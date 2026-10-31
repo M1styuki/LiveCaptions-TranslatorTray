@@ -27,10 +27,64 @@ use skia_safe::{Matrix, TileMode};
 
 pub type SkiaBoxShadowCache = BoxShadowCache<skia_safe::Image>;
 
+#[cfg(all(test, target_os = "windows"))]
+mod windows_canvas_tests {
+    use super::RenderState;
+    use skia_safe::{ImageInfo, PixelGeometry, SurfaceProps};
+
+    #[test]
+    fn native_canvas_properties_and_transparent_layers() {
+        let info = ImageInfo::new_n32_premul((32, 32), None);
+        for geometry in [PixelGeometry::RGBH, PixelGeometry::BGRH, PixelGeometry::Unknown] {
+            let props = SurfaceProps::new(Default::default(), geometry);
+            let mut surface = skia_safe::surfaces::raster(&info, None, Some(&props)).unwrap();
+            let canvas = surface.canvas();
+            let mut state = RenderState::new(canvas);
+            assert_eq!(state.lcd_text, geometry != PixelGeometry::Unknown);
+            // A bad native call can corrupt the canvas as well as its return value.
+            canvas.clear(skia_safe::Color::WHITE);
+            let saved = state;
+            canvas.save_layer_alpha(None, 128);
+            state.enter_opacity_layer();
+            assert!(!state.lcd_text);
+            canvas.restore();
+            state = saved;
+            assert_eq!(state.lcd_text, geometry != PixelGeometry::Unknown);
+            let mut layer = canvas.new_surface(&info, Some(&SurfaceProps::default())).unwrap();
+            assert!(!RenderState::new(layer.canvas()).lcd_text);
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct RenderState {
     alpha: f32,
     transform: i_slint_core::lengths::ItemTransform,
+    #[cfg(target_os = "windows")]
+    lcd_text: bool,
+}
+
+impl RenderState {
+    fn new(_canvas: &skia_safe::Canvas) -> Self {
+        Self {
+            alpha: 1.0,
+            transform: i_slint_core::lengths::ItemTransform::identity(),
+            // getProps writes through an output pointer. Avoid getTopProps's
+            // C++ aggregate return, which is ABI-incompatible on Windows x64.
+            #[cfg(target_os = "windows")]
+            lcd_text: _canvas.props().is_some_and(|props| {
+                props.pixel_geometry() != skia_safe::PixelGeometry::Unknown
+            }),
+        }
+    }
+
+    fn enter_opacity_layer(&mut self) {
+        self.alpha = 1.0;
+        #[cfg(target_os = "windows")]
+        {
+            self.lcd_text = false;
+        }
+    }
 }
 
 pub struct SkiaItemRenderer<'a> {
@@ -64,10 +118,7 @@ impl<'a> SkiaItemRenderer<'a> {
             window,
             surface,
             state_stack: Vec::new(),
-            current_state: RenderState {
-                alpha: 1.0,
-                transform: i_slint_core::lengths::ItemTransform::identity(),
-            },
+            current_state: RenderState::new(canvas),
             image_cache,
             layer_cache,
             path_cache,
@@ -943,7 +994,7 @@ impl ItemRenderer for SkiaItemRenderer<'_> {
         if Opacity::need_layer(item_rc, opacity) {
             self.canvas.save_layer_alpha(None, (opacity * 255.) as u32);
             self.state_stack.push(self.current_state);
-            self.current_state.alpha = 1.0;
+            self.current_state.enter_opacity_layer();
 
             let window_adapter = WindowInner::from_pub(self.window).window_adapter();
 
@@ -1107,7 +1158,7 @@ impl GlyphRenderer for SkiaItemRenderer<'_> {
         let mut font = skia_safe::Font::from_typeface(type_face, font_size.get());
         font.set_subpixel(true);
         #[cfg(target_os = "windows")]
-        if self.canvas.top_props().pixel_geometry() != skia_safe::PixelGeometry::Unknown {
+        if self.current_state.lcd_text {
             // Transparent save-layers deliberately keep Unknown geometry;
             // Skia falls back to grayscale there while retaining the animation.
             font.set_edging(skia_safe::font::Edging::SubpixelAntiAlias);

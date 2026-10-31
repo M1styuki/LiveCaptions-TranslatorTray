@@ -37,6 +37,8 @@ jobs:
           git config --global core.longpaths true
           .\rust-app\tools\build.ps1 -Mode release
           Push-Location rust-app
+          cargo test --release --package i-slint-renderer-skia --lib --locked
+          if ($LASTEXITCODE -ne 0) { throw 'Native Skia tests failed' }
           cargo test --release --workspace --locked -- --test-threads=1
           if ($LASTEXITCODE -ne 0) { throw 'Release tests failed' }
           Pop-Location
