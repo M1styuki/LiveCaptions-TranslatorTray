@@ -72,6 +72,28 @@ fn run_at_scale(windows: &Rc<std::cell::RefCell<Vec<Rc<MinimalSoftwareWindow>>>>
         "Second",
         "escape cancels pending selection"
     );
+    let position = slint::LogicalPosition::new(178.0, 235.0);
+    ui.window()
+        .dispatch_event(WindowEvent::PointerMoved { position });
+    ui.window().dispatch_event(WindowEvent::PointerPressed {
+        position,
+        button: PointerEventButton::Left,
+    });
+    assert_eq!(ui.get_interval(), 4, "press increments once immediately");
+    std::thread::sleep(Duration::from_millis(550));
+    slint::platform::update_timers_and_animations();
+    assert_eq!(ui.get_interval(), 5, "held button begins repeating");
+    std::thread::sleep(Duration::from_millis(70));
+    slint::platform::update_timers_and_animations();
+    assert_eq!(ui.get_interval(), 6, "held button continues repeating");
+    ui.window().dispatch_event(WindowEvent::PointerReleased {
+        position,
+        button: PointerEventButton::Left,
+    });
+    std::thread::sleep(Duration::from_millis(70));
+    slint::platform::update_timers_and_animations();
+    assert_eq!(ui.get_interval(), 6, "release stops without an extra step");
+    ui.set_interval(3);
     click(178.0, 235.0);
     assert_eq!(ui.get_interval(), 4, "increase arrow steps by one");
     click(206.0, 235.0);
