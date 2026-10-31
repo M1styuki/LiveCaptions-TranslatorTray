@@ -122,12 +122,11 @@ fn toolbar_hint(index: usize, settings: &Settings, mode: u8, source_first: bool)
         0 | 1 => format!("{}（当前 {}）", TOOLTIPS[index], settings.font_size),
         2 | 3 => format!("{}（当前 {:.1}）", TOOLTIPS[index], settings.stroke),
         4 => {
-            let states = ["关闭", "译文", "原文", "双语"];
-            format!(
-                "粗体：{}（切换为{}）",
-                states[settings.bold as usize],
-                states[(settings.bold as usize + 1) % 4]
-            )
+            if settings.bold == 0 {
+                "字重：普通（切换为加粗）".into()
+            } else {
+                "字重：加粗（切换为普通）".into()
+            }
         }
         6 | 7 => format!(
             "{}（当前 {}%）",
@@ -179,6 +178,8 @@ impl Content {
 pub struct Settings {
     pub font_size: u8,
     pub font_color: u8,
+    // Keep the saved numeric format: 0 is normal, 3 is bold for both rows.
+    // Older single-row values (1/2) also display both rows in bold.
     pub bold: u8,
     pub opacity: u8,
     pub background: u8,
@@ -312,7 +313,6 @@ struct State {
     mode: u8,
     source_first: bool,
     click_through: bool,
-    both_rect: RECT,
     signals: Rc<Signals>,
     work_area: Bounds,
     #[cfg(test)]
@@ -322,7 +322,6 @@ struct State {
 }
 struct Signals {
     scale: Cell<f32>,
-    minimum_height: Cell<f32>,
     manual_size: Cell<bool>,
     moving: Cell<bool>,
     paint_pending: Cell<bool>,
@@ -427,7 +426,7 @@ impl State {
         }
     }
     fn placement(&mut self) -> io::Result<Option<Placement>> {
-        let Some(mut value) = window_geometry::snapshot(self.window.0 as usize)? else {
+        let Some(value) = window_geometry::snapshot(self.window.0 as usize)? else {
             return Ok(None);
         };
         self.work_area = window_geometry::work_area(self.window.0 as usize)?;
@@ -436,21 +435,6 @@ impl State {
             self.signals.scale.set(scale);
             self.canvas = None;
         }
-        match self.mode {
-            1 => {
-                value.bounds.y -= 40.0;
-                value.bounds.height += 40.0;
-                value.anchor.y -= 40.0;
-            }
-            2 => value.bounds.height += 40.0,
-            _ => {}
-        }
-        self.both_rect = physical_rect(Bounds {
-            x: value.bounds.x * f64::from(scale),
-            y: value.bounds.y * f64::from(scale),
-            width: value.bounds.width * f64::from(scale),
-            height: value.bounds.height * f64::from(scale),
-        });
         Ok(Some(value))
     }
     fn publish_geometry(&mut self) {
@@ -470,15 +454,7 @@ impl State {
         let restored = window_geometry::restore(value.bounds, Some(&value.anchor), (650.0, 135.0))?;
         self.signals.scale.set(restored.scale as f32);
         self.work_area = restored.work_area;
-        self.both_rect = physical_rect(restored.physical);
-        window_geometry::apply(
-            self.window.0 as usize,
-            rect_bounds(mode_rect(
-                self.both_rect,
-                self.mode,
-                self.signals.scale.get(),
-            )),
-        )?;
+        window_geometry::apply(self.window.0 as usize, restored.physical)?;
         self.canvas = None;
         self.publish_geometry();
         self.redraw();
@@ -517,14 +493,14 @@ impl State {
         let result = (|| -> windows::core::Result<f32> {
             let source_style = TextStyle {
                 size: self.settings.font_size as f32,
-                bold: self.settings.bold & 2 != 0,
+                bold: self.settings.bold != 0,
                 rgb: palette(self.settings.font_color),
                 stroke: self.settings.stroke,
                 prefix: None,
             };
             let translated_style = TextStyle {
                 size: (self.settings.font_size as f32 * 1.25).floor(),
-                bold: self.settings.bold & 1 != 0,
+                bold: self.settings.bold != 0,
                 rgb: translation_color(source_style.rgb),
                 stroke: self.settings.stroke,
                 prefix: Some(ColorPrefix {
@@ -543,31 +519,32 @@ impl State {
                     &source_style,
                 )? + 8.0;
             }
+            // All modes share the bilingual height. Hiding a row must not move
+            // the toolbar, while new captions still participate in auto-height.
+            let mut required_height = top;
             let order = if self.source_first {
                 [true, false]
             } else {
                 [false, true]
             };
             for source in order {
-                if (source && self.mode == 1) || (!source && self.mode == 2) {
-                    continue;
-                }
+                let shown = !((source && self.mode == 1) || (!source && self.mode == 2));
                 let (slot, text, style) = if source {
                     (0, &self.content.source, &source_style)
                 } else {
                     (1, &self.content.translation, &translated_style)
                 };
-                top += canvas
-                    .text(
-                        slot,
-                        text,
-                        13.0,
-                        top,
-                        (logical_width - 26.0).max(1.0),
-                        style,
-                    )?
-                    .max(style.size * 1.3)
-                    + 8.0;
+                let width = (logical_width - 26.0).max(1.0);
+                let measured = if shown {
+                    canvas.text(slot, text, 13.0, top, width, style)?
+                } else {
+                    canvas.text_height(slot, text, width, style)?
+                };
+                let row_height = measured.max(style.size * 1.3) + 8.0;
+                required_height += row_height;
+                if shown {
+                    top += row_height;
+                }
             }
             if self.toolbar_opacity > 0.0 && !self.click_through {
                 let opacity = (self.toolbar_opacity * 255.0).round() as u8;
@@ -647,23 +624,6 @@ impl State {
                     } else {
                         canvas.icon(index, left + 8.0, top, 16.0, opacity, icon_color)?;
                     }
-                    if index == 4 {
-                        // The two marks distinguish all four bold states.
-                        for row in 0..2 {
-                            let source = (row == 0) == self.source_first;
-                            let enabled = self.settings.bold & (if source { 2 } else { 1 }) != 0;
-                            canvas.rectangle(
-                                D2D_RECT_F {
-                                    left: left + 25.0,
-                                    top: top + row as f32 * 8.0 + 3.0,
-                                    right: left + 28.0,
-                                    bottom: top + row as f32 * 8.0 + 6.0,
-                                },
-                                0x83d7ff,
-                                if enabled { opacity } else { opacity / 5 },
-                            )?;
-                        }
-                    }
                     if index == 5 || index == 8 {
                         canvas.rectangle(
                             D2D_RECT_F {
@@ -707,7 +667,7 @@ impl State {
                     )?;
                 }
             }
-            Ok(top + 12.0)
+            Ok(required_height + 12.0)
         })();
         let finished = canvas.finish();
         let required_height = result?;
@@ -756,7 +716,7 @@ impl State {
             return Ok(());
         }
         presented.ok()?;
-        let minimum = if self.mode == 0 { 135.0 } else { 95.0 };
+        let minimum = 135.0;
         let available = (self.work_area.height / f64::from(self.signals.scale.get())).max(minimum);
         let required = f64::from(required_height).max(minimum).min(available);
         let desired = AutoHeight::new(self.signals.manual_size.get()).adjusted(
@@ -824,12 +784,12 @@ impl State {
             1 => self.settings.font_size = self.settings.font_size.saturating_sub(1).max(8),
             2 => self.settings.stroke = (self.settings.stroke + 1.5).min(7.5),
             3 => self.settings.stroke = (self.settings.stroke - 1.5).max(0.0),
-            4 => self.settings.bold = (self.settings.bold + 1) % 4,
+            4 => self.settings.bold = if self.settings.bold == 0 { 3 } else { 0 },
             5 => self.settings.font_color = self.settings.font_color % 8 + 1,
             6 => self.settings.opacity = self.settings.opacity.saturating_add(25).min(251),
             7 => self.settings.opacity = self.settings.opacity.saturating_sub(25).max(1),
             8 => self.settings.background = self.settings.background % 8 + 1,
-            9 => self.change_mode(),
+            9 => self.mode = (self.mode + 1) % 3,
             10 => self.source_first = !self.source_first,
             11 => {
                 self.clear_tooltip();
@@ -849,27 +809,6 @@ impl State {
         }
         (self.shared.callback)(Event::StyleChanged(self.settings.clone()));
         self.redraw();
-    }
-    fn change_mode(&mut self) {
-        unsafe {
-            if self.mode == 0 {
-                let _ = GetWindowRect(self.window, &mut self.both_rect);
-            }
-            self.mode = (self.mode + 1) % 3;
-            self.signals
-                .minimum_height
-                .set(if self.mode == 0 { 135.0 } else { 95.0 });
-            let rect = mode_rect(self.both_rect, self.mode, self.signals.scale.get());
-            let _ = SetWindowPos(
-                self.window,
-                None,
-                rect.left,
-                rect.top,
-                rect.right - rect.left,
-                rect.bottom - rect.top,
-                SWP_NOZORDER | SWP_NOACTIVATE,
-            );
-        }
     }
 }
 
@@ -891,34 +830,13 @@ pub fn translation_color(rgb: u32) -> u32 {
         |value: f32, amount: f32| (value + (target - value) * amount).clamp(0.0, 255.0) as u32;
     channel(r, 0.3) << 16 | channel(g, 0.4) << 8 | channel(b, 0.3)
 }
-fn mode_rect(both: RECT, mode: u8, scale: f32) -> RECT {
-    let delta = (40.0 * scale).round() as i32;
-    match mode {
-        1 => RECT {
-            top: both.top + delta,
-            ..both
-        },
-        2 => RECT {
-            bottom: both.bottom - delta,
-            ..both
-        },
-        _ => both,
-    }
-}
+#[cfg(test)]
 fn physical_rect(bounds: Bounds) -> RECT {
     RECT {
         left: bounds.x.round() as i32,
         top: bounds.y.round() as i32,
         right: (bounds.x + bounds.width).round() as i32,
         bottom: (bounds.y + bounds.height).round() as i32,
-    }
-}
-fn rect_bounds(rect: RECT) -> Bounds {
-    Bounds {
-        x: f64::from(rect.left),
-        y: f64::from(rect.top),
-        width: f64::from(rect.right - rect.left),
-        height: f64::from(rect.bottom - rect.top),
     }
 }
 fn platform_error(error: io::Error) -> windows::core::Error {
@@ -985,7 +903,6 @@ fn run(
         };
         let signals = Rc::new(Signals {
             scale: Cell::new(placement.scale as f32),
-            minimum_height: Cell::new(135.0),
             manual_size: Cell::new(geometry.manual_size),
             moving: Cell::new(false),
             paint_pending: Cell::new(false),
@@ -1011,7 +928,6 @@ fn run(
                 mode: 0,
                 source_first: false,
                 click_through: false,
-                both_rect: physical_rect(placement.physical),
                 signals,
                 work_area: placement.work_area,
                 #[cfg(test)]
@@ -1182,7 +1098,7 @@ unsafe extern "system" fn window_proc(
                 let info = &mut *(lparam.0 as *mut MINMAXINFO);
                 info.ptMinTrackSize = POINT {
                     x: (650.0 * data.signals.scale.get()) as i32,
-                    y: (data.signals.minimum_height.get() * data.signals.scale.get()) as i32,
+                    y: (135.0 * data.signals.scale.get()) as i32,
                 };
                 return LRESULT(0);
             }
@@ -1480,7 +1396,7 @@ mod tests {
             unsafe { LoadCursorW(None, IDC_ARROW).unwrap() }.0 as usize,
             "client area must reset the cursor after leaving a resize edge"
         );
-        for (index, count) in [(4, 4), (9, 3)] {
+        for (index, count) in [(4, 2), (9, 3)] {
             let first = command(window, TestOperation::ToolbarSignature(index));
             let mut signatures = std::collections::HashSet::from([first]);
             for _ in 1..count {
@@ -1619,23 +1535,7 @@ mod tests {
         }
     }
     #[test]
-    fn visible_mode_geometry_uses_the_same_both_baseline_at_each_dpi() {
-        for scale in [1.0, 1.25, 1.5, 2.0] {
-            let both = RECT {
-                left: 100,
-                top: 200,
-                right: 1400,
-                bottom: 600,
-            };
-            for _ in 0..100 {
-                let translation = mode_rect(both, 1, scale);
-                let original = mode_rect(both, 2, scale);
-                assert_eq!(translation.top - both.top, (40.0 * scale) as i32);
-                assert_eq!(original.top, both.top);
-                assert_eq!(translation.bottom, both.bottom);
-                assert_eq!(mode_rect(both, 0, scale), both);
-            }
-        }
+    fn translation_palette_preserves_contrast() {
         assert_eq!(translation_color(0xffffff), 0xb299b2);
         assert_eq!(translation_color(0), 0x4c664c);
     }
@@ -1657,6 +1557,29 @@ mod tests {
             GetWindowRect(window, &mut result).unwrap();
         }
         result
+    }
+    fn assert_modes_keep_bounds_and_click_target(window: HWND) {
+        let base = rect(window);
+        let scale = unsafe { GetDpiForWindow(window) }.max(96) as f32 / 96.0;
+        let width = (base.right - base.left) as f32 / scale;
+        let x = ((toolbar_button_left(width, 9) + 16.0) * scale).round() as i32;
+        let y = base.bottom - base.top - (22.0 * scale).round() as i32;
+        let point = LPARAM(((y as u16 as u32) << 16 | x as u16 as u32) as isize);
+        unsafe { SendMessageW(window, WM_MOUSEMOVE, None, Some(point)) };
+        let first = command(window, TestOperation::ToolbarSignature(9));
+        let mut previous = first;
+        for click in 1..=9 {
+            // Repeated clicks use the same client and screen coordinates.
+            unsafe { SendMessageW(window, WM_LBUTTONUP, None, Some(point)) };
+            flush_paint(window);
+            assert_eq!(rect(window), base, "mode click {click} moved the window");
+            let current = command(window, TestOperation::ToolbarSignature(9));
+            assert_ne!(current, previous, "mode click {click} missed its control");
+            if click % 3 == 0 {
+                assert_eq!(current, first);
+            }
+            previous = current;
+        }
     }
     fn flush_paint(window: HWND) {
         unsafe {
@@ -1810,7 +1733,7 @@ mod tests {
         assert!(errors.lock().unwrap().is_empty());
     }
     #[test]
-    fn hidden_overlay_keeps_both_baseline_after_mode_move_resize_and_final_close() {
+    fn hidden_overlay_keeps_bounds_after_mode_move_resize_and_final_close() {
         let _dpi = test_dpi();
         let reported: Arc<Mutex<Vec<(Placement, bool)>>> = Arc::default();
         let errors: Arc<Mutex<Vec<String>>> = Arc::default();
@@ -1835,23 +1758,8 @@ mod tests {
         .unwrap();
         let window = HWND(overlay.shared.window.lock().unwrap().unwrap() as *mut _);
         flush_paint(window);
-        let base = rect(window);
         let scale = unsafe { GetDpiForWindow(window) }.max(96) as f64 / 96.0;
-        let delta = (40.0 * scale).round() as i32;
-        for _ in 0..10 {
-            for mode in 1..=3 {
-                unsafe {
-                    SendMessageW(window, TEST_ACTION, Some(WPARAM(9)), None);
-                }
-                flush_paint(window);
-                let actual = rect(window);
-                let expected = mode_rect(base, mode % 3, scale as f32);
-                assert_eq!(
-                    (actual.left, actual.top, actual.right, actual.bottom),
-                    (expected.left, expected.top, expected.right, expected.bottom)
-                );
-            }
-        }
+        assert_modes_keep_bounds_and_click_target(window);
         unsafe {
             SendMessageW(window, TEST_ACTION, Some(WPARAM(9)), None); // translation only
             SendMessageW(window, WM_ENTERSIZEMOVE, None, None);
@@ -1879,9 +1787,9 @@ mod tests {
         assert!(saved.1);
         for (actual, expected) in [
             (saved.0.bounds.x, -100.0),
-            (saved.0.bounds.y, 160.0),
+            (saved.0.bounds.y, 200.0),
             (saved.0.bounds.width, 800.0),
-            (saved.0.bounds.height, 190.0),
+            (saved.0.bounds.height, 150.0),
         ] {
             assert!((actual - expected).abs() < 1.1);
         }
@@ -1890,11 +1798,9 @@ mod tests {
             SendMessageW(window, TEST_ACTION, Some(WPARAM(9)), None); // both
         }
         let both = rect(window);
-        assert_eq!(both.top, (200.0 * scale).round() as i32 - delta);
-        assert_eq!(
-            both.bottom - both.top,
-            (150.0 * scale).round() as i32 + delta
-        );
+        assert_eq!(both.top, (200.0 * scale).round() as i32);
+        assert_eq!(both.bottom - both.top, (150.0 * scale).round() as i32);
+        assert_modes_keep_bounds_and_click_target(window);
         unsafe {
             // No EXITSIZEMOVE: the Close barrier must publish this last rectangle.
             SendMessageW(window, WM_ENTERSIZEMOVE, None, None);
@@ -1947,6 +1853,7 @@ mod tests {
         };
         flush_paint(window);
         let small = height();
+        assert_modes_keep_bounds_and_click_target(window);
         let mut notice = short_content();
         notice.notice = "翻译失败：服务暂时不可用。".repeat(20);
         overlay.update(notice);
@@ -1970,6 +1877,7 @@ mod tests {
             grown > small,
             "real DirectWrite wrapping must grow the HWND"
         );
+        assert_modes_keep_bounds_and_click_target(window);
         overlay.update(short_content());
         flush_paint(window);
         assert!((height() - small).abs() <= 1);

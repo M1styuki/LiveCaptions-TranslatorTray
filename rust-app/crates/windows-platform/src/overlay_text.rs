@@ -164,46 +164,8 @@ impl Canvas {
         if text.is_empty() {
             return Ok(0.0);
         }
-        if slot >= self.layouts.len() || width <= 0.0 {
-            return Err(E_INVALIDARG.into());
-        }
-        let reuse = self.layouts[slot].as_ref().is_some_and(|item| {
-            item.text == text
-                && item.width == width
-                && item.size == style.size
-                && item.bold == style.bold
-        });
+        let layout = self.layout(slot, text, width, style)?;
         unsafe {
-            if !reuse {
-                let format = self.write.CreateTextFormat(
-                    w!("Segoe UI"),
-                    None,
-                    if style.bold {
-                        DWRITE_FONT_WEIGHT_BOLD
-                    } else {
-                        DWRITE_FONT_WEIGHT_NORMAL
-                    },
-                    DWRITE_FONT_STYLE_NORMAL,
-                    DWRITE_FONT_STRETCH_NORMAL,
-                    style.size,
-                    w!("zh-CN"),
-                )?;
-                format.SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP)?;
-                let layout = self.write.CreateTextLayout(
-                    &text.encode_utf16().collect::<Vec<_>>(),
-                    &format,
-                    width,
-                    10_000.0,
-                )?;
-                self.layouts[slot] = Some(LayoutCache {
-                    text: text.into(),
-                    width,
-                    size: style.size,
-                    bold: style.bold,
-                    layout,
-                });
-            }
-            let layout = &self.layouts[slot].as_ref().unwrap().layout;
             // Effects are presentation only. Clear the previous draw's range
             // even when this layout is reused after a style/history edit.
             let length = text.encode_utf16().count() as u32;
@@ -243,6 +205,70 @@ impl Canvas {
             let mut metrics = DWRITE_TEXT_METRICS::default();
             layout.GetMetrics(&mut metrics)?;
             Ok(metrics.height)
+        }
+    }
+    pub fn text_height(
+        &mut self,
+        slot: usize,
+        text: &str,
+        width: f32,
+        style: &TextStyle,
+    ) -> Result<f32> {
+        if text.is_empty() {
+            return Ok(0.0);
+        }
+        let layout = self.layout(slot, text, width, style)?;
+        let mut metrics = DWRITE_TEXT_METRICS::default();
+        unsafe { layout.GetMetrics(&mut metrics) }?;
+        Ok(metrics.height)
+    }
+    fn layout(
+        &mut self,
+        slot: usize,
+        text: &str,
+        width: f32,
+        style: &TextStyle,
+    ) -> Result<IDWriteTextLayout> {
+        if slot >= self.layouts.len() || width <= 0.0 {
+            return Err(E_INVALIDARG.into());
+        }
+        let reuse = self.layouts[slot].as_ref().is_some_and(|item| {
+            item.text == text
+                && item.width == width
+                && item.size == style.size
+                && item.bold == style.bold
+        });
+        unsafe {
+            if !reuse {
+                let format = self.write.CreateTextFormat(
+                    w!("Segoe UI"),
+                    None,
+                    if style.bold {
+                        DWRITE_FONT_WEIGHT_BOLD
+                    } else {
+                        DWRITE_FONT_WEIGHT_NORMAL
+                    },
+                    DWRITE_FONT_STYLE_NORMAL,
+                    DWRITE_FONT_STRETCH_NORMAL,
+                    style.size,
+                    w!("zh-CN"),
+                )?;
+                format.SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP)?;
+                let layout = self.write.CreateTextLayout(
+                    &text.encode_utf16().collect::<Vec<_>>(),
+                    &format,
+                    width,
+                    10_000.0,
+                )?;
+                self.layouts[slot] = Some(LayoutCache {
+                    text: text.into(),
+                    width,
+                    size: style.size,
+                    bold: style.bold,
+                    layout,
+                });
+            }
+            Ok(self.layouts[slot].as_ref().unwrap().layout.clone())
         }
     }
     pub fn rectangle(&self, rect: D2D_RECT_F, rgb: u32, opacity: u8) -> Result<()> {

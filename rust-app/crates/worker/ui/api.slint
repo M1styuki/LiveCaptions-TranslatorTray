@@ -95,7 +95,7 @@ export component ApiWindow inherits Window {
     default-font-size: 14px;
     no-frame:true;
     always-on-top:true;
-    background: root.native-material ? transparent : (root.frame-dark ? #272727 : Palette.background);
+    background: root.frame-dark ? (root.native-material ? #30343ae8 : #30343a) : (root.native-material ? transparent : Palette.background);
     in-out property <int> section: 0;
     in property <string> service;
     in property <int> config-index;
