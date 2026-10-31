@@ -10,6 +10,11 @@ use std::{
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
+#[cfg(test)]
+use windows::Win32::{
+    Foundation::{HANDLE, WAIT_OBJECT_0},
+    System::Threading::WaitForSingleObject,
+};
 use windows::{
     Win32::{
         Foundation::HWND,
@@ -29,11 +34,6 @@ use windows::{
         },
     },
     core::{Interface, w},
-};
-#[cfg(test)]
-use windows::Win32::{
-    Foundation::{HANDLE, WAIT_OBJECT_0},
-    System::Threading::WaitForSingleObject,
 };
 
 pub enum CaptionEvent {
