@@ -1,6 +1,6 @@
 use super::Controller;
 use captions_core::{
-    geometry::{self, AutoHeight, Placement},
+    geometry::{self, Placement},
     settings::WindowKind,
 };
 use slint::{
@@ -20,7 +20,7 @@ use windows_platform::window_geometry;
 struct State {
     active: bool,
     restored: bool,
-    auto: AutoHeight,
+    manual_size: bool,
     expected: Option<(f64, f64)>,
     resized: bool,
     timer: slint::Timer,
@@ -33,7 +33,7 @@ impl State {
                 (width - bounds.width).abs() > 1.1 || (height - bounds.height).abs() > 1.1
             })
         {
-            self.auto.mark_manual();
+            self.manual_size = true;
         }
         self.resized = false;
     }
@@ -202,52 +202,21 @@ impl Controller {
                 settings.window_anchor(WindowKind::Main),
             )
         };
-        let base = geometry::restore(bounds, anchor.as_ref(), &monitors, (800.0, 240.0))
+        // Every page scrolls within the same bounds. Only restoration, a monitor
+        // change or a user's resize changes the native surface dimensions.
+        let desired = geometry::restore(bounds, anchor.as_ref(), &monitors, (800.0, 240.0))
             .ok_or_else(|| io::Error::other("无法找到可用显示器。"))?;
         let available = monitors
             .iter()
-            .find(|monitor| monitor.name == base.logical.anchor.monitor)
+            .find(|monitor| monitor.name == desired.logical.anchor.monitor)
             .map(|monitor| monitor.work_area.height / monitor.scale)
             .unwrap_or(240.0)
             .max(240.0);
         ui.set_available_window_height(available as f32);
-        let required = if ui.get_page() == 1 {
-            600.0
-        } else if ui.get_page() == 2 {
-            420.0
-        } else if ui.get_page() == 0 && ui.get_caption_log_enabled() {
-            (110.0 * f64::from(ui.get_display_sentences() + 1)).max(240.0)
-        } else {
-            240.0
-        };
         let mut state = self.geometry.state.borrow_mut();
         if !state.restored {
-            state.auto = AutoHeight::new(settings.window_manual_size(WindowKind::Main));
+            state.manual_size = settings.window_manual_size(WindowKind::Main);
         }
-        let height = state
-            .auto
-            .adjusted(base.logical.bounds.height, required.min(available));
-        drop(state);
-        let mut anchor = base.logical.anchor.clone();
-        if height > base.logical.bounds.height {
-            // Expanding the compact caption window into settings must keep
-            // the newly added controls above the monitor's taskbar.
-            let bottom = base.physical.y + height * base.scale;
-            let overflow = (bottom - base.work_area.y - base.work_area.height).max(0.0);
-            let shift = overflow.min((base.physical.y - base.work_area.y).max(0.0));
-            anchor.y -= shift / base.scale;
-        }
-        let desired = geometry::restore(
-            captions_core::settings::Bounds {
-                height,
-                ..base.logical.bounds
-            },
-            Some(&anchor),
-            &monitors,
-            (800.0, required.min(available)),
-        )
-        .ok_or_else(|| io::Error::other("窗口尺寸无效。"))?;
-        let mut state = self.geometry.state.borrow_mut();
         state.expected = Some((desired.logical.bounds.width, desired.logical.bounds.height));
         drop(state);
         if [
@@ -291,7 +260,7 @@ impl Controller {
         }
         state.observe_resize(placement.bounds);
         state.expected = Some((placement.bounds.width, placement.bounds.height));
-        let manual = state.auto.is_manual();
+        let manual = state.manual_size;
         drop(state);
         if let Some(settings) = &self.settings
             && let Ok((settings, _)) =

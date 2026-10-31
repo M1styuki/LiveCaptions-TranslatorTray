@@ -22,8 +22,8 @@ use windows::{
         },
         UI::{
             Accessibility::{
-                CUIAutomation8, IUIAutomation, IUIAutomation2, IUIAutomationElement,
-                TreeScope_Subtree, UIA_AutomationIdPropertyId,
+                CUIAutomation8, IUIAutomation, IUIAutomation2, IUIAutomationCondition,
+                IUIAutomationElement, TreeScope_Subtree, UIA_AutomationIdPropertyId,
             },
             WindowsAndMessaging::{FindWindowW, GetWindowThreadProcessId, PostMessageW, WM_CLOSE},
         },
@@ -168,9 +168,8 @@ struct AttachedWindow {
 
 impl Drop for AttachedWindow {
     fn drop(&mut self) {
-        // Before the first successful caption-node or explicit ready-marker read
-        // we have not changed
-        // the window. Leave Windows onboarding/consent/language setup alive,
+        // Before the first successful caption-node or explicit ready-marker read,
+        // leave the window available for Windows onboarding/consent/language setup,
         // including when attach, COM initialization or cancellation fails.
         if !self.ready {
             return;
@@ -226,7 +225,7 @@ fn attach(control: &Arc<(Mutex<Control>, Condvar)>) -> io::Result<AttachedWindow
         }
         if start.elapsed() >= Duration::from_secs(15) {
             return Err(io::Error::other(
-                "系统字幕尚未就绪。请完成 Windows 字幕引导后重新开启。",
+                "未能打开 Windows 实时字幕窗口。请使用 Win+Ctrl+L 打开系统字幕后重试。",
             ));
         }
         if wait(control, Duration::from_millis(100)) {
@@ -247,6 +246,20 @@ fn attach(control: &Arc<(Mutex<Control>, Condvar)>) -> io::Result<AttachedWindow
 
 fn matching_launch(pending: Option<Child>, pid: u32) -> Option<Child> {
     pending.filter(|child| child.id() == pid)
+}
+
+fn find_element(
+    root: &IUIAutomationElement,
+    condition: &IUIAutomationCondition,
+) -> windows::core::Result<Option<IUIAutomationElement>> {
+    // FindFirst returns S_OK + null when there is no match. windows-rs represents
+    // this as Error(S_OK); absence is a normal pending state, not a COM failure.
+    // SAFETY: these interfaces are created and used only on the capture MTA.
+    match unsafe { root.FindFirst(TreeScope_Subtree, condition) } {
+        Ok(element) => Ok(Some(element)),
+        Err(error) if error.code().is_ok() => Ok(None),
+        Err(error) => Err(error),
+    }
 }
 
 fn run_mta(control: &Arc<(Mutex<Control>, Condvar)>, callback: &CaptionCallback) -> io::Result<()> {
@@ -283,7 +296,9 @@ fn run_mta(control: &Arc<(Mutex<Control>, Condvar)>, callback: &CaptionCallback)
     let retries = [250, 500, 1_000, 2_000, 5_000];
     let mut sampler = Sampler::default();
     let mut applied_hidden = None;
-    let node_deadline = Instant::now() + Duration::from_secs(15);
+    let startup = Instant::now();
+    let node_deadline = startup + Duration::from_secs(15);
+    let mut startup_window_shown = false;
     while !stopped(control) {
         let mut operation = "读取字幕文本";
         let text = (|| {
@@ -299,25 +314,22 @@ fn run_mta(control: &Arc<(Mutex<Control>, Condvar)>, callback: &CaptionCallback)
                     }
                     let root = automation.ElementFromHandle(window.hwnd)?;
                     operation = "查找字幕文本";
-                    match root.FindFirst(TreeScope_Subtree, &condition) {
-                        Ok(caption) => element = Some(caption),
-                        Err(error) if error.code().is_ok() => {
-                            // Hiding a ready, silent window also removes its ready
-                            // marker from UIA. A live root with no text is silence;
-                            // only the first successful attach requires the marker.
-                            if window.ready {
-                                return Ok(String::new());
-                            }
-                            operation = "检查系统字幕就绪";
-                            let ready = root.FindFirst(TreeScope_Subtree, &ready_condition)?;
-                            if ready.CurrentName()?.is_empty() {
-                                return Err(windows::core::Error::from_hresult(
-                                    windows::core::HRESULT(0),
-                                ));
-                            }
-                            return Ok(String::new());
+                    element = find_element(&root, &condition)?;
+                    if element.is_none() {
+                        // Hiding a ready, silent window also removes its ready
+                        // marker from UIA. A live root with no text is silence;
+                        // only the first successful attach requires the marker.
+                        if window.ready {
+                            return Ok(Some(String::new()));
                         }
-                        Err(error) => return Err(error),
+                        operation = "检查系统字幕就绪";
+                        let ready = find_element(&root, &ready_condition)?;
+                        return match ready {
+                            Some(ready) if !ready.CurrentName()?.is_empty() => {
+                                Ok(Some(String::new()))
+                            }
+                            _ => Ok(None),
+                        };
                     }
                 }
                 operation = "读取字幕文本";
@@ -325,11 +337,33 @@ fn run_mta(control: &Arc<(Mutex<Control>, Condvar)>, callback: &CaptionCallback)
                     .as_ref()
                     .unwrap()
                     .CurrentName()
-                    .map(|name| name.to_string())
+                    .map(|name| Some(name.to_string()))
             }
         })();
         match text {
-            Ok(text) => {
+            Ok(None) => {
+                if stopped(control) {
+                    break;
+                }
+                failures = 0;
+                // A pre-existing hidden window is not initialized merely because
+                // its HWND exists. Let a new window finish native construction,
+                // then show it once so XAML/UIA and any setup UI can become ready.
+                // Apply the user's hidden preference only after readiness below.
+                if !startup_window_shown && startup.elapsed() >= Duration::from_secs(1) {
+                    window.snapshot.show_for_setup()?;
+                    startup_window_shown = true;
+                }
+                if Instant::now() >= node_deadline {
+                    return Err(io::Error::other(
+                        "未能读取系统字幕的就绪状态。请查看 Windows 实时字幕窗口后重试。",
+                    ));
+                }
+                if wait(control, Duration::from_millis(250)) {
+                    break;
+                }
+            }
+            Ok(Some(text)) => {
                 // A provider call can return after the user stopped startup.
                 // Do not take ownership or hide an onboarding window then.
                 let state = control.0.lock().unwrap();
@@ -373,20 +407,11 @@ fn run_mta(control: &Arc<(Mutex<Control>, Condvar)>, callback: &CaptionCallback)
                     })
                 );
                 element = None;
-                // FindFirst succeeds with a null result while the actual caption
-                // text control is still being created. The binding represents
-                // that null as Error(S_OK); it is not a disconnected provider.
-                if !window.ready && error.code().is_ok() && Instant::now() < node_deadline {
-                    if wait(control, Duration::from_millis(250)) {
-                        break;
-                    }
-                    continue;
-                }
-                if (!window.ready && error.code().is_ok()) || failures == retries.len() {
+                if failures == retries.len() {
                     let message = if window.ready {
                         "系统字幕连接已中断，请从托盘重新开启。"
                     } else {
-                        "系统字幕尚未就绪。请在 Windows 字幕窗口完成首次引导或语言设置后，从托盘重新开启。"
+                        "连接 Windows 实时字幕失败，请从托盘重新开启。"
                     };
                     return Err(io::Error::other(format!(
                         "{message}（{operation}，系统错误 {:#010X}）",

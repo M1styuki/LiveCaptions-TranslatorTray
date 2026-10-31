@@ -19,14 +19,18 @@ use windows::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM},
         Graphics::{
             Direct2D::Common::D2D_RECT_F,
-            Gdi::{AC_SRC_ALPHA, AC_SRC_OVER, BLENDFUNCTION, ScreenToClient, ValidateRect},
+            Gdi::{
+                AC_SRC_ALPHA, AC_SRC_OVER, BLENDFUNCTION, ClientToScreen, ScreenToClient,
+                ValidateRect,
+            },
         },
         System::LibraryLoader::GetModuleHandleW,
         UI::{
             Controls::WM_MOUSELEAVE,
             HiDpi::GetDpiForWindow,
             Input::KeyboardAndMouse::{
-                ReleaseCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
+                GetAsyncKeyState, ReleaseCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
+                VK_LBUTTON, VK_RBUTTON,
             },
             WindowsAndMessaging::*,
         },
@@ -64,6 +68,7 @@ enum TestOperation {
     ResizeDuringPaint(RECT),
     PaintCount,
     ReentrantPaint,
+    ReentrantPointer,
     StaleWorkArea(bool),
     WorkAreaHeight,
     TooltipState,
@@ -1047,6 +1052,11 @@ unsafe extern "system" fn window_proc(
                 return LRESULT(0);
             }
             WM_NCHITTEST => return hit_test(window, lparam, data.signals.scale.get()),
+            // DefWindowProc enters a nested move/size message loop here. Never
+            // hold State across that loop: repaint needs to borrow it too.
+            WM_NCLBUTTONDOWN | WM_SYSCOMMAND => {
+                return DefWindowProcW(window, message, wparam, lparam);
+            }
             WM_SETCURSOR
                 if data.signals.moving.get()
                     && matches!(lparam.0 as u16 as u32, HTCLIENT | HTCAPTION) =>
@@ -1106,10 +1116,12 @@ unsafe extern "system" fn window_proc(
         }
         let Ok(mut state) = data.state.try_borrow_mut() else {
             match message {
-                WM_CLOSE | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MOUSEMOVE | WM_MOUSELEAVE
-                | UPDATE | WM_DISPLAYCHANGE | WORKAREA_CHANGED => {
+                WM_CLOSE | UPDATE | WM_DISPLAYCHANGE | WORKAREA_CHANGED => {
                     let _ = PostMessageW(Some(window), message, wparam, lparam);
                 }
+                // Replaying a press after its release can start a native drag
+                // with no future button-up to end capture. Input is transient.
+                WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MOUSEMOVE | WM_MOUSELEAVE => {}
                 WM_TIMER if matches!(wparam.0, TOOLTIP_TIMER | TOOLBAR_TIMER) => {
                     let _ = KillTimer(Some(window), wparam.0);
                     let _ = PostMessageW(Some(window), message, wparam, LPARAM(0));
@@ -1190,6 +1202,26 @@ unsafe extern "system" fn window_proc(
                             (state.tooltip.map_or(0, |index| index as isize + 1))
                                 | if state.tooltip_due.is_some() { 256 } else { 0 }
                                 | if state.click_through { 512 } else { 0 }
+                        }
+                        TestOperation::ReentrantPointer => {
+                            // Simulate input arriving during rendering while State
+                            // is borrowed. Neither edge may become a delayed click.
+                            SendMessageW(window, WM_LBUTTONDOWN, Some(WPARAM(1)), Some(LPARAM(0)));
+                            SendMessageW(window, WM_LBUTTONUP, None, Some(LPARAM(0)));
+                            let mut message = MSG::default();
+                            let mut queued = 0;
+                            while PeekMessageW(
+                                &mut message,
+                                Some(window),
+                                WM_LBUTTONDOWN,
+                                WM_LBUTTONUP,
+                                PM_REMOVE,
+                            )
+                            .as_bool()
+                            {
+                                queued += 1;
+                            }
+                            queued
                         }
                         TestOperation::TooltipElapsed => {
                             if state.tooltip_due.is_some() {
@@ -1312,10 +1344,21 @@ unsafe extern "system" fn window_proc(
                 WM_TIMER if wparam.0 == TOOLBAR_TIMER => state.toolbar_tick(),
                 WM_LBUTTONDOWN => {
                     let (x, y) = point(lparam);
-                    if state.pointer_button(x, y).is_none() {
+                    let primary = if GetSystemMetrics(SM_SWAPBUTTON) != 0 {
+                        VK_RBUTTON
+                    } else {
+                        VK_LBUTTON
+                    };
+                    if state.pointer_button(x, y).is_none()
+                        && GetAsyncKeyState(primary.0 as i32) < 0
+                    {
                         // Release the RefCell borrow before the modal native
                         // move loop re-enters paint and resize callbacks.
                         drop(state);
+                        let mut screen = POINT { x, y };
+                        if !ClientToScreen(window, &mut screen).as_bool() {
+                            return LRESULT(0);
+                        }
                         let _ = ReleaseCapture();
                         if let Ok(cursor) = LoadCursorW(None, IDC_SIZEALL) {
                             SetCursor(Some(cursor));
@@ -1324,7 +1367,10 @@ unsafe extern "system" fn window_proc(
                             window,
                             WM_NCLBUTTONDOWN,
                             Some(WPARAM(HTCAPTION as usize)),
-                            Some(lparam),
+                            Some(LPARAM(
+                                ((screen.x as u16 as u32) | ((screen.y as u16 as u32) << 16))
+                                    as isize,
+                            )),
                         );
                         if let Ok(cursor) = LoadCursorW(None, IDC_ARROW) {
                             SetCursor(Some(cursor));
@@ -1362,7 +1408,10 @@ unsafe extern "system" fn window_proc(
                     let _ = DestroyWindow(window);
                     (state.shared.callback)(Event::Closed);
                 }
-                _ => return DefWindowProcW(window, message, wparam, lparam),
+                _ => {
+                    drop(state);
+                    return DefWindowProcW(window, message, wparam, lparam);
+                }
             }
             LRESULT(0)
         }
@@ -1372,6 +1421,23 @@ unsafe extern "system" fn window_proc(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn reentrant_pointer_input_is_not_replayed_after_release() {
+        let overlay = Overlay::open_with_visibility(
+            Settings::default(),
+            short_content(),
+            hidden_geometry(true),
+            Arc::new(|_| {}),
+            false,
+        )
+        .unwrap();
+        let window = HWND(overlay.shared.window.lock().unwrap().unwrap() as *mut _);
+        assert_eq!(
+            command(window, TestOperation::ReentrantPointer),
+            0,
+            "a released press must not be queued to start a later native move loop"
+        );
+    }
     #[test]
     fn toolbar_pixels_change_for_each_bold_and_display_state() {
         let _dpi = test_dpi();

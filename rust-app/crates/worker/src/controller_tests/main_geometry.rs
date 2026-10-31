@@ -34,19 +34,19 @@ pub(super) fn run(
                 .borrow_mut()
                 .setting_edited("CaptionLogEnabled", "true");
             owner.borrow_mut().setting_edited("DisplaySentences", "3");
-            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 440.0);
-            assert_eq!(ui.window().size().height, 440);
+            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 240.0);
+            assert_eq!(ui.window().size().height, 240);
             owner.borrow_mut().setting_edited("DisplaySentences", "6");
             owner.borrow_mut().test_main_work_height(540.0);
-            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 540.0);
-            assert_eq!(ui.window().size().height, 540);
+            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 240.0);
+            assert_eq!(ui.window().size().height, 240);
             owner.borrow_mut().test_main_work_height(1040.0);
             owner
                 .borrow_mut()
                 .setting_edited("CaptionLogEnabled", "false");
             assert_eq!(owner.borrow().test_main_geometry().bounds.height, 240.0);
             owner.borrow_mut().page_changed(2);
-            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 420.0);
+            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 240.0);
             owner.borrow_mut().page_changed(0);
             assert_eq!(owner.borrow().test_main_geometry().bounds.height, 240.0);
             owner.borrow_mut().test_main_native_resize(
@@ -59,12 +59,9 @@ pub(super) fn run(
                 false,
             );
             owner.borrow_mut().page_changed(1);
-            let expanded = owner.borrow().test_main_geometry().bounds;
-            assert_eq!(expanded.height, 600.0);
-            assert!(
-                expanded.y + expanded.height <= 1040.0,
-                "expanding settings stays above the taskbar"
-            );
+            let retained = owner.borrow().test_main_geometry().bounds;
+            assert_eq!(retained.height, 240.0);
+            assert_eq!(retained.y, 790.0, "navigation keeps the window in place");
             owner.borrow_mut().test_main_native_resize(
                 Bounds {
                     x: 80.0,
@@ -100,11 +97,11 @@ pub(super) fn run(
             owner
                 .borrow_mut()
                 .setting_edited("CaptionLogEnabled", "true");
-            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 660.0);
+            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 500.0);
             owner
                 .borrow_mut()
                 .setting_edited("CaptionLogEnabled", "false");
-            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 660.0);
+            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 500.0);
             // Close before any debounce tick: final physical bounds still save.
             owner.borrow_mut().test_main_native_resize(
                 Bounds {
@@ -172,6 +169,6 @@ pub(super) fn run(
         ui.hide().unwrap();
     }
     println!(
-        "Main geometry: injected native placement + actual virtual Slint and isolated settings; initial restore, card growth/shrink, manual preservation, necessary growth, close-before-debounce and reopened placement PASS; not visible desktop/Winit/DPI acceptance"
+        "Main geometry: injected native placement + actual virtual Slint and isolated settings; initial restore, stable page/card bounds, manual preservation, close-before-debounce and reopened placement PASS; not visible desktop/Winit/DPI acceptance"
     );
 }

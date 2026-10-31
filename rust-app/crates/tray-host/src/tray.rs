@@ -135,7 +135,7 @@ impl Tray {
         } else {
             "开启字幕"
         };
-        let menu = crate::menu::Menu::new(toggle, busy)?;
+        let menu = crate::menu::Menu::new(self.data.hWnd, toggle, busy)?;
         // SAFETY: the menu remains live through this nested message loop.
         unsafe {
             let mut position = POINT::default();

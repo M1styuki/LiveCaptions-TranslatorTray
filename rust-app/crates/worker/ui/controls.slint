@@ -4,41 +4,6 @@ export global ModelLookup {
     pure callback index-of([string], string) -> int;
 }
 
-// Integer interval slider with the shared action cursor and keyboard controls.
-export component IntervalSlider inherits Rectangle {
-    in property <float> minimum:0;
-    in property <float> maximum:10;
-    in-out property <float> value;
-    callback changed(float);
-    height:30px;min-width:80px;
-    accessible-role:slider;accessible-label:"API 调用间隔";
-    accessible-value:root.value;accessible-value-minimum:root.minimum;
-    accessible-value-maximum:root.maximum;accessible-value-step:1;
-    accessible-action-increment=>{root.set-value(root.value + 1);}
-    accessible-action-decrement=>{root.set-value(root.value - 1);}
-    accessible-action-set-value(text)=>{if text.is-float() {root.set-value(text.to-float());}}
-    function set-value(value:float) {root.value=clamp(round(value),root.minimum,root.maximum);root.changed(root.value);}
-    function from-pointer() {root.set-value(root.minimum + (touch.mouse-x - 10px) / max(1px,root.width - 20px) * (root.maximum - root.minimum));}
-    Rectangle {x:10px;y:13px;width:parent.width - 20px;height:4px;border-radius:2px;background:Palette.border;}
-    Rectangle {x:10px;y:13px;width:(parent.width - 20px) * (root.value - root.minimum) / max(1,root.maximum - root.minimum);height:4px;border-radius:2px;background:Palette.accent-background;}
-    Rectangle {
-        x:(parent.width - 20px) * (root.value - root.minimum) / max(1,root.maximum - root.minimum);
-        y:5px;width:20px;height:20px;border-radius:10px;
-        background:touch.pressed ? Palette.alternate-background : Palette.control-background;
-        border-width:1px;border-color:Palette.border;
-        Rectangle {x:parent.width/2 - self.width/2;y:parent.height/2 - self.height/2;width:touch.has-hover || focus.has-focus ? 12px : 10px;height:self.width;border-radius:self.width/2;background:Palette.accent-background;animate width {duration:140ms;}}
-    }
-    forward-focus:focus;
-    focus:=FocusScope {width:0px;key-pressed(event)=>{
-        if event.text==Key.LeftArrow || event.text==Key.DownArrow {root.set-value(root.value - 1);return accept;}
-        if event.text==Key.RightArrow || event.text==Key.UpArrow {root.set-value(root.value + 1);return accept;}
-        if event.text==Key.Home {root.set-value(root.minimum);return accept;}
-        if event.text==Key.End {root.set-value(root.maximum);return accept;}
-        return reject;
-    }}
-    touch:=TouchArea {mouse-cursor:pointer;pointer-event(event)=>{if event.kind==PointerEventKind.down && event.button==PointerEventButton.left {focus.focus();root.from-pointer();}}moved=>{if self.pressed {root.from-pointer();}}}
-}
-
 // Selection-only field sharing the original numeric editor's flat frame.
 export component ChoiceBox inherits Rectangle {
     in property <[string]> model;
@@ -113,7 +78,10 @@ export component ChoiceBox inherits Rectangle {
                 x:4px;y:4px;width:parent.width - 8px;height:parent.height - 8px;
                 content-width:self.visible-width;
                 content-y:-max(0,root.highlighted - 5) * 30px;
-                VerticalBox {padding:0px;spacing:0px;
+                VerticalBox {
+                    padding:0px;spacing:0px;
+                    // Fluent's overlay scrollbar is 14px wide; keep a 4px gap.
+                    padding-right:root.model.length > 6 ? 18px : 0px;
                     for value[index] in root.model: Rectangle {
                         height:30px;border-radius:3px;
                         background:row-touch.has-hover || root.highlighted==index ? Palette.control-background : transparent;
@@ -293,7 +261,7 @@ export component NavigationButton inherits Rectangle {
     animate background { duration:140ms; easing:ease-out; }
     Rectangle {x:0px;y:12px;width:3px;height:18px;border-radius:2px;background:Palette.accent-background;opacity:root.selected ? 1 : 0;animate opacity {duration:150ms;}}
     Image {x:14px;y:13px;width:16px;height:16px;source:root.icon;colorize:Palette.foreground;}
-    Text {x:root.icon.width > 0 ? 40px : 16px;width:parent.width - self.x - 10px;height:100%;text:root.text;color:Palette.foreground;font-weight:root.selected ? 600 : 400;vertical-alignment:center;}
+    Text {x:root.icon.width > 0 ? 40px : 16px;width:parent.width - self.x - 10px;height:100%;text:root.text;color:Palette.foreground;font-weight:400;vertical-alignment:center;}
     accessible-role:button;
     accessible-label:root.text;
     accessible-action-default=>{root.clicked();}
@@ -327,9 +295,7 @@ export component AnimatedSwitch inherits Rectangle {
     in property <string> text;
     in property <string> hint:root.text + (root.checked ? "：已开启" : "：已关闭");
     callback toggled;
-    min-width:70px;
-    preferred-width:82px;
-    max-width:82px;
+    width:42px;
     horizontal-stretch:0;
     height:32px;
     accessible-role:switch;
@@ -350,7 +316,6 @@ export component AnimatedSwitch inherits Rectangle {
             animate x, background {duration:180ms;easing:ease-out;}
         }
     }
-    Text {x:52px;height:100%;text:root.checked ? "开" : "关";color:Palette.foreground;vertical-alignment:center;}
     touch:=TouchArea {mouse-cursor:pointer;clicked=>{focus.focus();root.checked=!root.checked;root.toggled();}}
     focus:=FocusScope {width:0px;key-pressed(event)=>{if event.text==Key.Return || event.text==Key.Space {root.checked=!root.checked;root.toggled();return accept;}return reject;}}
 }

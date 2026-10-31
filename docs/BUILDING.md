@@ -7,7 +7,11 @@
 - Visual Studio 2022 Build Tools 的 MSVC x64 C++ 工具及 Windows SDK。
 - LLVM、Python 3、Ninja 和 Git，用于编译静态 Skia。LLVM 需包含 clang、clang-cl 和 libclang。
 
-设置与 API 窗口使用 Skia OpenGL 渲染，以改善圆角、细边框及缩放后的边缘；运行时需要正常安装的显卡驱动。托盘与字幕浮窗仍使用原生 Windows 绘制。
+设置与 API 窗口使用默认 Skia 渲染路径；运行时需要正常安装的显卡驱动。托盘菜单完全由 Windows 原生绘制，字幕浮窗也保留原生 Windows 绘制。
+
+托盘菜单仅在首尾添加各 4 个逻辑像素的不可选空白间隔。程序只处理这两条空白间隔的尺寸，不绘制任何文字、背景、高亮或边框；实际菜单项的测量和绘制继续交给系统。
+
+依赖启用 `renderer-skia`，程序显式选择 `skia`。`.8-local` 强制启用 OpenGL 后用户反馈设置文字不显示，因此恢复此前的默认路径。发行模式保留 `opt-level = "z"`、完整 LTO 和单个代码生成单元，侧重可执行文件体积；独立 PDB 调试信息不随 EXE 分发。翻译服务、系统字体、无障碍支持和原生字幕路径保持完整。
 
 Skia 未命中上游静态预编译包时会从源码构建。Git 需开启 `core.longpaths`；`LLVM_HOME`、`LIBCLANG_PATH`、`CLANG_PATH` 应指向同一套 LLVM，避免与 Visual Studio 自带的 Clang 混用。云端工作流已配置这些选项。
 

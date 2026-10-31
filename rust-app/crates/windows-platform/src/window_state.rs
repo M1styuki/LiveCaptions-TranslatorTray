@@ -111,6 +111,18 @@ impl WindowSnapshot {
         })
     }
 
+    pub(crate) fn show_for_setup(&self) -> io::Result<()> {
+        if !self.same_window() {
+            return Err(io::Error::other("系统字幕窗口已关闭。"));
+        }
+        // SAFETY: only the validated caption window is shown, without activating
+        // it or changing its styles/alpha during construction. Leave it accessible
+        // on timeout/cancel so the user can finish Windows setup if needed.
+        unsafe { ShowWindowAsync(self.window, SW_SHOWNOACTIVATE) }
+            .ok()
+            .map_err(win_error)
+    }
+
     pub(crate) fn set_hidden(&mut self, hidden: bool, waiting_for_caption: bool) -> io::Result<()> {
         if !self.same_window() {
             return Err(io::Error::other("系统字幕窗口已关闭。"));

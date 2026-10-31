@@ -1,15 +1,68 @@
 import { ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
-import { IntervalSlider, ChoiceBox, IntegerBox, Surface, ActionButton, AnimatedSwitch } from "controls.slint";
+import { ChoiceBox, IntegerBox, AnimatedSwitch } from "controls.slint";
 
 component Label inherits Text {color:Palette.foreground;font-size:14px;}
-component Note inherits Label {font-size:12px;opacity:0.65;wrap:word-wrap;}
-component Group inherits Surface {
+
+component SettingHint inherits Rectangle {
+    in property <string> text;
+    width:16px;height:16px;border-radius:8px;
+    background:Palette.color-scheme == ColorScheme.dark ? #a0a0a0 : #737373;
+    Text {
+        width:root.width;height:root.height;
+        text:"!";font-size:12px;font-weight:600;
+        color:Palette.color-scheme == ColorScheme.dark ? #202020 : #ffffff;
+        horizontal-alignment:center;vertical-alignment:center;
+    }
+    accessible-role:AccessibleRole.text;accessible-label:root.text;
+    Tooltip {text:@markdown("\{root.text}");}
+}
+
+component SettingRow inherits Rectangle {
     in property <string> title;
-    VerticalBox {
-        padding:18px;spacing:12px;
-        Label {text:root.title;font-size:16px;font-weight:600;}
+    in property <string> hint;
+    in property <length> control-width:130px;
+    in property <length> control-height:34px;
+    height:42px;
+    label:=Label {
+        x:12px;y:0px;width:self.preferred-width;height:root.height;
+        text:root.title;vertical-alignment:center;
+    }
+    if root.hint != "": SettingHint {
+        x:label.x + label.width + 6px;y:(root.height - self.height)/2;
+        text:root.hint;
+    }
+    Rectangle {
+        x:root.width - self.width - 12px;y:(root.height - self.height)/2;
+        width:root.control-width;height:root.control-height;
         @children
     }
+}
+
+component SwitchRow inherits SettingRow {control-width:42px;control-height:32px;}
+
+component SettingLink inherits Rectangle {
+    in property <string> title;
+    callback activated;
+    height:42px;border-radius:4px;
+    background:touch.pressed ? Palette.alternate-background
+        : (touch.has-hover || focus.has-focus ? Palette.control-background : transparent);
+    Label {
+        x:12px;y:0px;width:root.width - 52px;height:root.height;
+        text:root.title;vertical-alignment:center;
+    }
+    Image {
+        x:root.width - self.width - 12px;y:(root.height - self.height)/2;
+        width:16px;height:16px;colorize:Palette.foreground;
+        source:@image-url("../../../assets/original-icons/next.svg");
+    }
+    accessible-role:button;accessible-label:root.title;
+    accessible-action-default=>{root.activated();}
+    forward-focus:focus;
+    touch:=TouchArea {mouse-cursor:pointer;clicked=>{focus.focus();root.activated();}}
+    focus:=FocusScope {width:0px;key-pressed(event)=>{
+        if event.text==Key.Return || event.text==Key.Space {root.activated();return accept;}
+        return reject;
+    }}
 }
 
 export component SettingsPage inherits ScrollView {
@@ -29,63 +82,62 @@ export component SettingsPage inherits ScrollView {
     callback captions-visibility-changed(bool);
     content-width:self.visible-width;
     VerticalBox {
-        padding:22px;spacing:16px;
-        Label {text:"设置";font-size:24px;font-weight:700;}
-        Note {text:"翻译服务、字幕显示与上下文设置。";}
-        Group {
-            title:"翻译";
-            HorizontalBox {
-                padding:0px;spacing:18px;
-                VerticalBox {padding:0px;spacing:7px;
-                    Label {text:"翻译服务";}
-                    ChoiceBox {height:34px;model:["Google","Google2","Ollama","OpenAI","LMStudio","DeepL","OpenRouter","Youdao","MTranServer","Baidu","LibreTranslate"];label:"翻译服务";current-value <=> root.selected-service;selected(value)=>{root.setting-edited("ApiName",value);}Tooltip {text:@markdown("当前翻译服务；DeepSeek 使用 OpenAI 兼容接口");}}
-                }
-                VerticalBox {padding:0px;spacing:7px;
-                    Label {text:"目标语言";}
-                    ChoiceBox {height:34px;model:["zh-CN","zh-TW","en-US","en-GB","ja-JP","ko-KR","fr-FR","th-TH","ru-RU","es-ES","pt-BR","tr-TR","ar-SA"];label:"目标语言";current-value <=> root.selected-language;selected(value)=>{root.setting-edited("TargetLanguage",value);}Tooltip {text:@markdown("选择译文语言");}}
-                }
-            }
-            HorizontalBox {padding:0px;spacing:12px;
-                Note {text:"Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。";horizontal-stretch:1;}
-                ActionButton {text:"配置翻译服务";clicked=>{root.api-requested();}}
-            }
-            HorizontalBox {padding:0px;spacing:14px;
-                Label {text:"API 调用间隔";vertical-alignment:center;}
-                IntervalSlider {minimum:0;maximum:10;value:root.max-sync-interval;horizontal-stretch:1;changed(value)=>{root.setting-edited("MaxSyncInterval",round(value));}Tooltip {text:@markdown("调用间隔：\{root.max-sync-interval}；按字幕变化次数计");}}
-                Label {text:root.max-sync-interval;width:26px;horizontal-alignment:right;vertical-alignment:center;font-weight:600;}
-            }
-            Note {text:"按字幕内容变化次数控制调用频率，数值越小越频繁。";}
+        padding:16px;spacing:6px;
+        HorizontalBox {
+            padding:0px;padding-left:12px;padding-right:12px;
+            Label {text:"设置";font-size:24px;font-weight:700;}
         }
-        Group {
-            title:"上下文";
-            HorizontalBox {padding:0px;spacing:16px;
-                VerticalBox {padding:0px;spacing:4px;horizontal-stretch:1;Label {text:"结合前文翻译";}Note {text:"向翻译服务提供前文；模型服务会使用更多 token。";}}
-                AnimatedSwitch {text:"上下文翻译";checked <=> root.context-aware;toggled=>{root.setting-edited("ContextAware",self.checked ? "true" : "false");}}
-            }
-            HorizontalBox {padding:0px;spacing:18px;
-                VerticalBox {padding:0px;spacing:7px;Label {text:"上下文句数";}IntegerBox {label:"上下文句数";hint:"翻译上下文句数：1–10";number <=> root.num-contexts;minimum:1;maximum:10;number-edited(value)=>{root.setting-edited("NumContexts",value);}}}
-                VerticalBox {padding:0px;spacing:7px;Label {text:"悬浮字幕前文句数";}IntegerBox {label:"悬浮字幕前文句数";hint:"保留显示的前文句数：0–6";number <=> root.display-sentences;minimum:0;maximum:6;number-edited(value)=>{root.setting-edited("DisplaySentences",value);}}}
+        // Keep operation feedback outside the evenly spaced settings rows.
+        if root.autostart-message != "": HorizontalBox {
+            padding:0px;padding-left:12px;padding-right:12px;
+            Label {text:root.autostart-message;font-size:12px;wrap:word-wrap;}
+        }
+        SwitchRow {
+            title:"结合前文翻译";hint:"向模型提供前文，会增加 token 用量。";
+            AnimatedSwitch {text:"上下文翻译";checked <=> root.context-aware;toggled=>{root.setting-edited("ContextAware",self.checked ? "true" : "false");}}
+        }
+        SwitchRow {
+            title:"Windows 实时字幕";hint:"隐藏后仍可识别；源语言在系统字幕中修改。";
+            AnimatedSwitch {text:"显示系统字幕";checked:!root.live-captions-hidden;toggled=>{root.captions-visibility-changed(!self.checked);}}
+        }
+        SwitchRow {
+            title:"显示翻译耗时";hint:"仅统计翻译请求耗时。";
+            AnimatedSwitch {text:"显示翻译耗时";checked <=> root.latency-show;toggled=>{root.setting-edited("LatencyShow",self.checked ? "true" : "false");}}
+        }
+        SwitchRow {
+            title:"开机自启动";hint:"登录后驻留托盘，字幕需手动开启。";
+            AnimatedSwitch {text:"开机自启动";checked <=> root.autostart-enabled;toggled=>{root.autostart-changed(self.checked);}}
+        }
+        SettingRow {
+            title:"翻译服务";hint:"DeepSeek 选 OpenAI；Google 无需配置。";
+            ChoiceBox {
+                width:130px;model:["Google","Google2","Ollama","OpenAI","LMStudio","DeepL","OpenRouter","Youdao","MTranServer","Baidu","LibreTranslate"];
+                label:"翻译服务";current-value <=> root.selected-service;
+                selected(value)=>{root.setting-edited("ApiName",value);}
             }
         }
-        Group {
-            title:"显示";
-            HorizontalBox {padding:0px;spacing:16px;
-                VerticalBox {padding:0px;spacing:4px;horizontal-stretch:1;Label {text:"Windows 实时字幕";}Note {text:"在系统字幕中修改源语言；隐藏窗口后仍可识别。";}}
-                AnimatedSwitch {text:"显示系统字幕";checked:!root.live-captions-hidden;toggled=>{root.captions-visibility-changed(!self.checked);}}
-            }
-            Rectangle {height:1px;background:Palette.border;}
-            HorizontalBox {padding:0px;spacing:16px;
-                Label {text:"显示翻译耗时";horizontal-stretch:1;vertical-alignment:center;}
-                AnimatedSwitch {text:"显示翻译耗时";hint:"在字幕页显示翻译任务耗时（毫秒），不含此前的语音识别和分句等待";checked <=> root.latency-show;toggled=>{root.setting-edited("LatencyShow",self.checked ? "true" : "false");}}
+        SettingRow {
+            title:"目标语言";
+            ChoiceBox {
+                width:130px;model:["zh-CN","zh-TW","en-US","en-GB","ja-JP","ko-KR","fr-FR","th-TH","ru-RU","es-ES","pt-BR","tr-TR","ar-SA"];
+                label:"目标语言";current-value <=> root.selected-language;
+                selected(value)=>{root.setting-edited("TargetLanguage",value);}
             }
         }
-        Group {
-            title:"启动";
-            HorizontalBox {padding:0px;spacing:16px;
-                VerticalBox {padding:0px;spacing:4px;horizontal-stretch:1;Label {text:"开机自启动";}Note {text:"登录 Windows 后驻留托盘；字幕需手动开启。";}}
-                AnimatedSwitch {text:"开机自启动";checked <=> root.autostart-enabled;toggled=>{root.autostart-changed(self.checked);}}
-            }
-            if root.autostart-message != "": Note {text:root.autostart-message;}
+
+        SettingRow {
+            title:"API 调用间隔";hint:"按字幕变化次数计，越小翻译越频繁。";
+            IntegerBox {label:"API 调用间隔";number <=> root.max-sync-interval;minimum:0;maximum:10;number-edited(value)=>{root.setting-edited("MaxSyncInterval",value);}}
         }
+        SettingRow {
+            title:"翻译上下文句数";
+            IntegerBox {label:"翻译上下文句数";number <=> root.num-contexts;minimum:1;maximum:10;number-edited(value)=>{root.setting-edited("NumContexts",value);}}
+        }
+        SettingRow {
+            title:"悬浮字幕前文句数";
+            IntegerBox {label:"悬浮字幕前文句数";number <=> root.display-sentences;minimum:0;maximum:6;number-edited(value)=>{root.setting-edited("DisplaySentences",value);}}
+        }
+
+        SettingLink {title:"翻译服务配置";activated=>{root.api-requested();}}
     }
 }

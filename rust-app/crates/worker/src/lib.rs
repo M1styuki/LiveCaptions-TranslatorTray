@@ -51,9 +51,9 @@ pub fn run(
     let pipe = windows_platform::pipe_client::connect(&pipe, host_pid)?;
     slint::BackendSelector::new()
         .backend_name("winit".into())
-        // Skia preserves subpixel coverage for rounded controls and thin borders.
-        // The OpenGL surface also preserves alpha for the Windows Mica backdrop.
-        .renderer_name("skia-opengl".into())
+        // Select the supported default Skia path explicitly; forcing OpenGL
+        // in .8 made UI text disappear on the user's machine.
+        .renderer_name("skia".into())
         .select()?;
     let ui = MainWindow::new()?;
     let (width, height) = windows_platform::desktop::screen_size();

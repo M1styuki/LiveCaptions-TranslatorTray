@@ -28,8 +28,8 @@ slint = { version = "=1.18.1", default-features = false, features = ["std", "com
 slint-build = "=1.18.1"
 
 [profile.release]
-opt-level = "s"
-lto = "thin"
+opt-level = "z"
+lto = "fat"
 codegen-units = 1
 debug = "full"
 strip = "none"

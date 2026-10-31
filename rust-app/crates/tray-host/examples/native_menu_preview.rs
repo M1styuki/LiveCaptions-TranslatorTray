@@ -32,7 +32,7 @@ unsafe extern "system" fn window_proc(
     unsafe {
         match message {
             WM_CONTEXTMENU => {
-                let popup = menu::Menu::new("开启字幕", false).unwrap();
+                let popup = menu::Menu::new(window, "开启字幕", false).unwrap();
                 let mut point = POINT { x: 40, y: 40 };
                 windows::Win32::Graphics::Gdi::ClientToScreen(window, &mut point)
                     .ok()

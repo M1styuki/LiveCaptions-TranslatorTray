@@ -29,6 +29,7 @@ component CaptionText inherits Rectangle {
     preferred-height:self.min-height;
     vertical-stretch:0;
     background:Palette.control-background;
+    border-radius:6px;
     body := Text {x:8px;y:8px;width:parent.width - 16px;height:self.preferred-height;text:root.text;color:Palette.foreground;wrap:word-wrap;font-size:root.point-size * 1px;}
     TouchArea {
         mouse-cursor:pointer;
@@ -74,7 +75,7 @@ export component MainWindow inherits Window {
     preferred-width: 900px;
     preferred-height: 600px;
     min-width: 800px;
-    min-height: min(root.available-window-height * 1px,root.page == 1 ? 600px : (root.page == 2 ? 420px : (root.caption-log-enabled ? max(240px,110px * (root.display-sentences + 1)) : 240px)));
+    min-height: min(root.available-window-height * 1px,240px);
     in-out property <float> available-window-height: 10000;
     no-frame: true;
     in property <string> ui-font-family:"Segoe UI";
