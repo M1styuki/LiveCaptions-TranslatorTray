@@ -2,6 +2,10 @@
 members = ["crates/protocol", "crates/tray-host", "crates/windows-platform", "crates/worker", "crates/providers", "crates/app", "crates/core", "crates/storage"]
 default-members = ["crates/app"]
 resolver = "3"
+exclude = ["vendor/i-slint-renderer-skia-1.18.1"]
+
+[patch.crates-io]
+i-slint-renderer-skia = { path = "vendor/i-slint-renderer-skia-1.18.1" }
 
 [workspace.package]
 version = "0.1.0"
@@ -20,7 +24,7 @@ captions-core = { path = "crates/core" }
 storage = { path = "crates/storage" }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "net", "macros"] }
 reqwest = { version = "0.12", default-features = false, features = ["native-tls", "json", "system-proxy"] }
-slint = { version = "=1.18.1", default-features = false, features = ["std", "compat-1-18", "backend-winit", "renderer-software", "renderer-skia", "raw-window-handle-06", "accessibility"] }
+slint = { version = "=1.18.1", default-features = false, features = ["std", "compat-1-18", "backend-winit", "renderer-skia", "raw-window-handle-06", "accessibility"] }
 slint-build = "=1.18.1"
 
 [profile.release]

@@ -22,6 +22,7 @@ mod caption_interaction;
 mod caption_toggle;
 mod capture_cutoff;
 mod deletion;
+mod flat_controls;
 mod main_geometry;
 mod overlay_geometry;
 mod startup;
@@ -783,6 +784,7 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
     caption_toggle::run(&root, screen, &ui, &jobs);
     capture_cutoff::run(&root, screen, &ui, &jobs);
     original_number_input(&ui, &windows.borrow()[0]);
+    flat_controls::run(&windows);
     let actual = root.canonicalize().unwrap();
     assert_eq!(actual.parent(), Some(parent.as_path()));
     fs::remove_dir_all(actual).unwrap();

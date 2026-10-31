@@ -1,5 +1,5 @@
-import { ComboBox, ScrollView, VerticalBox, HorizontalBox, Slider, Palette } from "std-widgets.slint";
-import { IntegerBox, Surface, ActionButton, AnimatedSwitch } from "controls.slint";
+import { ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
+import { IntervalSlider, ChoiceBox, IntegerBox, Surface, ActionButton, AnimatedSwitch } from "controls.slint";
 
 component Label inherits Text {color:Palette.foreground;font-size:14px;}
 component Note inherits Label {font-size:12px;opacity:0.65;wrap:word-wrap;}
@@ -38,11 +38,11 @@ export component SettingsPage inherits ScrollView {
                 padding:0px;spacing:18px;
                 VerticalBox {padding:0px;spacing:7px;
                     Label {text:"翻译服务";}
-                    ComboBox {height:34px;model:["Google","Google2","Ollama","OpenAI","LMStudio","DeepL","OpenRouter","Youdao","MTranServer","Baidu","LibreTranslate"];current-value <=> root.selected-service;selected(value)=>{root.setting-edited("ApiName",value);}Tooltip {text:@markdown("当前翻译服务；DeepSeek 使用 OpenAI 兼容接口");}}
+                    ChoiceBox {height:34px;model:["Google","Google2","Ollama","OpenAI","LMStudio","DeepL","OpenRouter","Youdao","MTranServer","Baidu","LibreTranslate"];label:"翻译服务";current-value <=> root.selected-service;selected(value)=>{root.setting-edited("ApiName",value);}Tooltip {text:@markdown("当前翻译服务；DeepSeek 使用 OpenAI 兼容接口");}}
                 }
                 VerticalBox {padding:0px;spacing:7px;
                     Label {text:"目标语言";}
-                    ComboBox {height:34px;model:["zh-CN","zh-TW","en-US","en-GB","ja-JP","ko-KR","fr-FR","th-TH","ru-RU","es-ES","pt-BR","tr-TR","ar-SA"];current-value <=> root.selected-language;selected(value)=>{root.setting-edited("TargetLanguage",value);}Tooltip {text:@markdown("选择译文语言");}}
+                    ChoiceBox {height:34px;model:["zh-CN","zh-TW","en-US","en-GB","ja-JP","ko-KR","fr-FR","th-TH","ru-RU","es-ES","pt-BR","tr-TR","ar-SA"];label:"目标语言";current-value <=> root.selected-language;selected(value)=>{root.setting-edited("TargetLanguage",value);}Tooltip {text:@markdown("选择译文语言");}}
                 }
             }
             HorizontalBox {padding:0px;spacing:12px;
@@ -51,7 +51,7 @@ export component SettingsPage inherits ScrollView {
             }
             HorizontalBox {padding:0px;spacing:14px;
                 Label {text:"API 调用间隔";vertical-alignment:center;}
-                Slider {minimum:0;maximum:10;value:root.max-sync-interval;horizontal-stretch:1;changed(value)=>{root.setting-edited("MaxSyncInterval",round(value));}Tooltip {text:@markdown("调用间隔：\{root.max-sync-interval}；按字幕变化次数计");}}
+                IntervalSlider {minimum:0;maximum:10;value:root.max-sync-interval;horizontal-stretch:1;changed(value)=>{root.setting-edited("MaxSyncInterval",round(value));}Tooltip {text:@markdown("调用间隔：\{root.max-sync-interval}；按字幕变化次数计");}}
                 Label {text:root.max-sync-interval;width:26px;horizontal-alignment:right;vertical-alignment:center;font-weight:600;}
             }
             Note {text:"按字幕内容变化次数控制调用频率，数值越小越频繁。";}
@@ -75,8 +75,8 @@ export component SettingsPage inherits ScrollView {
             }
             Rectangle {height:1px;background:Palette.border;}
             HorizontalBox {padding:0px;spacing:16px;
-                Label {text:"显示翻译延迟";horizontal-stretch:1;vertical-alignment:center;}
-                AnimatedSwitch {text:"显示延迟";checked <=> root.latency-show;toggled=>{root.setting-edited("LatencyShow",self.checked ? "true" : "false");}}
+                Label {text:"显示翻译耗时";horizontal-stretch:1;vertical-alignment:center;}
+                AnimatedSwitch {text:"显示翻译耗时";hint:"在字幕页显示翻译任务耗时（毫秒），不含此前的语音识别和分句等待";checked <=> root.latency-show;toggled=>{root.setting-edited("LatencyShow",self.checked ? "true" : "false");}}
             }
         }
         Group {

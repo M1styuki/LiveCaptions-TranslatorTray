@@ -1,7 +1,7 @@
-import { Button, ComboBox, ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
+import { ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
 export { ApiWindow, ApiEditor } from "api.slint";
 export { Palette } from "std-widgets.slint";
-import { IconButton, HistorySearch, NavigationButton, PageEntrance } from "controls.slint";
+import { ChoiceBox, ActionButton, IconButton, HistorySearch, NavigationButton, PageEntrance } from "controls.slint";
 import { SettingsPage } from "settings.slint";
 
 export struct HistoryItem { stamp: string, stamp-full: string, source: string, translation: string, service: string, language: string }
@@ -59,8 +59,8 @@ component DeleteConfirmation inherits Rectangle {
                 Rectangle {vertical-stretch:1;}
                 HorizontalBox {
                     Rectangle {horizontal-stretch:1;}
-                    cancel := Button {text:"取消";clicked=>{root.decided(false);}}
-                    confirm := Button {text:"全部删除";clicked=>{root.decided(true);}}
+                    cancel := ActionButton {text:"取消";clicked=>{root.decided(false);}}
+                    confirm := ActionButton {text:"全部删除";clicked=>{root.decided(true);}}
                 }
             }
         }
@@ -83,7 +83,7 @@ export component MainWindow inherits Window {
     out property <bool> frame-dark:Palette.color-scheme == ColorScheme.dark;
     callback frame-theme-changed();
     changed frame-dark=>{root.frame-theme-changed();}
-    background: root.frame-dark ? (root.native-material ? #202020f2 : #202020) : (root.native-material ? transparent : Palette.background);
+    background: root.frame-dark ? #202020 : #f3f3f3;
     in-out property <int> page: 1;
     in-out property <bool> log-only: false;
     in-out property <bool> overlay-visible: false;
@@ -151,7 +151,7 @@ export component MainWindow inherits Window {
         if root.retry-save || (root.data-message != "" && root.data-message != "设置已保存。"): HorizontalBox {
             padding:4px;
             Text {text:root.data-message;color:Palette.foreground;wrap:word-wrap;horizontal-stretch:1;}
-            if root.retry-save: Button {text:"重试保存";clicked=>{root.data-action(4,"");}}
+            if root.retry-save: ActionButton {text:"重试保存";clicked=>{root.data-action(4,"");}}
         }
         Rectangle {height:30px;background:root.native-material ? transparent : (root.frame-dark ? #202020 : Palette.background);
         HorizontalBox {
@@ -203,7 +203,7 @@ export component MainWindow inherits Window {
                     CaptionText {text:root.source-caption;point-size:root.original-font-size;adjustable:true;copied(value)=>{root.caption-copy-requested(value);}adjusted(delta)=>{root.caption-font-adjusted(0,delta);}}
                     if root.caption-notice != "": Text {text:root.caption-notice;color:Palette.foreground;wrap:word-wrap;font-size:13px;}
                     CaptionText {floor-height:43px;text:root.translated-caption;point-size:root.translated-font-size;adjustable:true;copied(value)=>{root.caption-copy-requested(value);}adjusted(delta)=>{root.caption-font-adjusted(1,delta);}}
-                    if root.latency-show && root.latency-ms != "": Text { text: "延迟：" + root.latency-ms + " ms"; color: Palette.foreground; font-size: 12px; }
+                    if root.latency-show && root.latency-ms != "": Text { text: "翻译耗时：" + root.latency-ms + " ms"; color: Palette.foreground; font-size: 12px; }
                     if root.copy-message != "": Text {text:root.copy-message;color:Palette.foreground;font-size:12px;}
                     if root.caption-log-enabled: VerticalBox {for card in root.caption-cards: VerticalBox {padding:4px;CaptionText {text:card.source;point-size:12;copied(value)=>{root.caption-copy-requested(value);}}CaptionText {text:card.translation;point-size:16;copied(value)=>{root.caption-copy-requested(value);}}}}
                     Rectangle { vertical-stretch: 1; }
@@ -213,20 +213,20 @@ export component MainWindow inherits Window {
                     padding: 18px;
                     spacing: 12px;
                     if root.data-state >= 3: Text { text: root.recovery-location; color: Palette.foreground; wrap: word-wrap; }
-                    if root.data-state == 3 || root.data-state == 4: Button {
+                    if root.data-state == 3 || root.data-state == 4: ActionButton {
                         text: "保留原文件并恢复默认设置";
                         enabled:!root.file-busy;
                         clicked => { root.data-action(0, ""); }
                     }
-                    if root.data-state == 3 || root.data-state == 4: Button {
+                    if root.data-state == 3 || root.data-state == 4: ActionButton {
                         text:"选择另一份配置文件恢复…";
                         enabled:!root.file-busy;
                         clicked=>{root.file-requested(1);}
                     }
-                    if root.data-state == 3: Button {
+                    if root.data-state == 3: ActionButton {
                         text:"选择原数据目录完成恢复…";enabled:!root.file-busy;clicked=>{root.file-requested(2);}
                     }
-                    if root.data-state >= 3: Button {
+                    if root.data-state >= 3: ActionButton {
                         text: root.data-state == 3 ? "重试恢复" : "重新载入";
                         enabled:!root.file-busy;
                         clicked => { root.data-action(3, ""); }
@@ -254,15 +254,15 @@ export component MainWindow inherits Window {
                     spacing:5px;
                     HorizontalBox {
                         padding:0px;spacing:4px;
-                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/previous.svg");label:"上一页";enabled:root.history-page>1;clicked=>{root.history-requested(root.history-page - 1);}}
-                        Text {text:root.history-page + "/" + root.history-pages;min-width:34px;font-size:15px;color:Palette.foreground;vertical-alignment:center;horizontal-alignment:center;}
-                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/next.svg");label:"下一页";enabled:root.history-page<root.history-pages;clicked=>{root.history-requested(root.history-page + 1);}}
-                        ComboBox {width:86px;height:35px;model:["20/页","30/页","50/页","100/页"];current-index:root.history-size == 20 ? 0 : (root.history-size == 50 ? 2 : (root.history-size == 100 ? 3 : 1));selected(value)=>{root.history-action(3,[20,30,50,100][self.current-index]);}}
+                        IconButton {outlined:true;width:38px;height:34px;icon:@image-url("../../../assets/original-icons/previous.svg");label:"上一页";enabled:root.history-page>1;clicked=>{root.history-requested(root.history-page - 1);}}
+                        Text {text:root.history-page + "/" + root.history-pages;min-width:34px;height:34px;font-size:14px;color:Palette.foreground;vertical-alignment:center;horizontal-alignment:center;}
+                        IconButton {outlined:true;width:38px;height:34px;icon:@image-url("../../../assets/original-icons/next.svg");label:"下一页";enabled:root.history-page<root.history-pages;clicked=>{root.history-requested(root.history-page + 1);}}
+                        ChoiceBox {width:86px;min-width:86px;height:34px;label:"每页条数";model:["20/页","30/页","50/页","100/页"];current-value:root.history-size + "/页";selected(value)=>{root.history-action(3,[20,30,50,100][self.model.index-of(value)]);}}
                         HistorySearch {width:max(150px,min(220px,root.width - 650px));value <=> root.history-query;submitted=>{root.history-action(0,0);}cleared=>{root.history-action(1,0);}}
                         Rectangle {horizontal-stretch:1;}
-                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/download.svg");label:root.export-busy ? "正在导出全部历史" : "导出全部历史";enabled:!root.file-busy && !root.export-busy && !root.delete-busy;clicked=>{root.file-requested(3);}}
-                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/delete.svg");label:"全部删除";enabled:!root.file-busy && !root.export-busy && !root.delete-busy;clicked=>{root.delete-action(0);}}
-                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/refresh.svg");label:"刷新";clicked=>{root.history-action(2,0);}}
+                        IconButton {outlined:true;width:38px;height:34px;icon:@image-url("../../../assets/original-icons/download.svg");label:root.export-busy ? "正在导出全部历史" : "导出全部历史";enabled:!root.file-busy && !root.export-busy && !root.delete-busy;clicked=>{root.file-requested(3);}}
+                        IconButton {outlined:true;width:38px;height:34px;icon:@image-url("../../../assets/original-icons/delete.svg");label:"全部删除";enabled:!root.file-busy && !root.export-busy && !root.delete-busy;clicked=>{root.delete-action(0);}}
+                        IconButton {outlined:true;width:38px;height:34px;icon:@image-url("../../../assets/original-icons/refresh.svg");label:"刷新";clicked=>{root.history-action(2,0);}}
                     }
                     if root.export-message != "": Text {text:root.export-message;color:Palette.foreground;wrap:word-wrap;}
                     if root.delete-message != "": Text {text:root.delete-message;color:Palette.foreground;wrap:word-wrap;}

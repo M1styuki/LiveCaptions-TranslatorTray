@@ -1,6 +1,130 @@
-import { Button, Switch, ComboBox, LineEdit, HorizontalBox, Palette } from "std-widgets.slint";
+import { LineEdit, ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
 
-// The full-width ComboBox owns its full-width popup; the editable field covers
+// Integer interval slider with the shared action cursor and keyboard controls.
+export component IntervalSlider inherits Rectangle {
+    in property <float> minimum:0;
+    in property <float> maximum:10;
+    in-out property <float> value;
+    callback changed(float);
+    height:30px;min-width:80px;
+    accessible-role:slider;accessible-label:"API 调用间隔";
+    accessible-value:root.value;accessible-value-minimum:root.minimum;
+    accessible-value-maximum:root.maximum;accessible-value-step:1;
+    accessible-action-increment=>{root.set-value(root.value + 1);}
+    accessible-action-decrement=>{root.set-value(root.value - 1);}
+    accessible-action-set-value(text)=>{if text.is-float() {root.set-value(text.to-float());}}
+    function set-value(value:float) {root.value=clamp(round(value),root.minimum,root.maximum);root.changed(root.value);}
+    function from-pointer() {root.set-value(root.minimum + (touch.mouse-x - 10px) / max(1px,root.width - 20px) * (root.maximum - root.minimum));}
+    Rectangle {x:10px;y:13px;width:parent.width - 20px;height:4px;border-radius:2px;background:Palette.border;}
+    Rectangle {x:10px;y:13px;width:(parent.width - 20px) * (root.value - root.minimum) / max(1,root.maximum - root.minimum);height:4px;border-radius:2px;background:Palette.accent-background;}
+    Rectangle {
+        x:(parent.width - 20px) * (root.value - root.minimum) / max(1,root.maximum - root.minimum);
+        y:5px;width:20px;height:20px;border-radius:10px;
+        background:touch.pressed ? Palette.alternate-background : Palette.control-background;
+        border-width:1px;border-color:Palette.border;
+        Rectangle {x:parent.width/2 - self.width/2;y:parent.height/2 - self.height/2;width:touch.has-hover || focus.has-focus ? 12px : 10px;height:self.width;border-radius:self.width/2;background:Palette.accent-background;animate width {duration:140ms;}}
+    }
+    forward-focus:focus;
+    focus:=FocusScope {width:0px;key-pressed(event)=>{
+        if event.text==Key.LeftArrow || event.text==Key.DownArrow {root.set-value(root.value - 1);return accept;}
+        if event.text==Key.RightArrow || event.text==Key.UpArrow {root.set-value(root.value + 1);return accept;}
+        if event.text==Key.Home {root.set-value(root.minimum);return accept;}
+        if event.text==Key.End {root.set-value(root.maximum);return accept;}
+        return reject;
+    }}
+    touch:=TouchArea {mouse-cursor:pointer;pointer-event(event)=>{if event.kind==PointerEventKind.down && event.button==PointerEventButton.left {focus.focus();root.from-pointer();}}moved=>{if self.pressed {root.from-pointer();}}}
+}
+
+// Selection-only field sharing the original numeric editor's flat frame.
+export component ChoiceBox inherits Rectangle {
+    in property <[string]> model;
+    in-out property <string> current-value;
+    in property <string> label;
+    in property <bool> enabled:true;
+    callback selected(string);
+    private property <int> highlighted:0;
+    private property <bool> expanded:false;
+    height:34px;min-width:130px;
+    border-radius:4px;border-width:1px;border-color:Palette.border;
+    background:touch.pressed ? Palette.alternate-background : Palette.control-background;
+    opacity:root.enabled ? 1 : 0.4;
+    animate background {duration:120ms;}
+    accessible-role:combobox;accessible-label:root.label;
+    accessible-value:root.current-value;accessible-enabled:root.enabled;
+    accessible-expandable:true;accessible-expanded:root.expanded;
+    accessible-action-expand=>{root.open();}
+    function open() {
+        if root.enabled && root.model.length > 0 {
+            root.highlighted=max(0,root.model.index-of(root.current-value));
+            root.expanded=true;popup.show();
+        }
+    }
+    function choose(index:int) {
+        if index >= 0 && index < root.model.length {
+            root.current-value=root.model[index];root.selected(root.current-value);
+        }
+    }
+    function close() {popup.close();root.expanded=false;focus.focus();}
+    Text {x:10px;width:parent.width - 40px;height:100%;text:root.current-value;color:Palette.foreground;font-size:14px;vertical-alignment:center;overflow:elide;}
+    Image {x:parent.width - 23px;y:(parent.height - 14px)/2;width:14px;height:14px;source:@image-url("../../../assets/original-icons/number-decrease.svg");colorize:Palette.foreground;}
+    Rectangle {x:1px;y:1px;width:parent.width - 2px;height:parent.height - 2px;border-radius:3px;background:Palette.foreground;opacity:touch.has-hover || focus.has-focus ? 0.035 : 0;animate opacity {duration:120ms;}}
+    touch:=TouchArea {
+        enabled:root.enabled;mouse-cursor:pointer;clicked=>{focus.focus();root.open();}
+        scroll-event(event)=>{
+            if focus.has-focus && event.delta-y != 0 {
+                root.choose(clamp(root.model.index-of(root.current-value) + (event.delta-y < 0 ? 1 : -1),0,root.model.length - 1));return accept;
+            }
+            return reject;
+        }
+    }
+    forward-focus:focus;
+    focus:=FocusScope {
+        width:0px;enabled:root.enabled;
+        changed has-focus=>{if self.has-focus {root.expanded=false;}}
+        key-pressed(event)=>{
+            if event.text==Key.Return || event.text==Key.Space {root.open();return accept;}
+            if event.text==Key.UpArrow || event.text==Key.DownArrow {
+                root.choose(clamp(root.model.index-of(root.current-value) + (event.text==Key.DownArrow ? 1 : -1),0,root.model.length - 1));return accept;
+            }
+            return reject;
+        }
+    }
+    popup:=PopupWindow {
+        x:0px;y:root.height + 4px;width:root.width;height:min(6,root.model.length) * 30px + 8px;
+        close-policy:close-on-click-outside;
+        forward-focus:popup-focus;
+        Rectangle {background:Palette.color-scheme==ColorScheme.dark ? #2b2b2b : #fafafa;border-radius:4px;border-width:1px;border-color:Palette.border;}
+        popup-focus:=FocusScope {
+            changed has-focus=>{root.expanded=self.has-focus;}
+            key-pressed(event)=>{
+                if event.text==Key.Escape {root.close();return accept;}
+                if event.text==Key.Return || event.text==Key.Space {root.choose(root.highlighted);root.close();return accept;}
+                if event.text==Key.UpArrow || event.text==Key.DownArrow {root.highlighted=clamp(root.highlighted + (event.text==Key.DownArrow ? 1 : -1),0,root.model.length - 1);return accept;}
+                if event.text==Key.Home {root.highlighted=0;return accept;}
+                if event.text==Key.End {root.highlighted=root.model.length - 1;return accept;}
+                if event.text==Key.Tab {root.close();return reject;}
+                return reject;
+            }
+            ScrollView {
+                x:4px;y:4px;width:parent.width - 8px;height:parent.height - 8px;
+                content-width:self.visible-width;
+                content-y:-max(0,root.highlighted - 5) * 30px;
+                VerticalBox {padding:0px;spacing:0px;
+                    for value[index] in root.model: Rectangle {
+                        height:30px;border-radius:3px;
+                        background:row-touch.has-hover || root.highlighted==index ? Palette.control-background : transparent;
+                        accessible-role:button;accessible-label:value;
+                        accessible-action-default=>{root.choose(index);root.close();}
+                        Text {x:8px;width:parent.width - 16px;height:100%;text:value;color:Palette.foreground;font-size:14px;vertical-alignment:center;overflow:elide;}
+                        row-touch:=TouchArea {mouse-cursor:pointer;clicked=>{root.choose(index);root.close();}}
+                    }
+                }
+            }
+        }
+    }
+}
+
+// The full-width ChoiceBox owns its full-width popup; the editable field covers
 // its label only, leaving the ordinary arrow and keyboard selection intact.
 export component EditableCombo inherits Rectangle {
     in-out property <string> value;
@@ -10,15 +134,15 @@ export component EditableCombo inherits Rectangle {
     callback edited(string);
     callback chosen(int,string);
     height:34px;
-    ComboBox {
+    ChoiceBox {
         x:0px;
         y:0px;
         width:root.width;
         height:root.height;
         model:root.choices;
-        current-index:-1;
+        current-value:root.value;
         enabled:root.choices-enabled;
-        selected(value)=>{root.chosen(self.current-index,value);}
+        selected(value)=>{root.chosen(root.choices.index-of(value),value);}
     }
     LineEdit {x:0px;y:0px;width:root.width - 30px;height:root.height;text <=> root.value;edited(value)=>{root.edited(value);}}
     Tooltip {text:@markdown("\{root.hint}");}
@@ -34,10 +158,9 @@ export component DecimalBox inherits Rectangle {
     callback accepted();
     width:130px;
     height:34px;
-    // Match the pinned Fluent ComboBox frame; retain numeric editing behavior.
-    border-radius:3px;
+    border-radius:4px;
     border-width:1px;
-    border-color:input.has-focus ? Palette.foreground : (Palette.color-scheme == ColorScheme.dark ? @linear-gradient(180deg, #ffffff17 0%, #00000012 8.33%) : @linear-gradient(180deg, #0000000f 90.58%, #00000029 100%));
+    border-color:Palette.border;
     background:Palette.control-background;
     field-touch:=TouchArea {
         scroll-event(event)=>{
@@ -71,13 +194,17 @@ export component DecimalBox inherits Rectangle {
             changed held=>{self.repeating=false;}
             width:28px;
             height:root.height;
-            background:touch.has-hover ? Palette.alternate-background : transparent;
-            animate background { duration:120ms; easing:ease-out; }
+            Rectangle {
+                x:2px;y:3px;width:parent.width - 4px;height:parent.height - 6px;
+                border-radius:4px;
+                background:touch.pressed ? Palette.alternate-background : (touch.has-hover ? Palette.control-background : transparent);
+                animate background {duration:140ms;easing:ease-out;}
+            }
             accessible-role:button;
             accessible-label:(delta > 0 ? "增加" : "减少") + root.label;
             accessible-action-default=>{root.stepped(delta);}
             Image {x:5px;y:(parent.height - 14px)/2;width:14px;height:14px;source:delta > 0 ? @image-url("../../../assets/original-icons/number-increase.svg") : @image-url("../../../assets/original-icons/number-decrease.svg");colorize:Palette.foreground;}
-            touch:=TouchArea {pointer-event(event)=>{if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {input.focus();root.stepped(delta);}}}
+            touch:=TouchArea {mouse-cursor:pointer;pointer-event(event)=>{if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {input.focus();root.stepped(delta);}}}
             Timer {running:touch.pressed && touch.has-hover;interval:parent.repeating ? 50ms : 500ms;triggered=>{parent.repeating=true;root.stepped(delta);}}
             Tooltip {text:@markdown("\{parent.accessible-label}");}
         }
@@ -124,11 +251,11 @@ export component IconButton inherits Rectangle {
     callback clicked;
     width: 38px;
     height: 27px;
-    border-radius: 6px;
+    border-radius: root.outlined ? 4px : 6px;
     border-width: root.outlined ? 1px : 0px;
     border-color: Palette.border;
     opacity: root.enabled ? 1 : 0.4;
-    background: touch.pressed ? Palette.alternate-background : (touch.has-hover || focus.has-focus || root.active ? Palette.control-background : transparent);
+    background: touch.pressed ? Palette.alternate-background : (touch.has-hover || focus.has-focus || root.active || root.outlined ? Palette.control-background : transparent);
     animate background, opacity { duration:140ms; easing:ease-out; }
     accessible-role: button;
     accessible-label: root.label;
@@ -157,7 +284,7 @@ export component NavigationButton inherits Rectangle {
     height:42px;
     border-radius:7px;
     background:touch.pressed ? Palette.alternate-background : (root.selected || touch.has-hover ? Palette.control-background : transparent);
-    border-width:focus.has-focus ? 1px : 0px;
+    border-width:0px;
     border-color:Palette.foreground;
     animate background { duration:140ms; easing:ease-out; }
     Rectangle {x:0px;y:12px;width:3px;height:18px;border-radius:2px;background:Palette.accent-background;opacity:root.selected ? 1 : 0;animate opacity {duration:150ms;}}
@@ -171,30 +298,58 @@ export component NavigationButton inherits Rectangle {
     focus:=FocusScope {width:0px;key-pressed(event)=>{if event.text==Key.Return || event.text==Key.Space {root.clicked();return accept;}return reject;}}
 }
 
-export component ActionButton inherits Button {
+export component ActionButton inherits Rectangle {
+    in property <string> text;
     in property <string> hint:root.text;
+    in property <bool> enabled:true;
+    callback clicked;
     height:34px;
+    min-width:label.preferred-width + 28px;
+    border-radius:4px;border-width:1px;border-color:Palette.border;
+    background:touch.pressed ? Palette.alternate-background : Palette.control-background;
+    opacity:root.enabled ? (touch.pressed ? 0.72 : (touch.has-hover ? 0.88 : 1)) : 0.4;
+    animate background, opacity {duration:120ms;easing:ease-out;}
+    label:=Text {text:root.text;color:Palette.foreground;font-size:14px;horizontal-alignment:center;vertical-alignment:center;}
+    accessible-role:button;accessible-label:root.text;accessible-enabled:root.enabled;
+    accessible-action-default=>{if root.enabled {root.clicked();}}
+    forward-focus:focus;
+    touch:=TouchArea {enabled:root.enabled;mouse-cursor:pointer;clicked=>{focus.focus();root.clicked();}}
+    focus:=FocusScope {width:0px;enabled:root.enabled;key-pressed(event)=>{if event.text==Key.Return || event.text==Key.Space {root.clicked();return accept;}return reject;}}
     Tooltip {text:@markdown("\{root.hint}");}
 }
-
 export component AnimatedSwitch inherits Rectangle {
     in-out property <bool> checked;
     in property <string> text;
     in property <string> hint:root.text + (root.checked ? "：已开启" : "：已关闭");
     callback toggled;
-    width:82px;
+    min-width:70px;
+    preferred-width:82px;
+    max-width:82px;
     horizontal-stretch:0;
     height:32px;
-    forward-focus:control;
-    control:=Switch {
-        width:100%;height:100%;
-        checked <=> root.checked;
-        text:root.checked ? "开" : "关";
-        accessible-label:root.text;
-        toggled=>{root.toggled();}
-    }
+    accessible-role:switch;
+    accessible-label:root.text;
+    accessible-checkable:true;
+    accessible-checked <=> root.checked;
+    accessible-action-default=>{root.checked=!root.checked;root.toggled();}
+    forward-focus:focus;
     Tooltip {text:@markdown("\{root.hint}");}
+    Rectangle {
+        x:0px;y:5px;width:42px;height:22px;border-radius:11px;
+        background:root.checked ? Palette.accent-background : Palette.control-background;
+        border-width:1px;border-color:Palette.border;
+        animate background {duration:160ms;easing:ease-out;}
+        Rectangle {
+            x:root.checked ? 23px : 4px;y:4px;width:14px;height:14px;border-radius:7px;
+            background:root.checked ? Palette.accent-foreground : Palette.foreground;
+            animate x, background {duration:180ms;easing:ease-out;}
+        }
+    }
+    Text {x:52px;height:100%;text:root.checked ? "开" : "关";color:Palette.foreground;vertical-alignment:center;}
+    touch:=TouchArea {mouse-cursor:pointer;clicked=>{focus.focus();root.checked=!root.checked;root.toggled();}}
+    focus:=FocusScope {width:0px;key-pressed(event)=>{if event.text==Key.Return || event.text==Key.Space {root.checked=!root.checked;root.toggled();return accept;}return reject;}}
 }
+
 // Each newly selected page animates once. No timer remains active afterwards.
 export component PageEntrance inherits Rectangle {
     private property <bool> entered:false;
@@ -219,10 +374,10 @@ export component HistorySearch inherits Rectangle {
     in-out property <string> value;
     callback submitted();
     callback cleared();
-    width:200px;height:35px;
+    width:200px;height:34px;
     background:Palette.control-background;
     border-radius:4px;border-width:1px;
-    border-color:input.has-focus ? Palette.accent-background : Palette.border;
+    border-color:Palette.border;
     forward-focus:input;
     input := TextInput {
         x:12px;y:0px;height:100%;width:parent.width - (root.value == "" ? 42px : 72px);
@@ -234,7 +389,7 @@ export component HistorySearch inherits Rectangle {
         accepted=>{root.submitted();}
     }
     if root.value == "": Text {x:12px;height:100%;text:"搜索";color:Palette.foreground;opacity:0.65;vertical-alignment:center;}
-    if root.value != "": IconButton {x:root.width - 60px;y:2.5px;width:30px;height:34px;icon:@image-url("../../../assets/icons/close.svg");label:"清除搜索，返回原页";clicked=>{root.cleared();}}
-    IconButton {x:root.width - 30px;y:2.5px;width:30px;height:34px;icon:@image-url("../../../assets/original-icons/search.svg");label:"搜索";clicked=>{root.submitted();}}
+    if root.value != "": IconButton {x:root.width - 60px;y:2px;width:30px;height:30px;icon:@image-url("../../../assets/icons/close.svg");label:"清除搜索，返回原页";clicked=>{root.cleared();}}
+    IconButton {x:root.width - 30px;y:2px;width:30px;height:30px;icon:@image-url("../../../assets/original-icons/search.svg");label:"搜索";clicked=>{root.submitted();}}
     Tooltip {text:@markdown("提交搜索；支持 % 和 _ 通配符");}
 }

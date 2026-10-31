@@ -20,6 +20,7 @@ serde_json.workspace = true
 slint-build.workspace = true
 
 [dev-dependencies]
+slint = { workspace = true, features = ["renderer-software"] }
 windows-platform = { workspace = true, features = ["test-support"] }
 rusqlite = { version = "=0.40.1", features = ["bundled", "backup"] }
 providers = { workspace = true, features = ["test-support"] }
