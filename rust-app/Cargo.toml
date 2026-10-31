@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/protocol", "crates/tray-host", "crates/windows-platform", "crates/worker", "crates/providers", "crates/app", "crates/core", "crates/storage"]
+members = ["crates/protocol", "crates/tray-host", "crates/windows-platform", "crates/worker", "crates/providers", "crates/app", "crates/core", "crates/storage", "tools/ui-check"]
 default-members = ["crates/app"]
 resolver = "3"
 exclude = ["vendor/i-slint-renderer-skia-1.18.1"]

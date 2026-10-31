@@ -25,6 +25,9 @@ jobs:
       - name: Check formatting
         working-directory: rust-app
         run: cargo fmt --all -- --check
+      - name: Compile UI before native dependencies
+        working-directory: rust-app
+        run: cargo build --release --package ui-check --locked
       - name: Build and test Windows x64 release
         env:
           LLVM_HOME: C:\Program Files\LLVM

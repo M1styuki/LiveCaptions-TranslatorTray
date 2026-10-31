@@ -5034,6 +5034,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ui-check"
+version = "0.1.0"
+dependencies = [
+ "slint-build",
+]
+
+[[package]]
 name = "unicase"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
