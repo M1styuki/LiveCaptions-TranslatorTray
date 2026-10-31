@@ -1,0 +1,27 @@
+name: Refresh Rust lockfile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lockfile:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal --target x86_64-pc-windows-msvc
+      - name: Resolve changed features without upgrading locked packages
+        working-directory: rust-app
+        run: |
+          cargo metadata --format-version 1 | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency resolution failed' }
+          git diff -- Cargo.lock
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Rust-lockfile
+          path: rust-app/Cargo.lock
+          if-no-files-found: error
