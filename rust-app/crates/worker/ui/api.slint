@@ -14,9 +14,11 @@ component PromptEditor inherits Rectangle {
         text:root.text;wrap:word-wrap;
     }
     TextEdit {width:100%;height:100%;wrap:word-wrap;text <=> root.text;edited(value)=>{root.edited(value);}}
+    Tooltip {text:@markdown("翻译提示词；保留目标语言占位符 {0}");}
 }
 component Field inherits Rectangle {
     in property <string> caption;
+    in property <string> hint:root.caption;
     in-out property <string> value;
     in property <bool> secret;
     in property <length> field-width:10000px;
@@ -27,6 +29,7 @@ component Field inherits Rectangle {
     horizontal-stretch:1;
     height:54px;
     VerticalBox {padding:0px;spacing:5px;Label {text:root.caption;}LineEdit {min-width:0px;height:30px;text <=> root.value;input-type:root.secret ? InputType.password : InputType.text;edited(value)=>{root.edited(value);}}}
+    Tooltip {text:@markdown("\{root.hint}");}
 }
 
 export struct ApiEditor { service:string, config-index:int, config-count:int, model-name:string, api-url:string, api-key:string, app-id:string, app-key:string, app-secret:string, source-language:string, keep-alive:string, temperature-text:string }
@@ -50,20 +53,20 @@ component ApiEditorSection inherits Surface {
             Label {text:(root.entry.config-index + 1) + " / " + root.entry.config-count;vertical-alignment:center;}
             IconButton {width:32px;height:30px;icon:@image-url("../../../assets/original-icons/next.svg");label:"下一个配置";enabled:root.entry.config-index + 1 < root.entry.config-count;clicked=>{root.config-action(1);}}
             Rectangle {horizontal-stretch:1;}
-            ActionButton {text:"新建";clicked=>{root.config-action(2);}}
-            ActionButton {text:"删除";clicked=>{root.config-action(3);}}
+            ActionButton {text:"新建";hint:"新增此服务的配置";clicked=>{root.config-action(2);}}
+            ActionButton {text:"删除";hint:"删除当前配置；每项服务至少保留一项";clicked=>{root.config-action(3);}}
         }
         Rectangle {height:1px;background:Palette.border;}
-        if root.llm && root.entry.service != "LMStudio": Field {caption:"模型名称";value <=> root.entry.model-name;edited(value)=>{root.field-edited("ModelName",value);}}
+        if root.llm && root.entry.service != "LMStudio": Field {caption:"模型名称";hint:"服务提供的模型标识，如 deepseek-chat";value <=> root.entry.model-name;edited(value)=>{root.field-edited("ModelName",value);}}
         if root.entry.service == "LMStudio": VerticalBox {
             padding:0px;spacing:7px;
             Label {text:"模型名称";}
             HorizontalBox {padding:0px;spacing:12px;
-                EditableCombo {horizontal-stretch:1;value <=> root.entry.model-name;choices:root.model-labels;choices-enabled:!root.models-loading && root.model-labels.length > 0;edited(value)=>{root.field-edited("ModelName",value);}chosen(index,value)=>{root.model-selected(index);}}
-                ActionButton {text:root.models-loading ? "加载中…" : "加载模型";enabled:!root.models-loading;clicked=>{root.models-requested();}}
+                EditableCombo {horizontal-stretch:1;hint:"选择或输入 LMStudio 模型标识";value <=> root.entry.model-name;choices:root.model-labels;choices-enabled:!root.models-loading && root.model-labels.length > 0;edited(value)=>{root.field-edited("ModelName",value);}chosen(index,value)=>{root.model-selected(index);}}
+                ActionButton {text:root.models-loading ? "加载中…" : "加载模型";hint:"从 LMStudio 获取可用模型";enabled:!root.models-loading;clicked=>{root.models-requested();}}
             }
         }
-        if root.entry.service != "OpenRouter": Field {caption:root.entry.service == "Ollama" || root.entry.service == "LMStudio" ? "API 基础地址" : "API 地址";value <=> root.entry.api-url;edited(value)=>{root.field-edited("ApiUrl",value);}}
+        if root.entry.service != "OpenRouter": Field {caption:root.entry.service == "Ollama" || root.entry.service == "LMStudio" ? "API 基础地址" : "API 地址";hint:root.entry.service == "Ollama" || root.entry.service == "LMStudio" ? "服务基础地址；无需添加接口路径" : "完整 API 请求地址";value <=> root.entry.api-url;edited(value)=>{root.field-edited("ApiUrl",value);}}
         if root.entry.service == "OpenAI": Label {text:"使用完整聊天接口地址，例如 https://api.deepseek.com/chat/completions";font-size:12px;opacity:0.65;wrap:word-wrap;}
         if root.entry.service == "Youdao": Field {caption:"应用 Key";value <=> root.entry.app-key;edited(value)=>{root.field-edited("AppKey",value);}}
         if root.entry.service == "Baidu": Field {caption:"应用 ID";value <=> root.entry.app-id;edited(value)=>{root.field-edited("AppId",value);}}
@@ -72,9 +75,9 @@ component ApiEditorSection inherits Surface {
         if root.llm: VerticalBox {
             padding:0px;spacing:7px;
             Label {text:"温度";}
-            DecimalBox {label:"温度";value <=> root.entry.temperature-text;edited(value)=>{root.field-edited("Temperature",value);}stepped(delta)=>{root.temperature-stepped(delta);}}
+            DecimalBox {label:"温度";hint:"控制译文随机性；数值越低越稳定";value <=> root.entry.temperature-text;edited(value)=>{root.field-edited("Temperature",value);}stepped(delta)=>{root.temperature-stepped(delta);}}
         }
-        if root.entry.service == "MTranServer": Field {field-width:160px;caption:"源语言";value <=> root.entry.source-language;edited(value)=>{root.field-edited("SourceLanguage",value);}}
+        if root.entry.service == "MTranServer": Field {field-width:160px;caption:"源语言";hint:"待翻译文本的语言代码";value <=> root.entry.source-language;edited(value)=>{root.field-edited("SourceLanguage",value);}}
     }
 }
 export component ApiWindow inherits Window {

@@ -6,6 +6,8 @@
 - Rust 1.99.1，由 rust-app/rust-toolchain.toml 固定。
 - Visual Studio 2022 Build Tools 的 MSVC x64 C++ 工具及 Windows SDK。
 
+设置与 API 窗口使用 Skia OpenGL 渲染，以改善圆角、细边框及缩放后的边缘；运行时需要正常安装的显卡驱动。托盘与字幕浮窗仍使用原生 Windows 绘制。
+
 正常 Cargo 构建会按 Cargo.lock 获取依赖。不需要本项目作者的开发目录、验收记录或 .NET 环境。
 
 ## 构建
@@ -13,7 +15,7 @@
 在仓库根目录的 PowerShell 执行：
 
 ```powershell
-.ust-app	oolsuild.ps1 -Mode release
+.\rust-app\tools\build.ps1 -Mode release
 ```
 
 脚本使用现有 Rust，并在需要时通过 Visual Studio 自带的开发环境入口启用 MSVC / SDK；不安装软件，也不更改用户或系统环境变量。

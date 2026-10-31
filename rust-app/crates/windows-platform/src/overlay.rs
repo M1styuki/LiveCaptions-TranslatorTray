@@ -19,7 +19,7 @@ use windows::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM},
         Graphics::{
             Direct2D::Common::D2D_RECT_F,
-            Gdi::{AC_SRC_ALPHA, AC_SRC_OVER, BLENDFUNCTION, ValidateRect},
+            Gdi::{AC_SRC_ALPHA, AC_SRC_OVER, BLENDFUNCTION, ScreenToClient, ValidateRect},
         },
         System::LibraryLoader::GetModuleHandleW,
         UI::{
@@ -68,6 +68,7 @@ enum TestOperation {
     WorkAreaHeight,
     TooltipState,
     TooltipElapsed,
+    ToolbarSignature(usize),
     Snapshot(std::path::PathBuf),
 }
 #[cfg(test)]
@@ -115,6 +116,49 @@ const TOOLTIPS: [&str; 12] = [
     "切换原字幕与译文顺序",
     "鼠标穿透",
 ];
+
+fn toolbar_hint(index: usize, settings: &Settings, mode: u8, source_first: bool) -> String {
+    match index {
+        0 | 1 => format!("{}（当前 {}）", TOOLTIPS[index], settings.font_size),
+        2 | 3 => format!("{}（当前 {:.1}）", TOOLTIPS[index], settings.stroke),
+        4 => {
+            let states = ["关闭", "译文", "原文", "双语"];
+            format!(
+                "粗体：{}（切换为{}）",
+                states[settings.bold as usize],
+                states[(settings.bold as usize + 1) % 4]
+            )
+        }
+        6 | 7 => format!(
+            "{}（当前 {}%）",
+            TOOLTIPS[index],
+            u32::from(settings.opacity) * 100 / 255
+        ),
+        9 => {
+            let states = ["双语", "仅译文", "仅原文"];
+            format!(
+                "显示：{}（切换为{}）",
+                states[mode as usize],
+                states[(mode as usize + 1) % 3]
+            )
+        }
+        10 => format!(
+            "顺序：{}在上（切换顺序）",
+            if source_first { "原文" } else { "译文" }
+        ),
+        11 => "启用鼠标穿透；重新开启字幕后恢复操作".into(),
+        _ => TOOLTIPS[index].into(),
+    }
+}
+
+fn toolbar_active(index: usize, bold: u8, mode: u8, source_first: bool) -> bool {
+    match index {
+        4 => bold != 0,
+        9 => mode != 0,
+        10 => source_first,
+        _ => false,
+    }
+}
 
 #[derive(Clone, Default)]
 pub struct Content {
@@ -561,7 +605,9 @@ impl State {
                 }
                 for index in 0..LABELS.len() {
                     let left = toolbar_button_left(logical_width, index);
-                    if self.button == Some(index) {
+                    let selected =
+                        toolbar_active(index, self.settings.bold, self.mode, self.source_first);
+                    if self.button == Some(index) || selected {
                         canvas.rounded_rectangle(
                             D2D_RECT_F {
                                 left,
@@ -570,14 +616,69 @@ impl State {
                                 bottom: logical_height - 8.0,
                             },
                             6.0,
-                            0xffffff,
+                            if selected { 0x83d7ff } else { 0xffffff },
                             (self.toolbar_opacity * 42.0).round() as u8,
                         )?;
                     }
-                    canvas.icon(index, left + 8.0, logical_height - 30.0, 16.0, opacity)?;
+                    let icon_color = if selected { 0x83d7ff } else { 0xffffff };
+                    let top = logical_height - 30.0;
+                    if index == 9 {
+                        // Two caption rows: preserve source/translation order, and
+                        // dim the row excluded by the current display mode.
+                        for row in 0..2 {
+                            let source = (row == 0) == self.source_first;
+                            let shown = if source { self.mode != 1 } else { self.mode != 2 };
+                            canvas.rounded_rectangle(
+                                D2D_RECT_F {
+                                    left: left + 8.0,
+                                    top: top + row as f32 * 8.0 + 1.0,
+                                    right: left + 24.0,
+                                    bottom: top + row as f32 * 8.0 + 6.0,
+                                },
+                                1.5,
+                                icon_color,
+                                if shown { opacity } else { opacity / 5 },
+                            )?;
+                        }
+                    } else {
+                        canvas.icon(index, left + 8.0, top, 16.0, opacity, icon_color)?;
+                    }
+                    if index == 4 {
+                        // The two marks distinguish all four bold states.
+                        for row in 0..2 {
+                            let source = (row == 0) == self.source_first;
+                            let enabled = self.settings.bold & (if source { 2 } else { 1 }) != 0;
+                            canvas.rectangle(
+                                D2D_RECT_F {
+                                    left: left + 25.0,
+                                    top: top + row as f32 * 8.0 + 3.0,
+                                    right: left + 28.0,
+                                    bottom: top + row as f32 * 8.0 + 6.0,
+                                },
+                                0x83d7ff,
+                                if enabled { opacity } else { opacity / 5 },
+                            )?;
+                        }
+                    }
+                    if index == 5 || index == 8 {
+                        canvas.rectangle(
+                            D2D_RECT_F {
+                                left: left + 10.0,
+                                top: top + 18.0,
+                                right: left + 22.0,
+                                bottom: top + 20.0,
+                            },
+                            palette(if index == 5 {
+                                self.settings.font_color
+                            } else {
+                                self.settings.background
+                            }),
+                            opacity,
+                        )?;
+                    }
                 }
                 if let Some(index) = self.tooltip {
-                    let text = TOOLTIPS[index];
+                    let text = toolbar_hint(index, &self.settings, self.mode, self.source_first);
                     let width =
                         (text.chars().count() as f32 * 12.0 + 16.0).min(logical_width - 16.0);
                     let left = (toolbar_button_left(logical_width, index) + 16.0 - width / 2.0)
@@ -594,7 +695,7 @@ impl State {
                     )?;
                     canvas.text(
                         2,
-                        text,
+                        &text,
                         left + 8.0,
                         logical_height - 65.0,
                         width - 16.0,
@@ -874,6 +975,7 @@ fn run(
         let class = WNDCLASSW {
             lpfnWndProc: Some(window_proc),
             hInstance: instance,
+            hCursor: unsafe { LoadCursorW(None, IDC_ARROW)? },
             lpszClassName: w!("LiveCaptionsTray.Overlay"),
             ..Default::default()
         };
@@ -1025,6 +1127,15 @@ unsafe extern "system" fn window_proc(
                 return LRESULT(0);
             }
             WM_NCHITTEST => return hit_test(window, lparam, data.signals.scale.get()),
+            WM_SETCURSOR
+                if data.signals.moving.get()
+                    && matches!(lparam.0 as u16 as u32, HTCLIENT | HTCAPTION) =>
+            {
+                if let Ok(cursor) = LoadCursorW(None, IDC_SIZEALL) {
+                    SetCursor(Some(cursor));
+                }
+                return LRESULT(1);
+            }
             #[cfg(test)]
             TEST_FENCE => {
                 let sender = Box::from_raw(lparam.0 as *mut mpsc::SyncSender<()>);
@@ -1167,6 +1278,27 @@ unsafe extern "system" fn window_proc(
                             }
                             0
                         }
+                        TestOperation::ToolbarSignature(index) => {
+                            use std::hash::{Hash, Hasher};
+                            state.hover = true;
+                            state.toolbar_opacity = 1.0;
+                            state.paint().unwrap();
+                            let scale = state.signals.scale.get();
+                            let canvas = state.canvas.as_ref().unwrap();
+                            let left = (toolbar_button_left(canvas.width as f32 / scale, index)
+                                * scale)
+                                .round() as usize;
+                            let top = canvas.height as usize - (32.0 * scale).round() as usize;
+                            let right = left + (32.0 * scale).round() as usize;
+                            let bottom = canvas.height as usize - (8.0 * scale).round() as usize;
+                            let mut hash = std::hash::DefaultHasher::new();
+                            for row in top..bottom {
+                                let offset = row * canvas.width as usize;
+                                canvas.pixels()[(offset + left) * 4..(offset + right) * 4]
+                                    .hash(&mut hash);
+                            }
+                            hash.finish() as isize
+                        }
                         TestOperation::Snapshot(path) => {
                             state.paint().unwrap();
                             let canvas = state.canvas.as_ref().unwrap();
@@ -1209,6 +1341,17 @@ unsafe extern "system" fn window_proc(
                     }
                 }
                 WM_ERASEBKGND => return LRESULT(1),
+                WM_SETCURSOR if lparam.0 as u16 as u32 == HTCLIENT => {
+                    let mut position = POINT::default();
+                    let on_button = GetCursorPos(&mut position).is_ok()
+                        && ScreenToClient(window, &mut position).as_bool()
+                        && state.pointer_button(position.x, position.y).is_some();
+                    let resource = if on_button { IDC_HAND } else { IDC_ARROW };
+                    if let Ok(cursor) = LoadCursorW(None, resource) {
+                        SetCursor(Some(cursor));
+                    }
+                    return LRESULT(1);
+                }
                 WM_MOUSEMOVE => {
                     let was = state.hover;
                     state.hover = true;
@@ -1254,12 +1397,18 @@ unsafe extern "system" fn window_proc(
                         // move loop re-enters paint and resize callbacks.
                         drop(state);
                         let _ = ReleaseCapture();
+                        if let Ok(cursor) = LoadCursorW(None, IDC_SIZEALL) {
+                            SetCursor(Some(cursor));
+                        }
                         SendMessageW(
                             window,
                             WM_NCLBUTTONDOWN,
                             Some(WPARAM(HTCAPTION as usize)),
                             Some(lparam),
                         );
+                        if let Ok(cursor) = LoadCursorW(None, IDC_ARROW) {
+                            SetCursor(Some(cursor));
+                        }
                         return LRESULT(0);
                     }
                 }
@@ -1303,6 +1452,45 @@ unsafe extern "system" fn window_proc(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn toolbar_pixels_change_for_each_bold_and_display_state() {
+        let _dpi = test_dpi();
+        let errors: Arc<Mutex<Vec<String>>> = Arc::default();
+        let failed = errors.clone();
+        let overlay = Overlay::open_with_visibility(
+            Settings::default(),
+            short_content(),
+            hidden_geometry(true),
+            Arc::new(move |event| {
+                if let Event::Failed(error) = event {
+                    failed.lock().unwrap().push(error);
+                }
+            }),
+            false,
+        )
+        .unwrap();
+        let window = HWND(overlay.shared.window.lock().unwrap().unwrap() as *mut _);
+        flush_paint(window);
+        assert_eq!(
+            unsafe { GetClassLongPtrW(window, GCLP_HCURSOR) },
+            unsafe { LoadCursorW(None, IDC_ARROW).unwrap() }.0 as usize,
+            "client area must reset the cursor after leaving a resize edge"
+        );
+        for (index, count) in [(4, 4), (9, 3)] {
+            let first = command(window, TestOperation::ToolbarSignature(index));
+            let mut signatures = std::collections::HashSet::from([first]);
+            for _ in 1..count {
+                unsafe { SendMessageW(window, TEST_ACTION, Some(WPARAM(index)), None) };
+                flush_paint(window);
+                assert!(signatures.insert(command(window, TestOperation::ToolbarSignature(index))));
+            }
+            unsafe { SendMessageW(window, TEST_ACTION, Some(WPARAM(index)), None) };
+            flush_paint(window);
+            assert_eq!(command(window, TestOperation::ToolbarSignature(index)), first);
+        }
+        drop(overlay);
+        assert!(errors.lock().unwrap().is_empty());
+    }
     #[test]
     fn previous_translation_range_uses_utf16_and_resets_for_new_content() {
         let mut content = Content::default();

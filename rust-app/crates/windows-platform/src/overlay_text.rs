@@ -283,6 +283,7 @@ impl Canvas {
         y: f32,
         size: f32,
         opacity: u8,
+        rgb: u32,
     ) -> Result<()> {
         let shape = crate::toolbar_icons::TOOLBAR[index];
         if self.icons[index].is_none() {
@@ -294,6 +295,7 @@ impl Canvas {
             y,
             size / shape.size,
             opacity,
+            rgb,
         )
     }
     fn icon_paths(&self, icon: &crate::toolbar_icons::Icon) -> Result<Vec<ID2D1PathGeometry>> {
@@ -336,13 +338,14 @@ impl Canvas {
         y: f32,
         scale: f32,
         opacity: u8,
+        rgb: u32,
     ) -> Result<()> {
         // The checked-in SVGs are compiled to native geometry during development.
         // There is no SVG parser, icon font or UI runtime on the overlay thread.
         unsafe {
             let brush = self
                 .target()
-                .CreateSolidColorBrush(&color(0xffffff, opacity), None)?;
+                .CreateSolidColorBrush(&color(rgb, opacity), None)?;
             let transform = Matrix3x2 {
                 M11: scale,
                 M22: scale,
@@ -599,7 +602,7 @@ mod tests {
                 canvas.begin(0, 0);
                 let paths = canvas.icon_paths(icon).unwrap();
                 canvas
-                    .fill_icon(&paths, 0.0, 0.0, size as f32 / icon.size, 255)
+                    .fill_icon(&paths, 0.0, 0.0, size as f32 / icon.size, 255, 0xffffff)
                     .unwrap();
                 canvas.finish().unwrap();
                 let mask_stride = ((size + 31) / 32 * 4) as usize;

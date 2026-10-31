@@ -8,6 +8,11 @@ build dependencies. They do not assert that all listed packages are linked into
 the executable. THIRD-PARTY-NOTICES.txt combines the collected texts; texts/
 preserves their original bytes under SHA256 filenames.
 
+SKIA-NOTICES.txt supplements this Rust inventory with native Skia and its
+Windows build dependencies. Sources are pinned to rust-skia 0.153.3 and Skia
+m153-0.101.2, with exact source URLs in the file. It is embedded as EXE resource
+105 alongside the existing Rust notices (104).
+
 For packages without license files in the Cargo source archive,
 upstream-sources.json preserves the exact upstream root license/author files
 at the crate's recorded VCS revision. The base64 payloads preserve bytes, and

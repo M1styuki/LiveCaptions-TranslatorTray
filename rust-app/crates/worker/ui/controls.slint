@@ -4,6 +4,7 @@ import { ComboBox, LineEdit, HorizontalBox, Palette } from "std-widgets.slint";
 // its label only, leaving the ordinary arrow and keyboard selection intact.
 export component EditableCombo inherits Rectangle {
     in-out property <string> value;
+    in property <string> hint:"选择或输入值";
     in property <[string]> choices;
     in property <bool> choices-enabled: true;
     callback edited(string);
@@ -20,11 +21,13 @@ export component EditableCombo inherits Rectangle {
         selected(value)=>{root.chosen(self.current-index,value);}
     }
     LineEdit {x:0px;y:0px;width:root.width - 30px;height:root.height;text <=> root.value;edited(value)=>{root.edited(value);}}
+    Tooltip {text:@markdown("\{root.hint}");}
 }
 
 export component DecimalBox inherits Rectangle {
     in-out property <string> value;
     in property <string> label:"数值";
+    in property <string> hint:root.label;
     out property <bool> has-focus:input.has-focus;
     callback edited(string);
     callback stepped(int);
@@ -59,6 +62,7 @@ export component DecimalBox inherits Rectangle {
                 return reject;
             }
           }
+          Tooltip {text:@markdown("\{root.hint}");}
         }
         for delta in [1,-1]: Rectangle {
             private property <bool> held:touch.pressed;
@@ -69,11 +73,12 @@ export component DecimalBox inherits Rectangle {
             background:touch.has-hover ? Palette.alternate-background : transparent;
             animate background { duration:120ms; easing:ease-out; }
             accessible-role:button;
-            accessible-label:delta > 0 ? "增加" : "减少";
+            accessible-label:(delta > 0 ? "增加" : "减少") + root.label;
             accessible-action-default=>{root.stepped(delta);}
             Image {x:5px;y:8px;width:14px;height:14px;source:delta > 0 ? @image-url("../../../assets/original-icons/number-increase.svg") : @image-url("../../../assets/original-icons/number-decrease.svg");colorize:Palette.foreground;}
             touch:=TouchArea {pointer-event(event)=>{if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {input.focus();root.stepped(delta);}}}
             Timer {running:touch.pressed && touch.has-hover;interval:parent.repeating ? 50ms : 500ms;triggered=>{parent.repeating=true;root.stepped(delta);}}
+            Tooltip {text:@markdown("\{parent.accessible-label}");}
         }
     }
     forward-focus:input;
@@ -132,7 +137,7 @@ export component IconButton inherits Rectangle {
     Tooltip {text:@markdown("\{root.label}");}
     if root.indicator: Rectangle {x:0px;width:2px;height:18px;y:(parent.height - self.height)/2;background:Palette.accent-background;}
     Image {source:root.icon;colorize:root.active ? Palette.accent-background : Palette.foreground;width:root.icon-size;height:root.icon-size;x:(parent.width - self.width)/2;y:(parent.height - self.height)/2;image-fit:contain;}
-    touch := TouchArea {enabled:root.enabled;clicked=>{focus.focus();root.clicked();}}
+    touch := TouchArea {enabled:root.enabled;mouse-cursor:pointer;clicked=>{focus.focus();root.clicked();}}
     focus := FocusScope {width:0px;enabled:root.enabled;key-pressed(event)=>{if event.text == Key.Space || event.text == Key.Return {root.clicked();return accept;}return reject;}}
 }
 
@@ -167,6 +172,7 @@ export component NavigationButton inherits Rectangle {
 
 export component ActionButton inherits Rectangle {
     in property <string> text;
+    in property <string> hint:root.text;
     in property <bool> enabled:true;
     in property <bool> primary:false;
     callback clicked;
@@ -185,6 +191,7 @@ export component ActionButton inherits Rectangle {
     accessible-enabled:root.enabled;
     accessible-action-default=>{if root.enabled {root.clicked();}}
     forward-focus:focus;
+    Tooltip {text:@markdown("\{root.hint}");}
     touch:=TouchArea {enabled:root.enabled;mouse-cursor:pointer;clicked=>{focus.focus();root.clicked();}}
     focus:=FocusScope {width:0px;enabled:root.enabled;key-pressed(event)=>{if event.text==Key.Return || event.text==Key.Space {root.clicked();return accept;}return reject;}}
 }
@@ -192,6 +199,7 @@ export component ActionButton inherits Rectangle {
 export component AnimatedSwitch inherits Rectangle {
     in-out property <bool> checked;
     in property <string> text;
+    in property <string> hint:root.text + (root.checked ? "：已开启" : "：已关闭");
     callback toggled;
     min-width:70px;
     preferred-width:82px;
@@ -204,6 +212,7 @@ export component AnimatedSwitch inherits Rectangle {
     accessible-checked <=> root.checked;
     accessible-action-default=>{root.checked=!root.checked;root.toggled();}
     forward-focus:focus;
+    Tooltip {text:@markdown("\{root.hint}");}
     Rectangle {
         x:0px;y:5px;width:42px;height:22px;border-radius:11px;
         background:root.checked ? Palette.accent-background : Palette.control-background;

@@ -11,6 +11,7 @@ fn main() {
         "../../../NOTICE",
         "../../../licenses/LiveCaptions-TranslatorTray-Apache-2.0.txt",
         "../../../licenses/third-party/THIRD-PARTY-NOTICES.txt",
+        "../../../licenses/third-party/SKIA-NOTICES.txt",
     ] {
         println!("cargo:rerun-if-changed={path}");
     }
