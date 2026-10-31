@@ -39,4 +39,4 @@ cargo test --workspace --locked -- --test-threads=1
 
 测试会创建项目内的 scratch/ 和 evidence/ 夹具目录，不处理用户实际配置。需要真实外部服务、系统字幕或可见原生对话框的诊断标为 ignored，不随普通测试运行。不要将普通测试通过视为这些诊断通过。
 
-GitHub Actions 在 Windows runner 上检查格式、构建发行版并提供 EXE 构建产物。网络服务的真实翻译质量和可见界面仍需要单独验证。
+GitHub Actions 在 Windows runner 上检查格式、构建发行版并运行全工作区发行模式测试；全部通过后提供 EXE 构建产物。本机无需安装编译环境。测试包括 CC/托盘启停状态和隔离注册表中的自启动读写，不会注册真实登录任务。网络服务的真实翻译质量、可见界面和实际登录自启动仍需要单独验证。

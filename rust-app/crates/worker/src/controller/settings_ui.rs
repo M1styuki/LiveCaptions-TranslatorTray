@@ -48,7 +48,9 @@ impl Controller {
                     ui.set_autostart_enabled(enabled);
                     ui.set_autostart_message("".into());
                 }
-                Err(error) => ui.set_autostart_message(format!("无法读取自启动状态：{error}").into()),
+                Err(error) => {
+                    ui.set_autostart_message(format!("无法读取自启动状态：{error}").into())
+                }
             }
         }
     }
