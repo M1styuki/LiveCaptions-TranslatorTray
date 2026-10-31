@@ -49,18 +49,27 @@ fn run_at_scale(windows: &Rc<std::cell::RefCell<Vec<Rc<MinimalSoftwareWindow>>>>
     let key = |text: slint::SharedString| {
         ui.window()
             .dispatch_event(WindowEvent::KeyPressed { text: text.clone() });
-        ui.window().dispatch_event(WindowEvent::KeyReleased { text });
+        ui.window()
+            .dispatch_event(WindowEvent::KeyReleased { text });
     };
     click(100.0, 36.0);
     key(Key::DownArrow.into());
     key(Key::Return.into());
     assert_eq!(ui.get_selected(), "Second");
     key("x".into());
-    assert_eq!(ui.get_selected(), "Second", "selector must not accept typing");
+    assert_eq!(
+        ui.get_selected(),
+        "Second",
+        "selector must not accept typing"
+    );
     click(100.0, 36.0);
     key(Key::DownArrow.into());
     key(Key::Escape.into());
-    assert_eq!(ui.get_selected(), "Second", "escape cancels pending selection");
+    assert_eq!(
+        ui.get_selected(),
+        "Second",
+        "escape cancels pending selection"
+    );
     click(210.0, 235.0);
     assert_eq!(ui.get_interval(), 10.0);
     key(Key::LeftArrow.into());
