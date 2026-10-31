@@ -1,6 +1,7 @@
 import { ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
 export { ApiWindow, ApiEditor } from "api.slint";
 export { Palette } from "std-widgets.slint";
+export { ModelLookup } from "controls.slint";
 import { ChoiceBox, ActionButton, IconButton, HistorySearch, NavigationButton, PageEntrance } from "controls.slint";
 import { SettingsPage } from "settings.slint";
 
@@ -257,7 +258,7 @@ export component MainWindow inherits Window {
                         IconButton {outlined:true;width:38px;height:34px;icon:@image-url("../../../assets/original-icons/previous.svg");label:"上一页";enabled:root.history-page>1;clicked=>{root.history-requested(root.history-page - 1);}}
                         Text {text:root.history-page + "/" + root.history-pages;min-width:34px;height:34px;font-size:14px;color:Palette.foreground;vertical-alignment:center;horizontal-alignment:center;}
                         IconButton {outlined:true;width:38px;height:34px;icon:@image-url("../../../assets/original-icons/next.svg");label:"下一页";enabled:root.history-page<root.history-pages;clicked=>{root.history-requested(root.history-page + 1);}}
-                        ChoiceBox {width:86px;min-width:86px;height:34px;label:"每页条数";model:["20/页","30/页","50/页","100/页"];current-value:root.history-size + "/页";selected(value)=>{root.history-action(3,[20,30,50,100][self.model.index-of(value)]);}}
+                        ChoiceBox {width:86px;min-width:86px;height:34px;label:"每页条数";model:["20/页","30/页","50/页","100/页"];current-value:root.history-size + "/页";selected(value)=>{root.history-action(3,[20,30,50,100][ModelLookup.index-of(self.model,value)]);}}
                         HistorySearch {width:max(150px,min(220px,root.width - 650px));value <=> root.history-query;submitted=>{root.history-action(0,0);}cleared=>{root.history-action(1,0);}}
                         Rectangle {horizontal-stretch:1;}
                         IconButton {outlined:true;width:38px;height:34px;icon:@image-url("../../../assets/original-icons/download.svg");label:root.export-busy ? "正在导出全部历史" : "导出全部历史";enabled:!root.file-busy && !root.export-busy && !root.delete-busy;clicked=>{root.file-requested(3);}}

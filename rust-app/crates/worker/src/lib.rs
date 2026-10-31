@@ -18,6 +18,14 @@ use ui_bridge::Bridge;
 
 slint::include_modules!();
 
+fn model_index(model: slint::ModelRc<slint::SharedString>, value: slint::SharedString) -> i32 {
+    use slint::Model;
+    model
+        .iter()
+        .position(|row| row == value)
+        .map_or(-1, |index| index as i32)
+}
+
 pub fn run(
     mut args: impl Iterator<Item = std::ffi::OsString>,
 ) -> Result<(), Box<dyn std::error::Error>> {

@@ -181,6 +181,8 @@ impl Controller {
             }
         };
         api.set_ui_font_family(windows_platform::desktop::ui_font_family().into());
+        api.global::<crate::ModelLookup>()
+            .on_index_of(crate::model_index);
         let theme_window = api.as_weak();
         api.on_frame_theme_changed(move || {
             if let Some(api) = theme_window.upgrade() {

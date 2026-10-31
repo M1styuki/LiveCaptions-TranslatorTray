@@ -1,5 +1,9 @@
 import { LineEdit, ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
 
+export global ModelLookup {
+    pure callback index-of([string], string) -> int;
+}
+
 // Integer interval slider with the shared action cursor and keyboard controls.
 export component IntervalSlider inherits Rectangle {
     in property <float> minimum:0;
@@ -55,7 +59,7 @@ export component ChoiceBox inherits Rectangle {
     accessible-action-expand=>{root.open();}
     function open() {
         if root.enabled && root.model.length > 0 {
-            root.highlighted=max(0,root.model.index-of(root.current-value));
+            root.highlighted=max(0,ModelLookup.index-of(root.model,root.current-value));
             root.expanded=true;popup.show();
         }
     }
@@ -72,7 +76,7 @@ export component ChoiceBox inherits Rectangle {
         enabled:root.enabled;mouse-cursor:pointer;clicked=>{focus.focus();root.open();}
         scroll-event(event)=>{
             if focus.has-focus && event.delta-y != 0 {
-                root.choose(clamp(root.model.index-of(root.current-value) + (event.delta-y < 0 ? 1 : -1),0,root.model.length - 1));return accept;
+                root.choose(clamp(ModelLookup.index-of(root.model,root.current-value) + (event.delta-y < 0 ? 1 : -1),0,root.model.length - 1));return accept;
             }
             return reject;
         }
@@ -84,7 +88,7 @@ export component ChoiceBox inherits Rectangle {
         key-pressed(event)=>{
             if event.text==Key.Return || event.text==Key.Space {root.open();return accept;}
             if event.text==Key.UpArrow || event.text==Key.DownArrow {
-                root.choose(clamp(root.model.index-of(root.current-value) + (event.text==Key.DownArrow ? 1 : -1),0,root.model.length - 1));return accept;
+                root.choose(clamp(ModelLookup.index-of(root.model,root.current-value) + (event.text==Key.DownArrow ? 1 : -1),0,root.model.length - 1));return accept;
             }
             return reject;
         }
@@ -142,7 +146,7 @@ export component EditableCombo inherits Rectangle {
         model:root.choices;
         current-value:root.value;
         enabled:root.choices-enabled;
-        selected(value)=>{root.chosen(root.choices.index-of(value),value);}
+        selected(value)=>{root.chosen(ModelLookup.index-of(root.choices,value),value);}
     }
     LineEdit {x:0px;y:0px;width:root.width - 30px;height:root.height;text <=> root.value;edited(value)=>{root.edited(value);}}
     Tooltip {text:@markdown("\{root.hint}");}
@@ -299,6 +303,7 @@ export component NavigationButton inherits Rectangle {
 }
 
 export component ActionButton inherits Rectangle {
+    out property <bool> has-focus:focus.has-focus;
     in property <string> text;
     in property <string> hint:root.text;
     in property <bool> enabled:true;

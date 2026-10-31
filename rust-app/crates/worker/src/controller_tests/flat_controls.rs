@@ -3,6 +3,7 @@ use slint::platform::{Key, PointerEventButton, WindowEvent};
 
 slint::slint! {
     import { ChoiceBox, IntervalSlider } from "../../ui/controls.slint";
+    export { ModelLookup } from "../../ui/controls.slint";
     export component FlatControlsTest inherits Window {
         width:360px;height:280px;
         in-out property <string> selected:"First";
@@ -20,6 +21,7 @@ pub(super) fn run(windows: &Rc<std::cell::RefCell<Vec<Rc<MinimalSoftwareWindow>>
 
 fn run_at_scale(windows: &Rc<std::cell::RefCell<Vec<Rc<MinimalSoftwareWindow>>>>, scale: f32) {
     let ui = FlatControlsTest::new().unwrap();
+    ui.global::<ModelLookup>().on_index_of(crate::model_index);
     ui.show().unwrap();
     let window = windows.borrow().last().unwrap().clone();
     ui.window().dispatch_event(WindowEvent::ScaleFactorChanged {

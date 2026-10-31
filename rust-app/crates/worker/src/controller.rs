@@ -198,6 +198,9 @@ impl Controller {
     }
     pub fn new(bridge: Bridge, ui: slint::Weak<MainWindow>, data: Data, screen: Screen) -> Self {
         if let Some(window) = ui.upgrade() {
+            window
+                .global::<crate::ModelLookup>()
+                .on_index_of(crate::model_index);
             window.set_ui_font_family(windows_platform::desktop::ui_font_family().into());
         }
         let mailbox = Mailbox::new(ui.clone());
