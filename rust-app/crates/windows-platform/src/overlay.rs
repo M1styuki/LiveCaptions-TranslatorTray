@@ -627,7 +627,11 @@ impl State {
                         // dim the row excluded by the current display mode.
                         for row in 0..2 {
                             let source = (row == 0) == self.source_first;
-                            let shown = if source { self.mode != 1 } else { self.mode != 2 };
+                            let shown = if source {
+                                self.mode != 1
+                            } else {
+                                self.mode != 2
+                            };
                             canvas.rounded_rectangle(
                                 D2D_RECT_F {
                                     left: left + 8.0,
@@ -1486,7 +1490,10 @@ mod tests {
             }
             unsafe { SendMessageW(window, TEST_ACTION, Some(WPARAM(index)), None) };
             flush_paint(window);
-            assert_eq!(command(window, TestOperation::ToolbarSignature(index)), first);
+            assert_eq!(
+                command(window, TestOperation::ToolbarSignature(index)),
+                first
+            );
         }
         drop(overlay);
         assert!(errors.lock().unwrap().is_empty());
