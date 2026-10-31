@@ -1,8 +1,9 @@
 //! All UI Automation objects stay inside one MTA thread, including destruction.
 use crate::window_state::WindowSnapshot;
+#[cfg(test)]
+use std::os::windows::io::AsRawHandle;
 use std::{
     io,
-    os::windows::io::AsRawHandle,
     path::PathBuf,
     process::{Child, Command},
     sync::{Arc, Condvar, Mutex},
@@ -11,13 +12,12 @@ use std::{
 };
 use windows::{
     Win32::{
-        Foundation::{HANDLE, HWND, LPARAM, WAIT_OBJECT_0, WPARAM},
+        Foundation::HWND,
         System::{
             Com::{
                 CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx,
                 CoUninitialize,
             },
-            Threading::WaitForSingleObject,
             Variant::VARIANT,
         },
         UI::{
@@ -25,10 +25,15 @@ use windows::{
                 CUIAutomation8, IUIAutomation, IUIAutomation2, IUIAutomationCondition,
                 IUIAutomationElement, TreeScope_Subtree, UIA_AutomationIdPropertyId,
             },
-            WindowsAndMessaging::{FindWindowW, GetWindowThreadProcessId, PostMessageW, WM_CLOSE},
+            WindowsAndMessaging::{FindWindowW, GetWindowThreadProcessId},
         },
     },
     core::{Interface, w},
+};
+#[cfg(test)]
+use windows::Win32::{
+    Foundation::{HANDLE, WAIT_OBJECT_0},
+    System::Threading::WaitForSingleObject,
 };
 
 pub enum CaptionEvent {
@@ -164,6 +169,7 @@ struct AttachedWindow {
     owned: Option<Child>,
     ready: bool,
     hidden: bool,
+    control: Arc<(Mutex<Control>, Condvar)>,
 }
 
 impl Drop for AttachedWindow {
@@ -174,20 +180,10 @@ impl Drop for AttachedWindow {
         if !self.ready {
             return;
         }
-        if let Some(child) = &mut self.owned {
-            // SAFETY: process handle comes from our exact launch. Never look up a
-            // process by name. Normal close is attempted before a bounded forced kill.
-            unsafe {
-                let process = HANDLE(child.as_raw_handle());
-                if WaitForSingleObject(process, 0) != WAIT_OBJECT_0 {
-                    if self.snapshot.same_window() {
-                        let _ = PostMessageW(Some(self.hwnd), WM_CLOSE, WPARAM(0), LPARAM(0));
-                    }
-                    if WaitForSingleObject(process, 1_500) != WAIT_OBJECT_0 {
-                        let _ = child.kill();
-                    }
-                }
-            }
+        if self.owned.is_some() || stopped(&self.control) {
+            // Stop ends the active recognition session, including a ready process
+            // reused from an earlier run. Hiding the window is not stopping it.
+            self.snapshot.close();
         } else {
             self.snapshot.restore(self.hidden);
         }
@@ -241,6 +237,7 @@ fn attach(control: &Arc<(Mutex<Control>, Condvar)>) -> io::Result<AttachedWindow
         owned,
         ready: false,
         hidden: false,
+        control: control.clone(),
     })
 }
 
@@ -591,14 +588,14 @@ mod tests {
     }
     use std::{
         os::windows::{
-            io::{BorrowedHandle, OwnedHandle},
+            io::{AsRawHandle, BorrowedHandle, OwnedHandle},
             process::CommandExt,
         },
         process::Stdio,
     };
     use windows::Win32::{
-        Foundation::WAIT_TIMEOUT,
-        System::Threading::{CREATE_NO_WINDOW, TerminateProcess},
+        Foundation::{HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT},
+        System::Threading::{CREATE_NO_WINDOW, TerminateProcess, WaitForSingleObject},
     };
 
     struct ProcessProbe(OwnedHandle);
@@ -661,9 +658,18 @@ mod tests {
     }
 
     #[test]
-    fn attached_caption_cleanup_only_terminates_our_ready_process() {
-        for (ready, owned) in [(false, true), (true, true), (false, false), (true, false)] {
+    fn stop_releases_ready_recognition_but_preserves_setup_and_unrelated_processes() {
+        for (ready, owned, stop) in [
+            (false, true, false),
+            (false, true, true),
+            (false, false, true),
+            (true, true, false),
+            (true, true, true),
+            (true, false, false),
+            (true, false, true),
+        ] {
             let (child, probe) = test_process();
+            let (_unrelated_child, unrelated) = test_process();
             let snapshot = WindowSnapshot::without_window_for_test(&child);
             let window = AttachedWindow {
                 hwnd: HWND::default(),
@@ -671,25 +677,33 @@ mod tests {
                 owned: owned.then_some(child),
                 ready,
                 hidden: false,
+                control: Arc::new((
+                    Mutex::new(Control {
+                        stop,
+                        hidden: false,
+                    }),
+                    Condvar::new(),
+                )),
             };
             let start = Instant::now();
             drop(window);
-            if ready && owned {
+            if ready && (owned || stop) {
                 assert!(
                     // TerminateProcess is asynchronous: observe termination
                     // through the exact retained handle, not a name/PID poll.
                     unsafe {
                         WaitForSingleObject(HANDLE(probe.0.as_raw_handle()), 1_000) == WAIT_OBJECT_0
                     },
-                    "owned ready child must exit after bounded close fallback"
+                    "stopping a ready session must release recognition, including reused processes"
                 );
                 assert!(start.elapsed() < Duration::from_secs(4));
             } else {
                 assert!(
                     probe.alive(),
-                    "unready onboarding and independently owned processes must survive"
+                    "unready setup and a reused process on connection failure must survive"
                 );
             }
+            assert!(unrelated.alive(), "never terminate processes by name");
         }
     }
     #[test]

@@ -4,12 +4,13 @@ use std::{
     path::PathBuf,
 };
 use windows::Win32::{
-    Foundation::{COLORREF, HANDLE, HWND, WAIT_TIMEOUT},
+    Foundation::{COLORREF, HANDLE, HWND, LPARAM, WAIT_OBJECT_0, WAIT_TIMEOUT, WPARAM},
     System::{
         RemoteDesktop::ProcessIdToSessionId,
         Threading::{
             OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
-            PROCESS_SYNCHRONIZE, QueryFullProcessImageNameW, WaitForSingleObject,
+            PROCESS_SYNCHRONIZE, PROCESS_TERMINATE, QueryFullProcessImageNameW, TerminateProcess,
+            WaitForSingleObject,
         },
     },
     UI::WindowsAndMessaging::*,
@@ -59,7 +60,7 @@ impl WindowSnapshot {
                 return Err(io::Error::other("系统字幕不在当前登录会话。"));
             }
             let raw = OpenProcess(
-                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE | PROCESS_TERMINATE,
                 false,
                 pid,
             )
@@ -201,6 +202,24 @@ impl WindowSnapshot {
             let _ = SetWindowPlacement(self.window, &placement);
             if hidden || !self.visible {
                 let _ = ShowWindowAsync(self.window, SW_HIDE);
+            }
+        }
+    }
+
+    pub(crate) fn close(&self) {
+        // SAFETY: this retained handle belongs to the validated caption process,
+        // not a later PID reuse. Close its exact window first, then wait for exit.
+        unsafe {
+            let process = HANDLE(self.process.as_raw_handle());
+            if WaitForSingleObject(process, 0) == WAIT_OBJECT_0 {
+                return;
+            }
+            if self.same_window() {
+                let _ = PostMessageW(Some(self.window), WM_CLOSE, WPARAM(0), LPARAM(0));
+            }
+            if WaitForSingleObject(process, 1_500) != WAIT_OBJECT_0 {
+                let _ = TerminateProcess(process, 0);
+                let _ = WaitForSingleObject(process, 1_000);
             }
         }
     }
