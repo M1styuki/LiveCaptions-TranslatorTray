@@ -5,8 +5,11 @@
 - Windows 11 x64（程序运行目标）。
 - Rust 1.99.1，由 rust-app/rust-toolchain.toml 固定。
 - Visual Studio 2022 Build Tools 的 MSVC x64 C++ 工具及 Windows SDK。
+- LLVM、Python 3 和 Git，用于编译静态 Skia。LLVM 需包含 clang、clang-cl 和 libclang。
 
 设置与 API 窗口使用 Skia OpenGL 渲染，以改善圆角、细边框及缩放后的边缘；运行时需要正常安装的显卡驱动。托盘与字幕浮窗仍使用原生 Windows 绘制。
+
+Skia 未命中上游静态预编译包时会从源码构建。Git 需开启 `core.longpaths`；`LLVM_HOME`、`LIBCLANG_PATH`、`CLANG_PATH` 应指向同一套 LLVM，避免与 Visual Studio 自带的 Clang 混用。云端工作流已配置这些选项。
 
 正常 Cargo 构建会按 Cargo.lock 获取依赖。不需要本项目作者的开发目录、验收记录或 .NET 环境。
 

@@ -548,9 +548,8 @@ mod tests {
                 Canvas::new((336.0 * scale) as i32, (28.0 * scale) as i32, scale).unwrap();
             canvas.begin(0, 0);
             for index in 0..12 {
-                canvas
-                    .icon(index, index as f32 * 28.0 + 5.0, 5.0, 18.0, 255)
-                    .unwrap();
+                let x = index as f32 * 28.0 + 5.0;
+                canvas.icon(index, x, 5.0, 18.0, 255, 0xffffff).unwrap();
             }
             canvas.finish().unwrap();
             for index in 0..12 {
