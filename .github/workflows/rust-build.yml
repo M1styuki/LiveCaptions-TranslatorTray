@@ -26,7 +26,12 @@ jobs:
         working-directory: rust-app
         run: cargo fmt --all -- --check
       - name: Build and test Windows x64 release
+        env:
+          LLVM_HOME: C:\Program Files\LLVM
+          LIBCLANG_PATH: C:\Program Files\LLVM\bin
+          CLANG_PATH: C:\Program Files\LLVM\bin\clang.exe
         run: |
+          git config --global core.longpaths true
           .\rust-app\tools\build.ps1 -Mode release
           Push-Location rust-app
           cargo test --release --workspace --locked -- --test-threads=1
