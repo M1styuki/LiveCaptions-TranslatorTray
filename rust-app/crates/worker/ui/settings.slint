@@ -21,7 +21,7 @@ export component SettingsPage inherits ScrollView {
     in-out property <bool> context-aware;
     in-out property <bool> latency-show;
     in property <bool> live-captions-hidden;
-    in property <bool> autostart-enabled;
+    in-out property <bool> autostart-enabled;
     in property <string> autostart-message;
     callback autostart-changed(bool);
     callback setting-edited(string,string);
@@ -83,7 +83,7 @@ export component SettingsPage inherits ScrollView {
             title:"启动";
             HorizontalBox {padding:0px;spacing:16px;
                 VerticalBox {padding:0px;spacing:4px;horizontal-stretch:1;Label {text:"开机自启动";}Note {text:"登录 Windows 后自动驻留托盘，需要字幕时再开启。";}}
-                AnimatedSwitch {text:"开机自启动";checked:root.autostart-enabled;toggled=>{root.autostart-changed(self.checked);self.checked=root.autostart-enabled;}}
+                AnimatedSwitch {text:"开机自启动";checked <=> root.autostart-enabled;toggled=>{root.autostart-changed(self.checked);}}
             }
             if root.autostart-message != "": Note {text:root.autostart-message;}
         }

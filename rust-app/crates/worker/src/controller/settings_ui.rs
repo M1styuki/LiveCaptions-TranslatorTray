@@ -59,11 +59,17 @@ impl Controller {
         if self.exiting {
             return;
         }
-        if let (Some(registration), Some(ui)) = (&self.autostart, self.ui.upgrade()) {
-            let result = registration.set_enabled(enabled);
-            self.refresh_autostart();
-            if let Err(error) = result {
+        if let Some(ui) = self.ui.upgrade() {
+            let Some(registration) = &self.autostart else {
+                ui.set_autostart_enabled(false);
+                return;
+            };
+            if let Err(error) = registration.set_enabled(enabled) {
+                ui.set_autostart_enabled(!enabled);
+                self.refresh_autostart();
                 ui.set_autostart_message(format!("自启动设置未保存：{error}").into());
+            } else {
+                self.refresh_autostart();
             }
         }
     }

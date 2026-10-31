@@ -242,7 +242,7 @@ export component MainWindow inherits Window {
                     context-aware <=> root.context-aware;
                     latency-show <=> root.latency-show;
                     live-captions-hidden:root.live-captions-hidden;
-                    autostart-enabled:root.autostart-enabled;
+                    autostart-enabled <=> root.autostart-enabled;
                     autostart-message:root.autostart-message;
                     autostart-changed(enabled)=>{root.autostart-changed(enabled);}
                     setting-edited(field,value)=>{root.setting-edited(field,value);}
