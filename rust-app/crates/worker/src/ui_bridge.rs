@@ -11,7 +11,7 @@ use std::{
     time::Duration,
 };
 
-enum Outbound {
+pub(crate) enum Outbound {
     Message(Envelope),
     Flush(SyncSender<()>),
 }
@@ -23,7 +23,7 @@ pub struct Bridge {
 
 impl Bridge {
     #[cfg(test)]
-    pub fn fixture() -> (Self, impl Sized) {
+    pub fn fixture() -> (Self, mpsc::Receiver<Outbound>) {
         let (outbound, receiver) = mpsc::sync_channel(CHANNEL_CAPACITY);
         (
             Self {
@@ -32,6 +32,13 @@ impl Bridge {
             },
             receiver,
         )
+    }
+    #[cfg(test)]
+    pub fn queue_command(&self, request_id: u64, message: Message) {
+        self.incoming
+            .lock()
+            .unwrap()
+            .push_back(Envelope::new(request_id, message));
     }
     pub fn new(
         file: windows_platform::pipe_stream::PipeStream,

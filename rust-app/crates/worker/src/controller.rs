@@ -27,6 +27,7 @@ pub struct Controller {
     pub bridge: Bridge,
     ui: slint::Weak<MainWindow>,
     engine: EngineState,
+    pub(super) autostart: Option<windows_platform::autostart::Registration>,
     hidden: bool,
     shutdown: ShutdownState,
     replies: VecDeque<Envelope>,
@@ -121,6 +122,7 @@ impl Controller {
             self.mailbox.clone(),
         ));
         self.engine = EngineState::Running;
+        self.engine_changed();
         self.retire_when_idle = false;
     }
     #[cfg(test)]
@@ -204,6 +206,7 @@ impl Controller {
             bridge,
             ui,
             engine: EngineState::Disabled,
+            autostart: None,
             hidden: true,
             shutdown: ShutdownState::default(),
             replies: VecDeque::new(),
@@ -331,9 +334,6 @@ impl Controller {
         let settings = settings.clone();
         self.session += 1;
         self.engine = EngineState::Starting;
-        if let Some(ui) = self.ui.upgrade() {
-            ui.set_overlay_visible(true);
-        }
         self.engine_changed();
         let log_only = self.ui.upgrade().is_some_and(|ui| ui.get_log_only());
         match Engine::start(self.session, hidden, self.mailbox.clone()) {
@@ -425,9 +425,7 @@ impl Controller {
                 Status::Ready => {
                     self.engine = EngineState::Running;
                     self.engine_changed();
-                    if self.ui.upgrade().is_some_and(|ui| ui.get_overlay_visible()) {
-                        self.overlay_changed(true);
-                    }
+                    self.open_overlay();
                 }
                 Status::Fault(message) => {
                     let notice = format!("系统字幕已停止：{message}");
@@ -473,15 +471,21 @@ impl Controller {
         }
     }
 
-    pub fn overlay_changed(&mut self, visible: bool) {
+    pub fn captions_changed(&mut self, enabled: bool) {
         if self.exiting {
             return;
         }
-        if !visible {
-            self.close_overlay();
+        if enabled {
+            if let Err(error) = self.start(self.hidden) {
+                self.message(&format!("字幕无法启动：{error}"));
+            }
+        } else {
+            self.stop();
             self.maybe_exit();
-            return;
         }
+    }
+
+    fn open_overlay(&mut self) {
         if self.overlay.is_some() {
             return;
         }
@@ -542,9 +546,7 @@ impl Controller {
                 }
             }
             Err(error) => {
-                if let Some(ui) = self.ui.upgrade() {
-                    ui.set_overlay_visible(false);
-                }
+                self.stop();
                 let _ = self.bridge.send(Envelope::new(
                     0,
                     Message::Error {
@@ -615,11 +617,11 @@ impl Controller {
                     self.message(&format!("悬浮窗位置暂时无法保存：{error}"))
                 }
                 overlay::Event::Closed => {
-                    self.close_overlay();
+                    self.stop();
                     self.maybe_exit();
                 }
                 overlay::Event::Failed(message) => {
-                    self.close_overlay();
+                    self.stop();
                     let _ = self.bridge.send(Envelope::new(
                         0,
                         Message::Error {
@@ -705,6 +707,13 @@ impl Controller {
     }
 
     fn engine_changed(&self) {
+        if let Some(ui) = self.ui.upgrade() {
+            ui.set_captions_enabled(self.engine == EngineState::Running);
+            ui.set_engine_busy(matches!(
+                self.engine,
+                EngineState::Starting | EngineState::Stopping
+            ));
+        }
         let _ = self.bridge.send(Envelope::new(
             0,
             Message::EngineStateChanged { state: self.engine },

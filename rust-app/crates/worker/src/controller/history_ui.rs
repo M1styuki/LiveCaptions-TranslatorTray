@@ -75,6 +75,9 @@ impl Controller {
         self.history_request
     }
     pub fn page_changed(&mut self, page: i32) {
+        if page == 1 {
+            self.refresh_autostart();
+        }
         if page != 2 {
             self.cancel_delete_confirmation();
         }

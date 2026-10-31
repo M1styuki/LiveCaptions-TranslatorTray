@@ -1,3 +1,4 @@
+pub mod autostart;
 pub mod captions;
 pub mod clipboard;
 pub mod desktop;

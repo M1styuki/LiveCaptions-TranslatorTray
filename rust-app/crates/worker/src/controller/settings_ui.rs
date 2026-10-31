@@ -29,6 +29,43 @@ fn level(window: &slint::Window, topmost: bool) {
     });
 }
 impl Controller {
+    pub fn bind_caption_toggle(owner: &Rc<RefCell<Self>>) {
+        let Some(ui) = owner.borrow().ui.upgrade() else {
+            return;
+        };
+        let weak = Rc::downgrade(owner);
+        ui.on_captions_changed(move |enabled| {
+            if let Some(owner) = weak.upgrade() {
+                owner.borrow_mut().captions_changed(enabled);
+            }
+        });
+    }
+
+    pub fn refresh_autostart(&self) {
+        if let (Some(registration), Some(ui)) = (&self.autostart, self.ui.upgrade()) {
+            match registration.enabled() {
+                Ok(enabled) => {
+                    ui.set_autostart_enabled(enabled);
+                    ui.set_autostart_message("".into());
+                }
+                Err(error) => ui.set_autostart_message(format!("无法读取自启动状态：{error}").into()),
+            }
+        }
+    }
+
+    pub fn autostart_changed(&self, enabled: bool) {
+        if self.exiting {
+            return;
+        }
+        if let (Some(registration), Some(ui)) = (&self.autostart, self.ui.upgrade()) {
+            let result = registration.set_enabled(enabled);
+            self.refresh_autostart();
+            if let Err(error) = result {
+                ui.set_autostart_message(format!("自启动设置未保存：{error}").into());
+            }
+        }
+    }
+
     pub fn setting_edited(&mut self, field: &str, text: &str) {
         if self.exiting {
             return;

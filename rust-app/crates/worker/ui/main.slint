@@ -87,6 +87,10 @@ export component MainWindow inherits Window {
     in-out property <int> page: 1;
     in-out property <bool> log-only: false;
     in-out property <bool> overlay-visible: false;
+    in-out property <bool> captions-enabled: false;
+    in-out property <bool> engine-busy: false;
+    in-out property <bool> autostart-enabled: false;
+    in-out property <string> autostart-message;
     in-out property <bool> topmost: false;
     in-out property <string> source-caption;
     in-out property <string> translated-caption;
@@ -133,7 +137,8 @@ export component MainWindow inherits Window {
     callback host-wakeup();
     callback page-changed(int);
     callback pause-changed(bool);
-    callback overlay-changed(bool);
+    callback captions-changed(bool);
+    callback autostart-changed(bool);
     callback topmost-changed(bool);
     callback setting-edited(string,string);
     callback api-requested();
@@ -181,7 +186,7 @@ export component MainWindow inherits Window {
                 Rectangle {height:1px;background:Palette.border;opacity:0.45;}
                 HorizontalBox {padding:0px;spacing:6px;height:32px;
                     IconButton {width:37px;height:32px;active:root.log-only;icon:root.log-only ? @image-url("../../../assets/original-icons/pause-filled.svg") : @image-url("../../../assets/original-icons/pause.svg");label:root.log-only ? "恢复翻译" : "暂停翻译";clicked=>{root.log-only=!root.log-only;root.pause-changed(root.log-only);}}
-                    IconButton {width:37px;height:32px;active:root.overlay-visible;icon:root.overlay-visible ? @image-url("../../../assets/original-icons/captions.svg") : @image-url("../../../assets/original-icons/captions-off.svg");label:"悬浮字幕窗口";clicked=>{root.overlay-visible=!root.overlay-visible;root.overlay-changed(root.overlay-visible);}}
+                    IconButton {width:37px;height:32px;active:root.captions-enabled;enabled:!root.engine-busy;icon:root.captions-enabled ? @image-url("../../../assets/original-icons/captions.svg") : @image-url("../../../assets/original-icons/captions-off.svg");label:root.engine-busy ? "正在切换字幕…" : (root.captions-enabled ? "关闭字幕" : "开启字幕");clicked=>{root.captions-changed(!root.captions-enabled);}}
                     IconButton {width:37px;height:32px;active:root.topmost;icon:root.topmost ? @image-url("../../../assets/original-icons/pin.svg") : @image-url("../../../assets/original-icons/pin-off.svg");label:"始终置顶";clicked=>{root.topmost=!root.topmost;root.topmost-changed(root.topmost);}}
                 }
             }
@@ -237,6 +242,9 @@ export component MainWindow inherits Window {
                     context-aware <=> root.context-aware;
                     latency-show <=> root.latency-show;
                     live-captions-hidden:root.live-captions-hidden;
+                    autostart-enabled:root.autostart-enabled;
+                    autostart-message:root.autostart-message;
+                    autostart-changed(enabled)=>{root.autostart-changed(enabled);}
                     setting-edited(field,value)=>{root.setting-edited(field,value);}
                     api-requested=>{root.api-requested();}
                     captions-visibility-changed(hidden)=>{root.captions-visibility-changed(hidden);}

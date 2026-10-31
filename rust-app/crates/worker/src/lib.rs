@@ -49,6 +49,7 @@ pub fn run(
     let (width, height) = windows_platform::desktop::screen_size();
     let screen = captions_core::settings::Screen::new(width, height)
         .ok_or_else(|| io::Error::other("无法读取屏幕尺寸。"))?;
+    let autostart = windows_platform::autostart::Registration::current(&data_dir);
     let data = data::Data::start(data_dir, screen, ui.as_weak())?;
     let bridge = Bridge::new(pipe, ui.as_weak())?;
     let controller = Rc::new(RefCell::new(Controller::new(
@@ -57,6 +58,10 @@ pub fn run(
         data,
         screen,
     )));
+    match autostart {
+        Ok(registration) => controller.borrow_mut().autostart = Some(registration),
+        Err(error) => ui.set_autostart_message(format!("无法读取启动位置：{error}").into()),
+    }
     let weak = Rc::downgrade(&controller);
     ui.on_host_wakeup(move || {
         if let Some(controller) = weak.upgrade() {
@@ -69,10 +74,11 @@ pub fn run(
             controller.borrow_mut().pause_changed(value);
         }
     });
+    Controller::bind_caption_toggle(&controller);
     let weak = Rc::downgrade(&controller);
-    ui.on_overlay_changed(move |value| {
+    ui.on_autostart_changed(move |value| {
         if let Some(controller) = weak.upgrade() {
-            controller.borrow_mut().overlay_changed(value);
+            controller.borrow_mut().autostart_changed(value);
         }
     });
     let weak = Rc::downgrade(&controller);

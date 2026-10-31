@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build:
     runs-on: windows-2022
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned Rust toolchain
@@ -25,8 +25,13 @@ jobs:
       - name: Check formatting
         working-directory: rust-app
         run: cargo fmt --all -- --check
-      - name: Build Windows x64 executable
-        run: .\rust-app\tools\build.ps1 -Mode release
+      - name: Build and test Windows x64 release
+        run: |
+          .\rust-app\tools\build.ps1 -Mode release
+          Push-Location rust-app
+          cargo test --release --workspace --locked -- --test-threads=1
+          if ($LASTEXITCODE -ne 0) { throw 'Release tests failed' }
+          Pop-Location
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
