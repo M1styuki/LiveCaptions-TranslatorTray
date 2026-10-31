@@ -5,7 +5,7 @@
 - Windows 11 x64（程序运行目标）。
 - Rust 1.99.1，由 rust-app/rust-toolchain.toml 固定。
 - Visual Studio 2022 Build Tools 的 MSVC x64 C++ 工具及 Windows SDK。
-- LLVM、Python 3 和 Git，用于编译静态 Skia。LLVM 需包含 clang、clang-cl 和 libclang。
+- LLVM、Python 3、Ninja 和 Git，用于编译静态 Skia。LLVM 需包含 clang、clang-cl 和 libclang。
 
 设置与 API 窗口使用 Skia OpenGL 渲染，以改善圆角、细边框及缩放后的边缘；运行时需要正常安装的显卡驱动。托盘与字幕浮窗仍使用原生 Windows 绘制。
 
@@ -22,6 +22,17 @@ Skia 未命中上游静态预编译包时会从源码构建。Git 需开启 `cor
 ```
 
 脚本使用现有 Rust，并在需要时通过 Visual Studio 自带的开发环境入口启用 MSVC / SDK；不安装软件，也不更改用户或系统环境变量。
+
+本机标准安装布局可使用以下入口，默认保留 Cargo 缓存并使用 6 个 Cargo 编译任务：
+
+```powershell
+.\rust-app\tools\build-local.ps1 -Mode release
+.\rust-app\tools\build-local.ps1 -Mode verify
+```
+
+该入口使用标准用户目录中的 Rust、`C:\Program Files\LLVM`、`C:\Program Files\Python312` 和 `%LOCALAPPDATA%\Programs\Ninja`，只在当前进程设置路径、Git 长路径和下载选项。`verify` 检查格式、构建发行版，并运行原生 Skia 回归及全工作区发行模式测试；`-Jobs` 可调整并发数。开发期间保留 `rust-app/target`，后续构建复用已完成的依赖。
+
+首次 Skia 源码解包需要 Windows 符号链接权限，可在管理员 PowerShell 中完成首次构建。该环境找不到已安装的 Git 时，可用 `-GitBin` 指定现有 `git.exe` 所在目录；无需重复安装 Git。
 
 也可在 Developer PowerShell 中直接执行：
 
