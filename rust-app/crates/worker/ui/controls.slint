@@ -34,9 +34,10 @@ export component DecimalBox inherits Rectangle {
     callback accepted();
     width:130px;
     height:34px;
-    border-radius:4px;
+    // Match the pinned Fluent ComboBox frame; retain numeric editing behavior.
+    border-radius:3px;
     border-width:1px;
-    border-color:input.has-focus ? Palette.accent-background : Palette.border;
+    border-color:input.has-focus ? Palette.foreground : (Palette.color-scheme == ColorScheme.dark ? @linear-gradient(180deg, #ffffff17 0%, #00000012 8.33%) : @linear-gradient(180deg, #0000000f 90.58%, #00000029 100%));
     background:Palette.control-background;
     field-touch:=TouchArea {
         scroll-event(event)=>{
@@ -51,7 +52,7 @@ export component DecimalBox inherits Rectangle {
           input := TextInput {
             x:10px;y:0px;width:parent.width - 10px;height:root.height;
             text <=> root.value;single-line:true;vertical-alignment:center;
-            color:Palette.foreground;font-size:13.3px;accessible-label:root.label;
+            color:Palette.control-foreground;font-size:14px;accessible-label:root.label;
             selection-background-color:Palette.accent-background;
             selection-foreground-color:Palette.accent-foreground;
             edited=>{root.edited(self.text);}

@@ -1,5 +1,5 @@
 import { ComboBox, ScrollView, VerticalBox, HorizontalBox, Slider, Palette } from "std-widgets.slint";
-import { EditableCombo, IntegerBox, Surface, ActionButton, AnimatedSwitch } from "controls.slint";
+import { IntegerBox, Surface, ActionButton, AnimatedSwitch } from "controls.slint";
 
 component Label inherits Text {color:Palette.foreground;font-size:14px;}
 component Note inherits Label {font-size:12px;opacity:0.65;wrap:word-wrap;}
@@ -42,7 +42,7 @@ export component SettingsPage inherits ScrollView {
                 }
                 VerticalBox {padding:0px;spacing:7px;
                     Label {text:"目标语言";}
-                    EditableCombo {height:34px;hint:"译文语言代码，如 zh-CN";value <=> root.selected-language;choices:["zh-CN","zh-TW","en-US","en-GB","ja-JP","ko-KR","fr-FR","th-TH","ru-RU","es-ES","pt-BR","tr-TR","ar-SA"];edited(value)=>{root.setting-edited("TargetLanguage",value);}chosen(index,value)=>{root.setting-edited("TargetLanguage",value);}}
+                    ComboBox {height:34px;model:["zh-CN","zh-TW","en-US","en-GB","ja-JP","ko-KR","fr-FR","th-TH","ru-RU","es-ES","pt-BR","tr-TR","ar-SA"];current-value <=> root.selected-language;selected(value)=>{root.setting-edited("TargetLanguage",value);}Tooltip {text:@markdown("选择译文语言");}}
                 }
             }
             HorizontalBox {padding:0px;spacing:12px;
