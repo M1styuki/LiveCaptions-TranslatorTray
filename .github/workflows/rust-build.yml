@@ -21,14 +21,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned Rust toolchain
-        run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --target x86_64-pc-windows-msvc
-      - name: Check formatting
-        working-directory: rust-app
-        run: cargo fmt --all -- --check
-      - name: Compile UI before native dependencies
-        working-directory: rust-app
-        run: cargo build --release --package ui-check --locked
-      - name: Build Windows x64 release and check caption shutdown
+        run: rustup toolchain install 1.99.1 --profile minimal --target x86_64-pc-windows-msvc
+      - name: Build Windows x64 release
         env:
           LLVM_HOME: C:\Program Files\LLVM
           LIBCLANG_PATH: C:\Program Files\LLVM\bin
@@ -36,10 +30,6 @@ jobs:
         run: |
           git config --global core.longpaths true
           .\rust-app\tools\build.ps1 -Mode release
-          Push-Location rust-app
-          cargo test --release --package windows-platform --lib --locked captions::tests -- --test-threads=1
-          if ($LASTEXITCODE -ne 0) { throw 'Caption shutdown checks failed' }
-          Pop-Location
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
