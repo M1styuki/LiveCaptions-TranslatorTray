@@ -47,7 +47,7 @@ export component SettingsPage inherits ScrollView {
             }
             HorizontalBox {padding:0px;spacing:12px;
                 Note {text:"Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。";horizontal-stretch:1;}
-                ActionButton {text:"配置翻译服务";primary:true;clicked=>{root.api-requested();}}
+                ActionButton {text:"配置翻译服务";clicked=>{root.api-requested();}}
             }
             HorizontalBox {padding:0px;spacing:14px;
                 Label {text:"API 调用间隔";vertical-alignment:center;}
@@ -71,7 +71,7 @@ export component SettingsPage inherits ScrollView {
             title:"显示";
             HorizontalBox {padding:0px;spacing:16px;
                 VerticalBox {padding:0px;spacing:4px;horizontal-stretch:1;Label {text:"Windows 实时字幕";}Note {text:"在系统字幕中修改源语言；隐藏窗口后仍可识别。";}}
-                ActionButton {text:root.live-captions-hidden ? "显示系统字幕" : "隐藏系统字幕";clicked=>{root.captions-visibility-changed(!root.live-captions-hidden);}}
+                AnimatedSwitch {text:"显示系统字幕";checked:!root.live-captions-hidden;toggled=>{root.captions-visibility-changed(!self.checked);}}
             }
             Rectangle {height:1px;background:Palette.border;}
             HorizontalBox {padding:0px;spacing:16px;

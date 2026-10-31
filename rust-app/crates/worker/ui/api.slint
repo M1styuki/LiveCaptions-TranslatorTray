@@ -27,8 +27,8 @@ component Field inherits Rectangle {
     max-width:root.field-width;
     min-width:0px;
     horizontal-stretch:1;
-    height:54px;
-    VerticalBox {padding:0px;spacing:5px;Label {text:root.caption;}LineEdit {min-width:0px;height:30px;text <=> root.value;input-type:root.secret ? InputType.password : InputType.text;edited(value)=>{root.edited(value);}}}
+    height:58px;
+    VerticalBox {padding:0px;spacing:5px;Label {text:root.caption;}LineEdit {min-width:0px;height:34px;text <=> root.value;input-type:root.secret ? InputType.password : InputType.text;edited(value)=>{root.edited(value);}}}
     Tooltip {text:@markdown("\{root.hint}");}
 }
 
@@ -95,7 +95,7 @@ export component ApiWindow inherits Window {
     default-font-size: 14px;
     no-frame:true;
     always-on-top:true;
-    background: root.frame-dark ? (root.native-material ? #30343ae8 : #30343a) : (root.native-material ? transparent : Palette.background);
+    background: root.frame-dark ? (root.native-material ? #202020f2 : #202020) : (root.native-material ? transparent : Palette.background);
     in-out property <int> section: 0;
     in property <string> service;
     in property <int> config-index;

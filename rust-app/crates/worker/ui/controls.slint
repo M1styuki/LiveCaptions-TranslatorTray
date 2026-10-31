@@ -1,4 +1,4 @@
-import { ComboBox, LineEdit, HorizontalBox, Palette } from "std-widgets.slint";
+import { Button, Switch, ComboBox, LineEdit, HorizontalBox, Palette } from "std-widgets.slint";
 
 // The full-width ComboBox owns its full-width popup; the editable field covers
 // its label only, leaving the ordinary arrow and keyboard selection intact.
@@ -9,7 +9,7 @@ export component EditableCombo inherits Rectangle {
     in property <bool> choices-enabled: true;
     callback edited(string);
     callback chosen(int,string);
-    height:30px;
+    height:34px;
     ComboBox {
         x:0px;
         y:0px;
@@ -33,7 +33,7 @@ export component DecimalBox inherits Rectangle {
     callback stepped(int);
     callback accepted();
     width:130px;
-    height:30px;
+    height:34px;
     border-radius:4px;
     border-width:1px;
     border-color:input.has-focus ? Palette.accent-background : Palette.border;
@@ -75,7 +75,7 @@ export component DecimalBox inherits Rectangle {
             accessible-role:button;
             accessible-label:(delta > 0 ? "增加" : "减少") + root.label;
             accessible-action-default=>{root.stepped(delta);}
-            Image {x:5px;y:8px;width:14px;height:14px;source:delta > 0 ? @image-url("../../../assets/original-icons/number-increase.svg") : @image-url("../../../assets/original-icons/number-decrease.svg");colorize:Palette.foreground;}
+            Image {x:5px;y:(parent.height - 14px)/2;width:14px;height:14px;source:delta > 0 ? @image-url("../../../assets/original-icons/number-increase.svg") : @image-url("../../../assets/original-icons/number-decrease.svg");colorize:Palette.foreground;}
             touch:=TouchArea {pointer-event(event)=>{if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {input.focus();root.stepped(delta);}}}
             Timer {running:touch.pressed && touch.has-hover;interval:parent.repeating ? 50ms : 500ms;triggered=>{parent.repeating=true;root.stepped(delta);}}
             Tooltip {text:@markdown("\{parent.accessible-label}");}
@@ -124,10 +124,10 @@ export component IconButton inherits Rectangle {
     width: 38px;
     height: 27px;
     border-radius: 6px;
-    border-width: focus.has-focus || root.outlined ? 1px : 0px;
-    border-color: focus.has-focus ? Palette.accent-background : Palette.border;
+    border-width: root.outlined ? 1px : 0px;
+    border-color: Palette.border;
     opacity: root.enabled ? 1 : 0.4;
-    background: touch.pressed ? Palette.alternate-background : (touch.has-hover || root.active ? Palette.control-background : transparent);
+    background: touch.pressed ? Palette.alternate-background : (touch.has-hover || focus.has-focus || root.active ? Palette.control-background : transparent);
     animate background, opacity { duration:140ms; easing:ease-out; }
     accessible-role: button;
     accessible-label: root.label;
@@ -142,7 +142,7 @@ export component IconButton inherits Rectangle {
 }
 
 export component Surface inherits Rectangle {
-    background:Palette.color-scheme == ColorScheme.dark ? #ffffff0e : #ffffffc4;
+    background:Palette.color-scheme == ColorScheme.dark ? #ffffff0c : #ffffffc4;
     border-width:1px;
     border-color:Palette.color-scheme == ColorScheme.dark ? #ffffff12 : #00000010;
     border-radius:10px;
@@ -157,7 +157,7 @@ export component NavigationButton inherits Rectangle {
     border-radius:7px;
     background:touch.pressed ? Palette.alternate-background : (root.selected || touch.has-hover ? Palette.control-background : transparent);
     border-width:focus.has-focus ? 1px : 0px;
-    border-color:Palette.accent-background;
+    border-color:Palette.foreground;
     animate background { duration:140ms; easing:ease-out; }
     Rectangle {x:0px;y:12px;width:3px;height:18px;border-radius:2px;background:Palette.accent-background;opacity:root.selected ? 1 : 0;animate opacity {duration:150ms;}}
     Image {x:14px;y:13px;width:16px;height:16px;source:root.icon;colorize:Palette.foreground;}
@@ -170,30 +170,10 @@ export component NavigationButton inherits Rectangle {
     focus:=FocusScope {width:0px;key-pressed(event)=>{if event.text==Key.Return || event.text==Key.Space {root.clicked();return accept;}return reject;}}
 }
 
-export component ActionButton inherits Rectangle {
-    in property <string> text;
+export component ActionButton inherits Button {
     in property <string> hint:root.text;
-    in property <bool> enabled:true;
-    in property <bool> primary:false;
-    callback clicked;
-    min-width:label.preferred-width + 32px;
     height:34px;
-    border-radius:6px;
-    background:root.primary ? Palette.accent-background : (touch.pressed ? Palette.alternate-background : Palette.control-background);
-    opacity:root.enabled ? (touch.pressed ? 0.72 : (touch.has-hover ? 0.88 : 1)) : 0.4;
-    border-width:1px;
-    border-color:focus.has-focus ? Palette.accent-background : (root.primary ? transparent : Palette.border);
-    animate background, opacity {duration:120ms;easing:ease-out;}
-    if focus.has-focus: Rectangle {x:-3px;y:-3px;width:root.width + 6px;height:root.height + 6px;border-radius:8px;border-width:1px;border-color:Palette.foreground;}
-    label:=Text {text:root.text;color:root.primary ? Palette.accent-foreground : Palette.foreground;horizontal-alignment:center;vertical-alignment:center;}
-    accessible-role:button;
-    accessible-label:root.text;
-    accessible-enabled:root.enabled;
-    accessible-action-default=>{if root.enabled {root.clicked();}}
-    forward-focus:focus;
     Tooltip {text:@markdown("\{root.hint}");}
-    touch:=TouchArea {enabled:root.enabled;mouse-cursor:pointer;clicked=>{focus.focus();root.clicked();}}
-    focus:=FocusScope {width:0px;enabled:root.enabled;key-pressed(event)=>{if event.text==Key.Return || event.text==Key.Space {root.clicked();return accept;}return reject;}}
 }
 
 export component AnimatedSwitch inherits Rectangle {
@@ -201,34 +181,19 @@ export component AnimatedSwitch inherits Rectangle {
     in property <string> text;
     in property <string> hint:root.text + (root.checked ? "：已开启" : "：已关闭");
     callback toggled;
-    min-width:70px;
-    preferred-width:82px;
-    max-width:82px;
+    width:82px;
     horizontal-stretch:0;
     height:32px;
-    accessible-role:switch;
-    accessible-label:root.text;
-    accessible-checkable:true;
-    accessible-checked <=> root.checked;
-    accessible-action-default=>{root.checked=!root.checked;root.toggled();}
-    forward-focus:focus;
-    Tooltip {text:@markdown("\{root.hint}");}
-    Rectangle {
-        x:0px;y:5px;width:42px;height:22px;border-radius:11px;
-        background:root.checked ? Palette.accent-background : Palette.control-background;
-        border-width:1px;border-color:focus.has-focus ? Palette.accent-background : Palette.border;
-        animate background {duration:160ms;easing:ease-out;}
-        Rectangle {
-            x:root.checked ? 23px : 4px;y:4px;width:14px;height:14px;border-radius:7px;
-            background:root.checked ? Palette.accent-foreground : Palette.foreground;
-            animate x, background {duration:180ms;easing:ease-out;}
-        }
+    forward-focus:control;
+    control:=Switch {
+        width:100%;height:100%;
+        checked <=> root.checked;
+        text:root.checked ? "开" : "关";
+        accessible-label:root.text;
+        toggled=>{root.toggled();}
     }
-    Text {x:52px;height:100%;text:root.checked ? "开" : "关";color:Palette.foreground;vertical-alignment:center;}
-    touch:=TouchArea {mouse-cursor:pointer;clicked=>{focus.focus();root.checked=!root.checked;root.toggled();}}
-    focus:=FocusScope {width:0px;key-pressed(event)=>{if event.text==Key.Return || event.text==Key.Space {root.checked=!root.checked;root.toggled();return accept;}return reject;}}
+    Tooltip {text:@markdown("\{root.hint}");}
 }
-
 // Each newly selected page animates once. No timer remains active afterwards.
 export component PageEntrance inherits Rectangle {
     private property <bool> entered:false;
@@ -268,7 +233,7 @@ export component HistorySearch inherits Rectangle {
         accepted=>{root.submitted();}
     }
     if root.value == "": Text {x:12px;height:100%;text:"搜索";color:Palette.foreground;opacity:0.65;vertical-alignment:center;}
-    if root.value != "": IconButton {x:root.width - 60px;y:2.5px;width:30px;height:30px;icon:@image-url("../../../assets/icons/close.svg");label:"清除搜索，返回原页";clicked=>{root.cleared();}}
-    IconButton {x:root.width - 30px;y:2.5px;width:30px;height:30px;icon:@image-url("../../../assets/original-icons/search.svg");label:"搜索";clicked=>{root.submitted();}}
+    if root.value != "": IconButton {x:root.width - 60px;y:2.5px;width:30px;height:34px;icon:@image-url("../../../assets/icons/close.svg");label:"清除搜索，返回原页";clicked=>{root.cleared();}}
+    IconButton {x:root.width - 30px;y:2.5px;width:30px;height:34px;icon:@image-url("../../../assets/original-icons/search.svg");label:"搜索";clicked=>{root.submitted();}}
     Tooltip {text:@markdown("提交搜索；支持 % 和 _ 通配符");}
 }

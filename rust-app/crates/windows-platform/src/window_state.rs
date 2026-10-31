@@ -175,7 +175,7 @@ impl WindowSnapshot {
         }
     }
 
-    pub(crate) fn restore(&self) {
+    pub(crate) fn restore(&self, hidden: bool) {
         if !self.same_window() {
             return;
         }
@@ -183,8 +183,11 @@ impl WindowSnapshot {
         unsafe {
             SetWindowLongPtrW(self.window, GWL_EXSTYLE, self.extended_style);
             self.restore_layered();
-            let _ = SetWindowPlacement(self.window, &self.placement);
-            if !self.visible {
+            // Restore position/styles without reopening a window that the user
+            // explicitly kept hidden during this caption session.
+            let placement = restored_placement(self.placement, self.visible, hidden);
+            let _ = SetWindowPlacement(self.window, &placement);
+            if hidden || !self.visible {
                 let _ = ShowWindowAsync(self.window, SW_HIDE);
             }
         }
@@ -204,6 +207,41 @@ impl WindowSnapshot {
                         .encode_utf16()
                         .collect::<Vec<_>>()
                 && WaitForSingleObject(HANDLE(self.process.as_raw_handle()), 0) == WAIT_TIMEOUT
+        }
+    }
+}
+
+fn restored_placement(
+    mut placement: WINDOWPLACEMENT,
+    originally_visible: bool,
+    hidden: bool,
+) -> WINDOWPLACEMENT {
+    if hidden || !originally_visible {
+        placement.showCmd = SW_HIDE.0 as u32;
+    }
+    placement
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stopping_capture_preserves_the_requested_hidden_window() {
+        let original = WINDOWPLACEMENT {
+            showCmd: SW_SHOWNORMAL.0 as u32,
+            ..Default::default()
+        };
+        for (visible, hidden, expected) in [
+            (true, true, SW_HIDE),
+            (true, false, SW_SHOWNORMAL),
+            (false, true, SW_HIDE),
+            (false, false, SW_HIDE),
+        ] {
+            assert_eq!(
+                restored_placement(original, visible, hidden).showCmd,
+                expected.0 as u32
+            );
         }
     }
 }

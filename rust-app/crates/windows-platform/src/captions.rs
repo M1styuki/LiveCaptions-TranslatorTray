@@ -163,6 +163,7 @@ struct AttachedWindow {
     snapshot: WindowSnapshot,
     owned: Option<Child>,
     ready: bool,
+    hidden: bool,
 }
 
 impl Drop for AttachedWindow {
@@ -189,7 +190,7 @@ impl Drop for AttachedWindow {
                 }
             }
         } else {
-            self.snapshot.restore();
+            self.snapshot.restore(self.hidden);
         }
     }
 }
@@ -240,6 +241,7 @@ fn attach(control: &Arc<(Mutex<Control>, Condvar)>) -> io::Result<AttachedWindow
         snapshot,
         owned,
         ready: false,
+        hidden: false,
     })
 }
 
@@ -342,6 +344,7 @@ fn run_mta(control: &Arc<(Mutex<Control>, Condvar)>, callback: &CaptionCallback)
                 let visibility = (hidden, hidden && element.is_none());
                 if applied_hidden != Some(visibility) {
                     window.snapshot.set_hidden(visibility.0, visibility.1)?;
+                    window.hidden = hidden;
                     applied_hidden = Some(visibility);
                 }
                 if first_ready {
@@ -398,6 +401,7 @@ fn run_mta(control: &Arc<(Mutex<Control>, Condvar)>, callback: &CaptionCallback)
             }
         }
     }
+    window.hidden = control.0.lock().unwrap().hidden;
     // UIA interfaces drop before AttachedWindow restores/closes the system window.
     drop(element);
     drop(condition);
@@ -641,6 +645,7 @@ mod tests {
                 snapshot,
                 owned: owned.then_some(child),
                 ready,
+                hidden: false,
             };
             let start = Instant::now();
             drop(window);
