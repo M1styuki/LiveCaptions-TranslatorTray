@@ -2,14 +2,14 @@ use super::*;
 use slint::platform::{Key, PointerEventButton, WindowEvent};
 
 slint::slint! {
-    import { ChoiceBox, IntervalSlider } from "../../ui/controls.slint";
+    import { ChoiceBox, IntegerBox } from "../../ui/controls.slint";
     export { ModelLookup } from "../../ui/controls.slint";
     export component FlatControlsTest inherits Window {
         width:360px;height:280px;
         in-out property <string> selected:"First";
-        in-out property <float> interval:3;
+        in-out property <int> interval:3;
         ChoiceBox {x:20px;y:20px;width:200px;model:["First","Second","Third"];current-value <=> root.selected;}
-        IntervalSlider {x:20px;y:220px;width:200px;value <=> root.interval;}
+        IntegerBox {x:20px;y:220px;width:200px;minimum:0;maximum:10;number <=> root.interval;}
     }
 }
 
@@ -72,11 +72,21 @@ fn run_at_scale(windows: &Rc<std::cell::RefCell<Vec<Rc<MinimalSoftwareWindow>>>>
         "Second",
         "escape cancels pending selection"
     );
-    click(210.0, 235.0);
-    assert_eq!(ui.get_interval(), 10.0);
-    key(Key::LeftArrow.into());
-    assert_eq!(ui.get_interval(), 9.0);
-    key(Key::Home.into());
-    assert_eq!(ui.get_interval(), 0.0);
+    click(178.0, 235.0);
+    assert_eq!(ui.get_interval(), 4, "increase arrow steps by one");
+    click(206.0, 235.0);
+    assert_eq!(ui.get_interval(), 3, "decrease arrow steps by one");
+    key(Key::UpArrow.into());
+    assert_eq!(ui.get_interval(), 4);
+    key(Key::DownArrow.into());
+    assert_eq!(ui.get_interval(), 3);
+    for _ in 0..15 {
+        key(Key::DownArrow.into());
+    }
+    assert_eq!(ui.get_interval(), 0);
+    for _ in 0..15 {
+        key(Key::UpArrow.into());
+    }
+    assert_eq!(ui.get_interval(), 10);
     ui.hide().unwrap();
 }
