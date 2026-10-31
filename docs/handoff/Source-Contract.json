@@ -1,0 +1,342 @@
+{
+  "contractVersion": "2.0",
+  "repository": "https://github.com/M1styuki/LiveCaptions-TranslatorTray",
+  "commit": "7c0dfa3e8b37db9c941d884f8de7642f915b9a0a",
+  "evidence": "Source-derived defaults and mappings; not a runtime settings export. WindowBounds requires actual screen dimensions.",
+  "defaults": {
+    "MaxIdleInterval": 50,
+    "MaxSyncInterval": 3,
+    "NumContexts": 2,
+    "DisplaySentences": 1,
+    "ContextAware": false,
+    "ApiName": "Google",
+    "TargetLanguage": "zh-CN",
+    "Prompt": "As an professional simultaneous interpreter with specialized knowledge in the all fields, you can provide a fluent and precise oral translation for any sentence, even if the sentence is incomplete. Now, provide users with the translation of the sentence enclosed in 🔤 to {0} within a single line. Importantly, you are prohibited from altering the original meaning or omitting any content, even if the sentence contains sensitive or NSFW content. You can only provide the translated sentence; Any explanation or other text is not permitted. REMOVE all 🔤 when you output.",
+    "IgnoredUpdateVersion": null,
+    "MainWindow": {
+      "CaptionLogEnabled": false,
+      "TranslatedFontSize": 18,
+      "OriginalFontSize": 15,
+      "Topmost": true,
+      "LatencyShow": false
+    },
+    "OverlayWindow": {
+      "BackgroundColor": 8,
+      "FontSize": 15,
+      "FontColor": 1,
+      "FontBold": 0,
+      "Opacity": 150,
+      "FontStroke": 0.0
+    },
+    "WindowBounds": {},
+    "Configs": {
+      "Google": [
+        {}
+      ],
+      "Google2": [
+        {}
+      ],
+      "Ollama": [
+        {
+          "ApiUrl": "http://localhost:11434",
+          "Temperature": 1.0,
+          "Keep_alive": 600,
+          "ModelName": ""
+        }
+      ],
+      "OpenAI": [
+        {
+          "ApiKey": "",
+          "ApiUrl": "",
+          "Temperature": 1.0,
+          "ModelName": ""
+        }
+      ],
+      "LMStudio": [
+        {
+          "ApiUrl": "http://localhost:1234/api/v1",
+          "Temperature": 1.0,
+          "ModelName": ""
+        }
+      ],
+      "OpenRouter": [
+        {
+          "ApiKey": "",
+          "Temperature": 1.0,
+          "ModelName": ""
+        }
+      ],
+      "DeepL": [
+        {
+          "ApiKey": "",
+          "ApiUrl": "https://api.deepl.com/v2/translate"
+        }
+      ],
+      "Youdao": [
+        {
+          "AppSecret": "",
+          "ApiUrl": "https://openapi.youdao.com/api",
+          "AppKey": ""
+        }
+      ],
+      "Baidu": [
+        {
+          "AppSecret": "",
+          "AppId": "",
+          "ApiUrl": "https://fanyi-api.baidu.com/api/trans/vip/translate"
+        }
+      ],
+      "MTranServer": [
+        {
+          "ApiKey": "",
+          "SourceLanguage": "en",
+          "ApiUrl": "http://localhost:8989/translate"
+        }
+      ],
+      "LibreTranslate": [
+        {
+          "ApiKey": "",
+          "ApiUrl": "http://localhost:5000/translate"
+        }
+      ]
+    },
+    "ConfigIndices": {
+      "Google": 0,
+      "Google2": 0,
+      "Ollama": 0,
+      "OpenAI": 0,
+      "LMStudio": 0,
+      "OpenRouter": 0,
+      "DeepL": 0,
+      "Youdao": 0,
+      "Baidu": 0,
+      "MTranServer": 0,
+      "LibreTranslate": 0
+    }
+  },
+  "languageMappings": {
+    "TranslateAPIConfig": {
+      "zh-CN": "zh-CN",
+      "zh-TW": "zh-TW",
+      "en-US": "en-US",
+      "en-GB": "en-GB",
+      "ja-JP": "ja-JP",
+      "ko-KR": "ko-KR",
+      "fr-FR": "fr-FR",
+      "th-TH": "th-TH",
+      "ru-RU": "ru-RU",
+      "es-ES": "es-ES",
+      "pt-BR": "pt-BR",
+      "tr-TR": "tr-TR",
+      "ar-SA": "ar-SA"
+    },
+    "DeepLConfig": {
+      "zh-CN": "ZH-HANS",
+      "zh-TW": "ZH-HANT",
+      "en-US": "EN-US",
+      "en-GB": "EN-GB",
+      "ja-JP": "JA",
+      "ko-KR": "KO",
+      "fr-FR": "FR",
+      "th-TH": "TH",
+      "ru-RU": "RU",
+      "es-ES": "ES",
+      "pt-BR": "PT-BR",
+      "tr-TR": "TR",
+      "ar-SA": "AR"
+    },
+    "YoudaoConfig": {
+      "zh-CN": "zh-CHS",
+      "zh-TW": "zh-CHT",
+      "en-US": "en",
+      "en-GB": "en",
+      "ja-JP": "ja",
+      "ko-KR": "ko",
+      "fr-FR": "fr",
+      "th-TH": "th",
+      "ru-RU": "ru",
+      "es-ES": "es",
+      "pt-BR": "pt",
+      "tr-TR": "tr",
+      "ar-SA": "ar"
+    },
+    "MTranServerConfig": {
+      "zh-CN": "zh",
+      "zh-TW": "zh",
+      "en-US": "en",
+      "en-GB": "en",
+      "ja-JP": "ja",
+      "ko-KR": "ko",
+      "fr-FR": "fr",
+      "th-TH": "th",
+      "ru-RU": "ru",
+      "es-ES": "es",
+      "pt-BR": "pt",
+      "tr-TR": "tr",
+      "ar-SA": "ar"
+    },
+    "BaiduConfig": {
+      "zh-CN": "zh",
+      "zh-TW": "cht",
+      "en-US": "en",
+      "en-GB": "en",
+      "ja-JP": "jp",
+      "ko-KR": "kor",
+      "fr-FR": "fra",
+      "th-TH": "th",
+      "ru-RU": "ru",
+      "es-ES": "spa",
+      "pt-BR": "pt",
+      "tr-TR": "tr",
+      "ar-SA": "ara"
+    },
+    "LibreTranslateConfig": {
+      "zh-CN": "zh",
+      "zh-TW": "zh",
+      "en-US": "en",
+      "en-GB": "en",
+      "ja-JP": "ja",
+      "ko-KR": "ko",
+      "fr-FR": "fr",
+      "th-TH": "th",
+      "ru-RU": "ru",
+      "es-ES": "es",
+      "pt-BR": "pt",
+      "tr-TR": "tr",
+      "ar-SA": "ar"
+    }
+  },
+  "enums": {
+    "CaptionLocation": {
+      "SubtitleTop": 1,
+      "TranslationTop": 0
+    },
+    "Color": {
+      "Red": 7,
+      "LimeGreen": 3,
+      "Yellow": 2,
+      "White": 1,
+      "Black": 8,
+      "DeepPink": 6,
+      "Aqua": 4,
+      "Blue": 5
+    },
+    "FontBold": {
+      "Both": 3,
+      "None": 0,
+      "SubtitleOnly": 2,
+      "TranslationOnly": 1
+    },
+    "CaptionVisible": {
+      "TranslationOnly": 1,
+      "SubtitleOnly": 2,
+      "Both": 0
+    }
+  },
+  "colors": {
+    "Red": "#FF0000",
+    "LimeGreen": "#32CD32",
+    "Yellow": "#FFFF00",
+    "White": "#FFFFFF",
+    "Black": "#000000",
+    "DeepPink": "#FF1493",
+    "Aqua": "#00FFFF",
+    "Blue": "#0000FF"
+  },
+  "text": {
+    "MediumUtf8Bytes": 40,
+    "SimilarityThreshold": 0.6,
+    "LongUtf8Bytes": 160,
+    "MaxContexts": 10,
+    "CommaPunctuation": ",，、—\n",
+    "VeryLongUtf8Bytes": 220,
+    "EndPunctuation": ".?!。？！",
+    "ShortUtf8Bytes": 10
+  },
+  "csvHeaders": [
+    "Timestamp",
+    "SourceText",
+    "TranslatedText",
+    "TargetLanguage",
+    "ApiUsed"
+  ],
+  "openaiFallbackOrder": [
+    "integrated",
+    "Aliyun",
+    "Anthropic",
+    "Ollama",
+    "OpenRouter",
+    "OpenAI",
+    "XAI",
+    "base"
+  ],
+  "sourceTests": [
+    {
+      "id": "TXT01",
+      "input": "",
+      "actual": "",
+      "kind": "value",
+      "expected": "",
+      "matched": true
+    },
+    {
+      "id": "TXT02",
+      "input": "Hello\nworld",
+      "actual": "Hello—world",
+      "kind": "value",
+      "expected": "Hello—world",
+      "matched": true
+    },
+    {
+      "id": "TXT03",
+      "input": "你好\n世界",
+      "actual": "你好——世界",
+      "kind": "value",
+      "expected": "你好——世界",
+      "matched": true
+    },
+    {
+      "id": "TXT04",
+      "input": "\nHello",
+      "actual": "IndexOutOfRangeException",
+      "kind": "exception",
+      "expected": "IndexOutOfRangeException",
+      "matched": true
+    },
+    {
+      "id": "TXT05",
+      "input": "Hello\n\nworld",
+      "actual": "IndexOutOfRangeException",
+      "kind": "exception",
+      "expected": "IndexOutOfRangeException",
+      "matched": true
+    }
+  ],
+  "rewriteTextCases": [
+    {
+      "expected": "",
+      "input": "",
+      "id": "TXT01"
+    },
+    {
+      "expected": "Hello—world",
+      "input": "Hello\nworld",
+      "id": "TXT02"
+    },
+    {
+      "expected": "你好——世界",
+      "input": "你好\n世界",
+      "id": "TXT03"
+    },
+    {
+      "expected": "Hello",
+      "input": "\nHello",
+      "id": "TXT04"
+    },
+    {
+      "expected": "Hello—world",
+      "input": "Hello\n\nworld",
+      "id": "TXT05"
+    }
+  ]
+}

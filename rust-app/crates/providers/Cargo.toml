@@ -1,0 +1,17 @@
+[package]
+name = "providers"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+test-support = []
+
+[dependencies]
+reqwest.workspace = true
+serde_json.workspace = true
+captions-core.workspace = true
+sha2 = "0.10"
+windows = { workspace = true, features = ["Win32_Security_Cryptography"] }
+tokio.workspace = true

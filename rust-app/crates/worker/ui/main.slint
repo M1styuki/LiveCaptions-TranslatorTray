@@ -1,0 +1,283 @@
+import { Button, ComboBox, ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
+export { ApiWindow, ApiEditor } from "api.slint";
+export { Palette } from "std-widgets.slint";
+import { IconButton, HistorySearch, NavigationButton, PageEntrance } from "controls.slint";
+import { SettingsPage } from "settings.slint";
+
+export struct HistoryItem { stamp: string, stamp-full: string, source: string, translation: string, service: string, language: string }
+
+component HistoryLine inherits HorizontalBox {
+    in property <HistoryItem> entry;
+    in property <bool> header: false;
+    padding:8px;
+    spacing:8px;
+    Text {width:max(0px,(root.width - 40px)*0.4/2.7);text:root.entry.stamp;color:Palette.foreground;wrap:word-wrap;font-weight:root.header ? 600 : 400;Tooltip {text:@markdown("\{root.entry.stamp-full}");}}
+    Text {width:max(0px,(root.width - 40px)/2.7);text:root.entry.source;color:Palette.foreground;wrap:word-wrap;font-weight:root.header ? 600 : 400;}
+    Text {width:max(0px,(root.width - 40px)/2.7);text:root.entry.translation;color:Palette.foreground;wrap:word-wrap;font-weight:root.header ? 600 : 400;}
+    Text {width:max(0px,(root.width - 40px)*0.3/2.7);text:root.entry.service;color:Palette.foreground;wrap:word-wrap;font-weight:root.header ? 600 : 400;Tooltip {text:@markdown("\{root.entry.language}");}}
+}
+
+component CaptionText inherits Rectangle {
+    in property <string> text;
+    in property <int> point-size:15;
+    in property <bool> adjustable:false;
+    in property <length> floor-height:34px;
+    callback copied(string);
+    callback adjusted(int);
+    min-height:max(root.floor-height,body.preferred-height + 16px);
+    preferred-height:self.min-height;
+    vertical-stretch:0;
+    background:Palette.control-background;
+    body := Text {x:8px;y:8px;width:parent.width - 16px;height:self.preferred-height;text:root.text;color:Palette.foreground;wrap:word-wrap;font-size:root.point-size * 1px;}
+    TouchArea {
+        mouse-cursor:pointer;
+        pointer-event(event)=>{if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {root.copied(root.text);}}
+        scroll-event(event)=>{if root.adjustable && event.modifiers.control && !event.modifiers.shift && !event.modifiers.alt && !event.modifiers.meta && event.delta-y != 0 {root.adjusted(event.delta-y > 0 ? 1 : -1);return accept;}return reject;}
+        Tooltip {text:@markdown("单击复制字幕");}
+    }
+}
+
+component DeleteConfirmation inherits Rectangle {
+    callback decided(bool);
+    background:#00000080; // Slint is RGBA; WPF's #80000000 is ARGB.
+    TouchArea {}
+    FocusScope {
+        capture-key-pressed(event)=>{
+            if event.text==Key.Escape {root.decided(false);return accept;}
+            if event.text==Key.Tab {if cancel.has-focus {confirm.focus();} else {cancel.focus();}return accept;}
+            return reject;
+        }
+        key-pressed(event)=>{if event.text==Key.Return {root.decided(false);return accept;}return reject;}
+        Rectangle {
+            x:(root.width - self.width)/2;y:(root.height - self.height)/2;
+            width:380px;height:170px;
+            background:Palette.background;border-radius:6px;border-width:1px;border-color:Palette.border;
+            VerticalBox {
+                padding:18px;
+                Text {text:"删除全部历史记录？";font-size:18px;font-weight:600;color:Palette.foreground;}
+                Text {text:"历史记录将永久删除，当前翻译上下文也会清空。";wrap:word-wrap;color:Palette.foreground;}
+                Rectangle {vertical-stretch:1;}
+                HorizontalBox {
+                    Rectangle {horizontal-stretch:1;}
+                    cancel := Button {text:"取消";clicked=>{root.decided(false);}}
+                    confirm := Button {text:"全部删除";clicked=>{root.decided(true);}}
+                }
+            }
+        }
+    }
+    init=>{cancel.focus();}
+}
+
+export component MainWindow inherits Window {
+    title: "实时字幕翻译";
+    preferred-width: 900px;
+    preferred-height: 600px;
+    min-width: 800px;
+    min-height: min(root.available-window-height * 1px,root.page == 1 ? 600px : (root.page == 2 ? 420px : (root.caption-log-enabled ? max(240px,110px * (root.display-sentences + 1)) : 240px)));
+    in-out property <float> available-window-height: 10000;
+    no-frame: true;
+    in property <string> ui-font-family:"Segoe UI";
+    default-font-family:root.ui-font-family;
+    default-font-size: 14px;
+    in-out property <bool> native-material:false;
+    out property <bool> frame-dark:Palette.color-scheme == ColorScheme.dark;
+    callback frame-theme-changed();
+    changed frame-dark=>{root.frame-theme-changed();}
+    background: root.native-material ? transparent : (root.frame-dark ? #272727 : Palette.background);
+    in-out property <int> page: 1;
+    in-out property <bool> log-only: false;
+    in-out property <bool> overlay-visible: false;
+    in-out property <bool> topmost: false;
+    in-out property <string> source-caption;
+    in-out property <string> translated-caption;
+    in-out property <string> caption-notice;
+    in-out property <int> original-font-size:15;
+    in-out property <int> translated-font-size:18;
+    in-out property <string> copy-message;
+    in-out property <int> data-state: 0;
+    in-out property <string> data-message: "正在载入设置与历史…";
+    in-out property <bool> retry-save: false;
+    in-out property <bool> file-busy: false;
+    in-out property <bool> export-busy: false;
+    in-out property <string> export-message;
+    in-out property <bool> delete-confirm:false;
+    in-out property <bool> delete-busy:false;
+    in-out property <string> delete-message;
+    in-out property <string> recovery-location;
+    in-out property <string> selected-service: "Google";
+    in-out property <string> selected-language: "zh-CN";
+    in-out property <string> settings-prompt;
+    in-out property <int> max-sync-interval: 3;
+    in-out property <int> num-contexts: 2;
+    in-out property <int> display-sentences: 1;
+    in-out property <bool> context-aware: false;
+    in-out property <bool> latency-show: false;
+    in-out property <bool> caption-log-enabled: false;
+    in property <[HistoryItem]> caption-cards;
+    in-out property <string> latency-ms;
+    in-out property <bool> live-captions-hidden: true;
+    in-out property <string> history-query;
+    in-out property <int> history-size: 30;
+    in-out property <int> history-page: 1;
+    in-out property <int> history-pages: 1;
+    in-out property <string> history-total: "0";
+    in property <[HistoryItem]> history-rows;
+    callback data-action(int, string);
+    callback file-requested(int);
+    callback caption-copy-requested(string);
+    callback caption-font-adjusted(int,int);
+    callback delete-action(int);
+    callback prompt-changed(string);
+    callback history-requested(int);
+    callback history-action(int,int);
+    callback host-wakeup();
+    callback page-changed(int);
+    callback pause-changed(bool);
+    callback overlay-changed(bool);
+    callback topmost-changed(bool);
+    callback setting-edited(string,string);
+    callback api-requested();
+    callback captions-visibility-changed(bool);
+    callback window-action(int);
+
+    VerticalBox {
+        padding: 0px;
+        spacing: 0px;
+        if root.retry-save || (root.data-message != "" && root.data-message != "设置已保存。"): HorizontalBox {
+            padding:4px;
+            Text {text:root.data-message;color:Palette.foreground;wrap:word-wrap;horizontal-stretch:1;}
+            if root.retry-save: Button {text:"重试保存";clicked=>{root.data-action(4,"");}}
+        }
+        Rectangle {height:30px;background:root.native-material ? transparent : (root.frame-dark ? #202020 : Palette.background);
+        HorizontalBox {
+            padding:0px;
+            spacing:0px;
+            height:30px;
+            Rectangle {
+                horizontal-stretch:1;
+                Text {x:14px;text:"实时字幕翻译";color:Palette.foreground;vertical-alignment:center;font-size:12px;opacity:0.8;}
+                TouchArea {pointer-event(event)=>{if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {root.window-action(2);}}}
+            }
+            if root.page == 0: IconButton {width:32px;height:30px;active:root.caption-log-enabled;icon:root.caption-log-enabled ? @image-url("../../../assets/original-icons/history.svg") : @image-url("../../../assets/original-icons/history-dismiss.svg");label:"字幕历史卡片";clicked=>{root.caption-log-enabled=!root.caption-log-enabled;root.setting-edited("CaptionLogEnabled",root.caption-log-enabled ? "true" : "false");}}
+            IconButton {width:38px;height:30px;icon-size:14px;icon:@image-url("../../../assets/icons/minimize.svg");label:"最小化";clicked=>{root.window-action(0);}}
+            IconButton {width:38px;height:30px;icon-size:14px;icon:@image-url("../../../assets/icons/close.svg");label:"关闭主窗口";clicked=>{root.window-action(1);}}
+        }
+        }
+        HorizontalBox {
+            padding:0px;spacing:0px;
+            VerticalBox {
+                padding: 10px;
+                padding-top:12px;
+                padding-bottom:8px;
+                width: 144px;
+                spacing: 6px;
+                for entry[index] in ["字幕", "设置", "历史记录"]: NavigationButton {
+                    text:entry;
+                    selected:root.page == index;
+                    icon:[@image-url("../../../assets/original-icons/home.svg"),@image-url("../../../assets/original-icons/settings.svg"),@image-url("../../../assets/original-icons/history.svg")][index];
+                    clicked=>{root.page=index;root.page-changed(index);}
+                }
+                Rectangle { vertical-stretch: 1; }
+                Rectangle {height:1px;background:Palette.border;opacity:0.45;}
+                HorizontalBox {padding:0px;spacing:6px;height:32px;
+                    IconButton {width:37px;height:32px;active:root.log-only;icon:root.log-only ? @image-url("../../../assets/original-icons/pause-filled.svg") : @image-url("../../../assets/original-icons/pause.svg");label:root.log-only ? "恢复翻译" : "暂停翻译";clicked=>{root.log-only=!root.log-only;root.pause-changed(root.log-only);}}
+                    IconButton {width:37px;height:32px;active:root.overlay-visible;icon:root.overlay-visible ? @image-url("../../../assets/original-icons/captions.svg") : @image-url("../../../assets/original-icons/captions-off.svg");label:"悬浮字幕窗口";clicked=>{root.overlay-visible=!root.overlay-visible;root.overlay-changed(root.overlay-visible);}}
+                    IconButton {width:37px;height:32px;active:root.topmost;icon:root.topmost ? @image-url("../../../assets/original-icons/pin.svg") : @image-url("../../../assets/original-icons/pin-off.svg");label:"始终置顶";clicked=>{root.topmost=!root.topmost;root.topmost-changed(root.topmost);}}
+                }
+            }
+            PageEntrance {
+                revision:root.page;
+                background: transparent;
+                border-radius: 0px;
+                horizontal-stretch: 1;
+                if root.page == 0: ScrollView {
+                  content-width:self.visible-width;
+                  VerticalBox {
+                    padding-left:5px;padding-right:15px;padding-top:5px;padding-bottom:5px;
+                    spacing:3px;
+                    CaptionText {text:root.source-caption;point-size:root.original-font-size;adjustable:true;copied(value)=>{root.caption-copy-requested(value);}adjusted(delta)=>{root.caption-font-adjusted(0,delta);}}
+                    if root.caption-notice != "": Text {text:root.caption-notice;color:Palette.foreground;wrap:word-wrap;font-size:13px;}
+                    CaptionText {floor-height:43px;text:root.translated-caption;point-size:root.translated-font-size;adjustable:true;copied(value)=>{root.caption-copy-requested(value);}adjusted(delta)=>{root.caption-font-adjusted(1,delta);}}
+                    if root.latency-show && root.latency-ms != "": Text { text: "延迟：" + root.latency-ms + " ms"; color: Palette.foreground; font-size: 12px; }
+                    if root.copy-message != "": Text {text:root.copy-message;color:Palette.foreground;font-size:12px;}
+                    if root.caption-log-enabled: VerticalBox {for card in root.caption-cards: VerticalBox {padding:4px;CaptionText {text:card.source;point-size:12;copied(value)=>{root.caption-copy-requested(value);}}CaptionText {text:card.translation;point-size:16;copied(value)=>{root.caption-copy-requested(value);}}}}
+                    Rectangle { vertical-stretch: 1; }
+                  }
+                }
+                if root.page == 1 && root.data-state != 2: VerticalBox {
+                    padding: 18px;
+                    spacing: 12px;
+                    if root.data-state >= 3: Text { text: root.recovery-location; color: Palette.foreground; wrap: word-wrap; }
+                    if root.data-state == 3 || root.data-state == 4: Button {
+                        text: "保留原文件并恢复默认设置";
+                        enabled:!root.file-busy;
+                        clicked => { root.data-action(0, ""); }
+                    }
+                    if root.data-state == 3 || root.data-state == 4: Button {
+                        text:"选择另一份配置文件恢复…";
+                        enabled:!root.file-busy;
+                        clicked=>{root.file-requested(1);}
+                    }
+                    if root.data-state == 3: Button {
+                        text:"选择原数据目录完成恢复…";enabled:!root.file-busy;clicked=>{root.file-requested(2);}
+                    }
+                    if root.data-state >= 3: Button {
+                        text: root.data-state == 3 ? "重试恢复" : "重新载入";
+                        enabled:!root.file-busy;
+                        clicked => { root.data-action(3, ""); }
+                    }
+                    Rectangle { vertical-stretch: 1; }
+                }
+                if root.page == 1 && root.data-state == 2: SettingsPage {
+                    selected-service <=> root.selected-service;
+                    selected-language <=> root.selected-language;
+                    max-sync-interval <=> root.max-sync-interval;
+                    num-contexts <=> root.num-contexts;
+                    display-sentences <=> root.display-sentences;
+                    context-aware <=> root.context-aware;
+                    latency-show <=> root.latency-show;
+                    live-captions-hidden:root.live-captions-hidden;
+                    setting-edited(field,value)=>{root.setting-edited(field,value);}
+                    api-requested=>{root.api-requested();}
+                    captions-visibility-changed(hidden)=>{root.captions-visibility-changed(hidden);}
+                }
+                if root.page == 2: VerticalBox {
+                    padding:15px;
+                    spacing:5px;
+                    HorizontalBox {
+                        padding:0px;spacing:4px;
+                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/previous.svg");label:"上一页";enabled:root.history-page>1;clicked=>{root.history-requested(root.history-page - 1);}}
+                        Text {text:root.history-page + "/" + root.history-pages;min-width:34px;font-size:15px;color:Palette.foreground;vertical-alignment:center;horizontal-alignment:center;}
+                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/next.svg");label:"下一页";enabled:root.history-page<root.history-pages;clicked=>{root.history-requested(root.history-page + 1);}}
+                        ComboBox {width:86px;height:35px;model:["20/页","30/页","50/页","100/页"];current-index:root.history-size == 20 ? 0 : (root.history-size == 50 ? 2 : (root.history-size == 100 ? 3 : 1));selected(value)=>{root.history-action(3,[20,30,50,100][self.current-index]);}}
+                        HistorySearch {width:max(150px,min(220px,root.width - 650px));value <=> root.history-query;submitted=>{root.history-action(0,0);}cleared=>{root.history-action(1,0);}}
+                        Rectangle {horizontal-stretch:1;}
+                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/download.svg");label:root.export-busy ? "正在导出全部历史" : "导出全部历史";enabled:!root.file-busy && !root.export-busy && !root.delete-busy;clicked=>{root.file-requested(3);}}
+                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/delete.svg");label:"全部删除";enabled:!root.file-busy && !root.export-busy && !root.delete-busy;clicked=>{root.delete-action(0);}}
+                        IconButton {outlined:true;width:38px;height:30px;icon:@image-url("../../../assets/original-icons/refresh.svg");label:"刷新";clicked=>{root.history-action(2,0);}}
+                    }
+                    if root.export-message != "": Text {text:root.export-message;color:Palette.foreground;wrap:word-wrap;}
+                    if root.delete-message != "": Text {text:root.delete-message;color:Palette.foreground;wrap:word-wrap;}
+                    HistoryLine {
+                        width:history-list.visible-width;
+                        header:true;
+                        entry:{stamp:"时间",stamp-full:"",source:"字幕",translation:"译文",service:"API",language:""};
+                    }
+                    history-list := ScrollView {
+                        content-width:self.visible-width;
+                        VerticalBox {
+                            padding:0px;spacing:0px;
+                            for row in root.history-rows: VerticalBox {
+                                padding:0px;spacing:0px;
+                                HistoryLine {width:history-list.visible-width;entry:row;}
+                                Rectangle {height:1px;background:Palette.border;}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    TouchArea {x:root.width - 12px;y:root.height - 12px;width:12px;height:12px;mouse-cursor:nwse-resize;pointer-event(event)=>{if event.kind==PointerEventKind.down && event.button==PointerEventButton.left {root.window-action(3);}}}
+    if root.delete-confirm: DeleteConfirmation {decided(yes)=>{root.delete-action(yes ? 2 : 1);}}
+}

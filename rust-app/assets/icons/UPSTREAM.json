@@ -1,0 +1,175 @@
+{
+  "repository": "https://github.com/microsoft/fluentui-system-icons",
+  "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+  "license": "MIT",
+  "files": [
+    {
+      "name": "font-increase",
+      "path": "assets/Font Increase/SVG/ic_fluent_font_increase_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "e610d7da8cd7d96e319e165bd9542c88f4725c80"
+    },
+    {
+      "name": "font-decrease",
+      "path": "assets/Font Decrease/SVG/ic_fluent_font_decrease_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "8fb79a9d962d9d67f13113603800cd9a1c39fe36"
+    },
+    {
+      "name": "stroke-increase",
+      "path": "assets/Ink Stroke/SVG/ic_fluent_ink_stroke_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "9b1f6739ee3e74396e075eaef07e75b9994de818"
+    },
+    {
+      "name": "stroke-decrease",
+      "path": "assets/Ink Stroke Arrow Down/SVG/ic_fluent_ink_stroke_arrow_down_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "13627647cb7e6301b10c965a4c3e556e8f18fe0f"
+    },
+    {
+      "name": "bold",
+      "path": "assets/Text Bold/SVG/ic_fluent_text_bold_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "9e73b3b569f372f5f626464a47ad2a04764ec0d7"
+    },
+    {
+      "name": "color",
+      "path": "assets/Color/SVG/ic_fluent_color_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "c4a7474c123e9bf127cd879dbc1535f9a1cfee93"
+    },
+    {
+      "name": "opacity-increase",
+      "path": "assets/Arrow Autofit Up/SVG/ic_fluent_arrow_autofit_up_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "f9c0b2e37e92a71309866bb9d46357bd7ec25673"
+    },
+    {
+      "name": "opacity-decrease",
+      "path": "assets/Arrow Autofit Down/SVG/ic_fluent_arrow_autofit_down_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "6e64599c2e1392317eb519d85e02f7ee9c91625f"
+    },
+    {
+      "name": "panel-bottom",
+      "path": "assets/Panel Bottom/SVG/ic_fluent_panel_bottom_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "f83525e6d0c80a06372262b34f4c594f4510d6dd"
+    },
+    {
+      "name": "swap",
+      "path": "assets/Arrow Sync Circle/SVG/ic_fluent_arrow_sync_circle_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "624b68370d9656085df1e162f7ba6375d3e1b929"
+    },
+    {
+      "name": "lock",
+      "path": "assets/Lock Closed/SVG/ic_fluent_lock_closed_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "1d1a29c17b7da3a02e3e05f902b0542e743178f2"
+    },
+    {
+      "name": "home",
+      "path": "assets/Home/SVG/ic_fluent_home_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "e89610b4a42bcb055d748490cb3fb05a1848222c"
+    },
+    {
+      "name": "settings",
+      "path": "assets/Settings/SVG/ic_fluent_settings_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "54752c20fe6c380b1f2b5bcbef8738295e2cc1d0"
+    },
+    {
+      "name": "history",
+      "path": "assets/History/SVG/ic_fluent_history_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "400c1e8ff707546029c301eb400e5d5517fc7519"
+    },
+    {
+      "name": "pause",
+      "path": "assets/Pause/SVG/ic_fluent_pause_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "b582441fdf815174bad7478ad15708897ecf25c0"
+    },
+    {
+      "name": "play",
+      "path": "assets/Play/SVG/ic_fluent_play_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "05a0ec3f98ee72567238bfeee1ffa980553d8b0b"
+    },
+    {
+      "name": "captions",
+      "path": "assets/Closed Caption Off/SVG/ic_fluent_closed_caption_off_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "af051f016ea1f64ace5bc97ee5a429f91e4ab940"
+    },
+    {
+      "name": "pin",
+      "path": "assets/Pin/SVG/ic_fluent_pin_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "23ff433f8500efc5276c8112ed03fdef2771eb37"
+    },
+    {
+      "name": "minimize",
+      "path": "assets/Subtract/SVG/ic_fluent_subtract_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "7943b8637489e5db22ed493e5a95553d9ccf3865"
+    },
+    {
+      "name": "close",
+      "path": "assets/Dismiss/SVG/ic_fluent_dismiss_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "8da9b6210fd80425d1e16dbeab5b3e0a4c944b23"
+    },
+    {
+      "name": "search",
+      "path": "assets/Search/SVG/ic_fluent_search_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "fc5559ea403f5ff0b3e7ddcfb7332f58f0d3a74c"
+    },
+    {
+      "name": "download",
+      "path": "assets/Arrow Download/SVG/ic_fluent_arrow_download_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "0ea4b96f7746fea5f8b132201d26c4e403ee965d"
+    },
+    {
+      "name": "delete",
+      "path": "assets/Delete/SVG/ic_fluent_delete_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "b3ae7c7035e6384337c8a640fd375d0531c26ec2"
+    },
+    {
+      "name": "refresh",
+      "path": "assets/Arrow Clockwise/SVG/ic_fluent_arrow_clockwise_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "43d0b5edd796cb103fcf2ce3669f146eae54afbc"
+    },
+    {
+      "name": "previous",
+      "path": "assets/Chevron Left/SVG/ic_fluent_chevron_left_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "b368c857c28db6fb3f5a4519c6dac794745b419f"
+    },
+    {
+      "name": "next",
+      "path": "assets/Chevron Right/SVG/ic_fluent_chevron_right_20_regular.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "2267806f347827fcb43ead48b4e015454b5a1920"
+    },
+    {
+      "name": "tray-enabled",
+      "path": "assets/Closed Caption/SVG/ic_fluent_closed_caption_24_filled.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "6c4be7777e5f92b029be75feb25c01230481be83"
+    },
+    {
+      "name": "tray-disabled",
+      "path": "assets/Closed Caption Off/SVG/ic_fluent_closed_caption_off_24_filled.svg",
+      "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+      "sha": "60aff88f4f7eeb4742fdb7fb028d962ed30bbd10"
+    }
+  ]
+}

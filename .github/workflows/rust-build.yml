@@ -1,0 +1,35 @@
+name: Rust Windows build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --target x86_64-pc-windows-msvc
+      - name: Check formatting
+        working-directory: rust-app
+        run: cargo fmt --all -- --check
+      - name: Build Windows x64 executable
+        run: .\rust-app\tools\build.ps1 -Mode release
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiveCaptionsTray-win11-x64
+          path: rust-app/target/x86_64-pc-windows-msvc/release/LiveCaptionsTray.exe
+          if-no-files-found: error

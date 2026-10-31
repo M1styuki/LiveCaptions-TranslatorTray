@@ -1,0 +1,242 @@
+{
+  "package": "WPF-UI 4.0.1",
+  "items": [
+    {
+      "codepoint": 60626,
+      "name": "bold",
+      "symbol": "TextBold16",
+      "font": "regular",
+      "svgSha256": "7dc93f8589ff4c2622a678c5322c4360319c5c7e2407c64db2f36940b8702356"
+    },
+    {
+      "codepoint": 62179,
+      "name": "captions",
+      "symbol": "ClosedCaption24",
+      "font": "filled",
+      "svgSha256": "cda416ab5a45c7ec990999d9f9dfe20cbd165b4b45c7ea821d13118f650dc7b3"
+    },
+    {
+      "codepoint": 58239,
+      "name": "captions-off",
+      "symbol": "ClosedCaptionOff24",
+      "font": "regular",
+      "svgSha256": "6bee1d06800200546c009187ea366918b8971532549c1ebfc9fc4e246f0f6ec1"
+    },
+    {
+      "codepoint": 58300,
+      "name": "color",
+      "symbol": "Color16",
+      "font": "regular",
+      "svgSha256": "2d3860852c1fdb0455ddff19afbe1621c1399080ccc8918ae2ab1fc76b2a468a"
+    },
+    {
+      "codepoint": 61093,
+      "name": "delete",
+      "symbol": "Delete12",
+      "font": "regular",
+      "svgSha256": "7a5edd861f6d84370e6c340ad2a753dc6bc6f65532f89278a420d87c31769880"
+    },
+    {
+      "codepoint": 63696,
+      "name": "download",
+      "symbol": "ArrowDown12",
+      "font": "regular",
+      "svgSha256": "c7ae18ba977ee9437587ac152df131d7f27662c70176eb5ee66a0ca455705036"
+    },
+    {
+      "codepoint": 62519,
+      "name": "font-decrease",
+      "symbol": "FontDecrease20",
+      "font": "regular",
+      "svgSha256": "136d14fc0d09a3465a429c3f62ebacf79329ab1f17cde1b3ba722e7ae67647d0"
+    },
+    {
+      "codepoint": 62521,
+      "name": "font-increase",
+      "symbol": "FontIncrease20",
+      "font": "regular",
+      "svgSha256": "63ed6a034a32b4398f3b8b5424bf096f973a8dd7172c9136eafc90617ea53ba9"
+    },
+    {
+      "codepoint": 62591,
+      "name": "history",
+      "symbol": "History24",
+      "font": "regular",
+      "svgSha256": "ed483f76f62f60771b21eac631ec62eb229e83654cd881e526ad90efaa9f88a9"
+    },
+    {
+      "codepoint": 59146,
+      "name": "history-dismiss",
+      "symbol": "HistoryDismiss24",
+      "font": "regular",
+      "svgSha256": "d90f9395c89da6e0617a0f6751d03c4f6fc218b3bbe8705b09e93579e96de524"
+    },
+    {
+      "codepoint": 59141,
+      "name": "history-title",
+      "symbol": "History16",
+      "font": "regular",
+      "svgSha256": "ffbab7a443b35c92a6a62835c141fc21a9d3ba15ebcac9243c182adbc42b4d97"
+    },
+    {
+      "codepoint": 62593,
+      "name": "home",
+      "symbol": "Home24",
+      "font": "regular",
+      "svgSha256": "1612912576408273e920ae75df533f2077aa1f5cfbbaf9d558763c1fe9bb24ac"
+    },
+    {
+      "codepoint": 62626,
+      "name": "info",
+      "symbol": "Info16",
+      "font": "regular",
+      "svgSha256": "49a6e3261e476b2c5470a1592a78eaec2223d1540bc291c6141740e9efb09910"
+    },
+    {
+      "codepoint": 59278,
+      "name": "lock",
+      "symbol": "LockClosed16",
+      "font": "regular",
+      "svgSha256": "ee42094fb6d2a7edae290a3408e9d27e80b7d75fa7ecff64470d7d811ff7b8b8"
+    },
+    {
+      "codepoint": 62126,
+      "name": "next",
+      "symbol": "ChevronRight12",
+      "font": "regular",
+      "svgSha256": "7332763998800195516ef4ed7d16d4e5a3de0661c6a6ccfcab91c5dc1a19d2a8"
+    },
+    {
+      "codepoint": 62116,
+      "name": "number-decrease",
+      "symbol": "ChevronDown24",
+      "font": "regular",
+      "svgSha256": "a66b148a5c3799d3df26f84f0d245c83676910d0b6c1ddfdd4da241dc35f8e51"
+    },
+    {
+      "codepoint": 62135,
+      "name": "number-increase",
+      "symbol": "ChevronUp24",
+      "font": "regular",
+      "svgSha256": "90c8dea961fc321c314d3360000b0b2a01acda19eb8e7ffabb2132be20ccc71b"
+    },
+    {
+      "codepoint": 57461,
+      "name": "opacity-decrease",
+      "symbol": "ArrowAutofitDown20",
+      "font": "regular",
+      "svgSha256": "9dacccc33bec37fc6ee5b409ed131dbe61ef9f04b5aefacbe24fd4740f377187"
+    },
+    {
+      "codepoint": 57466,
+      "name": "opacity-increase",
+      "symbol": "ArrowAutofitUp20",
+      "font": "regular",
+      "svgSha256": "7754c7500d31b628037301396e08fa96119e7b065e0ceceafe14323e29b59e06"
+    },
+    {
+      "codepoint": 59564,
+      "name": "panel-bottom",
+      "symbol": "PanelBottom20",
+      "font": "regular",
+      "svgSha256": "49d4594b920e3be5b59e9b92f9cd2e1bd926081d081aba860b91f0633703eef8"
+    },
+    {
+      "codepoint": 62880,
+      "name": "pause",
+      "symbol": "Pause16",
+      "font": "regular",
+      "svgSha256": "794237efadaf9cc204dcfa6d65b7427294de5b63a0ce3ac0f6ef0686d359975d"
+    },
+    {
+      "codepoint": 62890,
+      "name": "pause-filled",
+      "symbol": "Pause16",
+      "font": "filled",
+      "svgSha256": "b409d6a22d1831774260fe846772c264114e550404bf4a9075dbacfe002b8a76"
+    },
+    {
+      "codepoint": 62986,
+      "name": "pin",
+      "symbol": "Pin16",
+      "font": "filled",
+      "svgSha256": "cbcb598ea5450ba00e0571052e641e1b0fcc18518415e06f0be420614e1c0a8b"
+    },
+    {
+      "codepoint": 62976,
+      "name": "pin-off",
+      "symbol": "Pin16",
+      "font": "regular",
+      "svgSha256": "4184efcfd75958e8b308068dfdd13fe1d6ac3dc052c38ca7ed22d3c29c0f7ab4"
+    },
+    {
+      "codepoint": 59792,
+      "name": "play",
+      "symbol": "Play16",
+      "font": "regular",
+      "svgSha256": "dd5280c1bf5487b848b79ab151f40796083ee36ee9d3278dd6184f038c25b04e"
+    },
+    {
+      "codepoint": 62120,
+      "name": "previous",
+      "symbol": "ChevronLeft12",
+      "font": "regular",
+      "svgSha256": "110ada4834cbe6d24c25514ae9a69b433926d6ce6418dff74c38adf38820b243"
+    },
+    {
+      "codepoint": 58607,
+      "name": "prompt",
+      "symbol": "DocumentCatchUp16",
+      "font": "regular",
+      "svgSha256": "ec572c262a2a5d98e73f792b314d2cda5f996872adf3198eeaf5ae393c743c15"
+    },
+    {
+      "codepoint": 57513,
+      "name": "refresh",
+      "symbol": "ArrowClockwise12",
+      "font": "regular",
+      "svgSha256": "cc7a04d1edeeda24bed8746bc615b90a8b5e8c602bd1527e7b67d89210234bde"
+    },
+    {
+      "codepoint": 60028,
+      "name": "search",
+      "symbol": "Search16",
+      "font": "regular",
+      "svgSha256": "3ffd7a683c89f417bad78542e26235c2774bf6f4085a5b5619be84ea3ad004eb"
+    },
+    {
+      "codepoint": 63146,
+      "name": "settings",
+      "symbol": "Settings24",
+      "font": "regular",
+      "svgSha256": "f458ecd915bba16318774bc66891b31e52bd8aafbdcd83364909709f126c7abb"
+    },
+    {
+      "codepoint": 61299,
+      "name": "stroke-decrease",
+      "symbol": "InkStrokeArrowDown20",
+      "font": "regular",
+      "svgSha256": "76f8bfb8a91bd3a49c39828d78243f73eadf4a30e0e7827a26410b4d4e9cff83"
+    },
+    {
+      "codepoint": 59192,
+      "name": "stroke-increase",
+      "symbol": "InkStroke20",
+      "font": "regular",
+      "svgSha256": "24f2d83d0fd3c034aaedd8068544397eebb5a2c4f8d0c8bd84b83ace8dd5497c"
+    },
+    {
+      "codepoint": 61843,
+      "name": "swap",
+      "symbol": "ArrowSyncCircle20",
+      "font": "regular",
+      "svgSha256": "20b49e403a1233ea35391d189582e16237998969a6514a97e9758401a01660a3"
+    }
+  ],
+  "assemblySha256": "119058F794E356D372F61C88B0DDD761D3DE808983AA4B23C1669385686BADD3",
+  "fontSha256": {
+    "regular": "0af4747bae633e4c7649161962a6ddc11af27b2db95dd8c2597811bb034f2d91",
+    "filled": "96ec4e635c3331af37039c9ff8509aa314da0319121a2f330f739036339d3e92"
+  },
+  "scope": "Exact original WPF-UI 4.0.1 SymbolIcon glyphs from existing M0 dependency; SVG paths only; Fluent System Icons MIT license retained."
+}

@@ -1,0 +1,80 @@
+import { ComboBox, ScrollView, VerticalBox, HorizontalBox, Slider, Palette } from "std-widgets.slint";
+import { EditableCombo, IntegerBox, Surface, ActionButton, AnimatedSwitch } from "controls.slint";
+
+component Label inherits Text {color:Palette.foreground;font-size:14px;}
+component Note inherits Label {font-size:12px;opacity:0.65;wrap:word-wrap;}
+component Group inherits Surface {
+    in property <string> title;
+    VerticalBox {
+        padding:18px;spacing:12px;
+        Label {text:root.title;font-size:16px;font-weight:600;}
+        @children
+    }
+}
+
+export component SettingsPage inherits ScrollView {
+    in-out property <string> selected-service;
+    in-out property <string> selected-language;
+    in-out property <int> max-sync-interval;
+    in-out property <int> num-contexts;
+    in-out property <int> display-sentences;
+    in-out property <bool> context-aware;
+    in-out property <bool> latency-show;
+    in property <bool> live-captions-hidden;
+    callback setting-edited(string,string);
+    callback api-requested;
+    callback captions-visibility-changed(bool);
+    content-width:self.visible-width;
+    VerticalBox {
+        padding:22px;spacing:16px;
+        Label {text:"设置";font-size:24px;font-weight:700;}
+        Note {text:"选择翻译方式，调整字幕的显示与上下文。";}
+        Group {
+            title:"翻译";
+            HorizontalBox {
+                padding:0px;spacing:18px;
+                VerticalBox {padding:0px;spacing:7px;
+                    Label {text:"翻译服务";}
+                    ComboBox {height:34px;model:["Google","Google2","Ollama","OpenAI","LMStudio","DeepL","OpenRouter","Youdao","MTranServer","Baidu","LibreTranslate"];current-value <=> root.selected-service;selected(value)=>{root.setting-edited("ApiName",value);}}
+                }
+                VerticalBox {padding:0px;spacing:7px;
+                    Label {text:"目标语言";}
+                    EditableCombo {height:34px;value <=> root.selected-language;choices:["zh-CN","zh-TW","en-US","en-GB","ja-JP","ko-KR","fr-FR","th-TH","ru-RU","es-ES","pt-BR","tr-TR","ar-SA"];edited(value)=>{root.setting-edited("TargetLanguage",value);}chosen(index,value)=>{root.setting-edited("TargetLanguage",value);}}
+                }
+            }
+            HorizontalBox {padding:0px;spacing:12px;
+                Note {text:"Google 可直接使用；DeepSeek 请在 OpenAI 接口中配置。";horizontal-stretch:1;}
+                ActionButton {text:"配置翻译服务";primary:true;clicked=>{root.api-requested();}}
+            }
+            HorizontalBox {padding:0px;spacing:14px;
+                Label {text:"API 调用间隔";vertical-alignment:center;}
+                Slider {minimum:0;maximum:10;value:root.max-sync-interval;horizontal-stretch:1;changed(value)=>{root.setting-edited("MaxSyncInterval",round(value));}}
+                Label {text:root.max-sync-interval;width:26px;horizontal-alignment:right;vertical-alignment:center;font-weight:600;}
+            }
+            Note {text:"按字幕内容变化次数控制调用频率，数值越小越频繁。";}
+        }
+        Group {
+            title:"上下文";
+            HorizontalBox {padding:0px;spacing:16px;
+                VerticalBox {padding:0px;spacing:4px;horizontal-stretch:1;Label {text:"结合前文翻译";}Note {text:"向翻译服务提供前文；模型服务会使用更多 token。";}}
+                AnimatedSwitch {text:"上下文翻译";checked <=> root.context-aware;toggled=>{root.setting-edited("ContextAware",self.checked ? "true" : "false");}}
+            }
+            HorizontalBox {padding:0px;spacing:18px;
+                VerticalBox {padding:0px;spacing:7px;Label {text:"上下文句数";}IntegerBox {label:"上下文句数";number <=> root.num-contexts;minimum:1;maximum:10;number-edited(value)=>{root.setting-edited("NumContexts",value);}}}
+                VerticalBox {padding:0px;spacing:7px;Label {text:"悬浮字幕前文句数";}IntegerBox {label:"悬浮字幕句数";number <=> root.display-sentences;minimum:0;maximum:6;number-edited(value)=>{root.setting-edited("DisplaySentences",value);}}}
+            }
+        }
+        Group {
+            title:"显示";
+            HorizontalBox {padding:0px;spacing:16px;
+                VerticalBox {padding:0px;spacing:4px;horizontal-stretch:1;Label {text:"Windows 实时字幕";}Note {text:"在系统字幕中修改源语言；隐藏窗口后仍可识别。";}}
+                ActionButton {text:root.live-captions-hidden ? "显示系统字幕" : "隐藏系统字幕";clicked=>{root.captions-visibility-changed(!root.live-captions-hidden);}}
+            }
+            Rectangle {height:1px;background:Palette.border;}
+            HorizontalBox {padding:0px;spacing:16px;
+                Label {text:"显示翻译延迟";horizontal-stretch:1;vertical-alignment:center;}
+                AnimatedSwitch {text:"显示延迟";checked <=> root.latency-show;toggled=>{root.setting-edited("LatencyShow",self.checked ? "true" : "false");}}
+            }
+        }
+    }
+}

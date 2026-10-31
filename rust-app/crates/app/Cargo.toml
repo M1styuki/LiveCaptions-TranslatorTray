@@ -1,0 +1,16 @@
+[package]
+name = "live-captions-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "LiveCaptionsTray"
+path = "src/main.rs"
+test = false
+bench = false
+
+[dependencies]
+tray-host = { path = "../tray-host" }
+worker = { path = "../worker" }

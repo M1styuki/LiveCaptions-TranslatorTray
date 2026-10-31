@@ -1,0 +1,370 @@
+﻿name,version,offered_license,selected_license,status,revision,repository
+accesskit,0.24.1,MIT OR Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,a55d3e1a18bb9ef0e4bccc9083fb13c3e0ad8969,https://github.com/AccessKit/accesskit
+accesskit_consumer,0.38.0,MIT OR Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,c88605b96d04431f9c3c792464a0f2f253480e94,https://github.com/AccessKit/accesskit
+accesskit_windows,0.34.0,MIT OR Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,c88605b96d04431f9c3c792464a0f2f253480e94,https://github.com/AccessKit/accesskit
+accesskit_winit,0.33.2,Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,c88605b96d04431f9c3c792464a0f2f253480e94,https://github.com/AccessKit/accesskit
+adler2,2.0.1,0BSD OR MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,89a031a0f42eeff31c70dc598b398cbf31f1680f,https://github.com/oyvindln/adler2
+aho-corasick,1.1.5,Unlicense OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,5178060ce73d91938f8582d0360e3be031380440,https://github.com/BurntSushi/aho-corasick
+allocator-api2,0.2.21,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,63cd7fcc2f8854b5821c7054d026e8a4647acde1,https://github.com/zakarumych/allocator-api2
+annotate-snippets,0.12.17,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,80dd9881ffd2247438ca4fe766b81ac7c81f6536,https://github.com/rust-lang/annotate-snippets-rs
+anstyle,1.0.14,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,0fe6f0ff6d52e9f91d4071199bd0b24bd46f3d35,https://github.com/rust-cli/anstyle.git
+arboard,3.7.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,5f5c8637911ba219edee619105a19b4f74e66a9f,https://github.com/1Password/arboard
+arrayref,0.3.9,BSD-2-Clause,See offered license expression,LOCAL_TEXT_COLLECTED,f8d0299d863922db6c409d08098941e833b70d69,https://github.com/droundy/arrayref
+arrayvec,0.7.8,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,0cb664cf505844348538230479b0040b44f3faf1,https://github.com/bluss/arrayvec
+ash,0.38.0+1.3.281,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b724b78dac8d83879ed7a1aad2b91bb9f2beb5cf,https://github.com/ash-rs/ash
+atomic-waker,1.1.2,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,9969a29ccd1fe298e2df7346849c0095ba303a64,https://github.com/smol-rs/atomic-waker
+autocfg,1.5.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,2799b09c24e6632f8e653c5cd8fc303e85a906ba,https://github.com/cuviper/autocfg
+base64,0.22.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,e14400697453bcc85997119b874bc03d9601d0af,https://github.com/marshallpierce/rust-base64
+base64,0.23.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,069bf7067b949f5c0a92b6ceb82492920502f2c2,https://github.com/marshallpierce/rust-base64
+bincode,2.0.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,4673360aa638b2b907dff24538de54f258d157da,https://github.com/bincode-org/bincode
+bindgen,0.72.1,BSD-3-Clause,See offered license expression,LOCAL_TEXT_COLLECTED,d874de8d646d9b8a3e7ba2db2bcd52f2fba8f1f5,https://github.com/rust-lang/rust-bindgen
+bit-set,0.10.0,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,2a569e1a5bffaee2c2974bcf070ef4e8ee85550b,https://github.com/contain-rs/bit-set
+bit-vec,0.9.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,2fb0305422ff7fd915a107b91209abbff9fce50f,https://github.com/contain-rs/bit-vec
+bitflags,2.13.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,80ce9b545acb0bd42150695fc351889cac1d8eb4,https://github.com/bitflags/bitflags
+block-buffer,0.10.4,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,6d35952d3d3b124bc1049ad6fb406b42b1ce4bfe,https://github.com/RustCrypto/utils
+borsh,1.8.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,fe778bec428d5b44cd4922c896af0a7c39a863dd,https://github.com/near/borsh-rs
+by_address,1.2.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,bb921a29ea2fc1ee30a4dac9ff6d97c6730b5c7f,https://github.com/mbrubeck/by_address
+bytemuck,1.25.2,Zlib OR Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,f363643e951a7ac9e4b9921de982f2b0918902e3,https://github.com/Lokathor/bytemuck
+bytemuck_derive,1.12.1,Zlib OR Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,839ee557dd9b1ac5a0b0155cabba71f96b4ccd06,https://github.com/Lokathor/bytemuck
+byteorder-lite,0.1.0,Unlicense OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,7d44da06a48fe10d7e23efd9a932d18a7a2def63,https://github.com/image-rs/byteorder-lite
+bytes,1.12.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,76c0fbb54ed4336caf9d2311658a2f4a5627c21d,https://github.com/tokio-rs/bytes
+cc,1.10.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,8d06fcb73f6938c35c9bc59edbdcb9fb56f04d71,https://github.com/rust-lang/cc-rs
+cexpr,0.6.0,Apache-2.0/MIT,See offered license expression,LOCAL_TEXT_COLLECTED,c7ccdfbc37b508cfda1171ab4f89afaeb72e82f3,https://github.com/jethrogb/rust-cexpr
+cfg-if,1.0.5,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,8b0a2b0fc1fa3b3741b9e72895f390cf499fe36f,https://github.com/rust-lang/cfg-if
+cfg_aliases,0.2.2,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,e069ce61e00fee423ac1dbe6a897f228f1774716,https://github.com/katharostech/cfg_aliases
+chrono,0.4.45,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,170338250e836976a211e64728ec956e45e78a39,https://github.com/chronotope/chrono
+clang-sys,1.9.1,Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,8844c21292e54818d200980cd90a5498e2a5a644,https://github.com/KyleMayes/clang-sys
+clipboard-win,5.4.3,BSL-1.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,ed27008ae5d1f10cfbb266de039f0fb35fd05a56,https://github.com/DoumanAsh/clipboard-win
+clru,0.6.3,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,68aadcc767e20d493568ebb746ec0c1851684828,https://github.com/marmeladema/clru-rs
+codespan-reporting,0.13.1,Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ef354877a16c83e678051830b260a8f9a53778bd,https://github.com/brendanzab/codespan
+color_quant,1.1.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,6c302d2d1540496584476d513dd75b815f14e7a1,https://github.com/image-rs/color_quant.git
+const-field-offset,0.2.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b0fc6a7287a062fefb30133e6aecf0303f76357d,https://github.com/slint-ui/slint
+const-field-offset-macro,0.2.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b0fc6a7287a062fefb30133e6aecf0303f76357d,https://github.com/slint-ui/slint
+convert_case,0.10.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,fbbca84796dfa288d5a7b8673858ca2867c0414a,https://github.com/rutrum/convert-case
+countme,3.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,9e037c4293fb8ef6c1c632094349734955f06d89,https://github.com/matklad/countme
+cpufeatures,0.2.17,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,9d92d5e95ab4c07c5d8bfd024bf2a17e96d20feb,https://github.com/RustCrypto/utils
+crc32fast,1.5.3,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d2363eab95ebc85fcf726d1c8fa845148e474591,https://github.com/srijs/rust-crc32fast
+critical-section,1.2.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ed0f84c5ca3697a2166ed76e656c958cd3915b00,https://github.com/rust-embedded/critical-section
+crossbeam-channel,0.5.17,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,2920c984290229ab4e0ca0452ef09e48a82063f3,https://github.com/crossbeam-rs/crossbeam
+crossbeam-deque,0.8.8,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,2920c984290229ab4e0ca0452ef09e48a82063f3,https://github.com/crossbeam-rs/crossbeam
+crossbeam-epoch,0.9.21,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,2920c984290229ab4e0ca0452ef09e48a82063f3,https://github.com/crossbeam-rs/crossbeam
+crossbeam-utils,0.8.23,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,2920c984290229ab4e0ca0452ef09e48a82063f3,https://github.com/crossbeam-rs/crossbeam
+crypto-common,0.1.7,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,66a997ccf5776ce873da5a48e2885a9908e940f6,https://github.com/RustCrypto/traits
+csv,1.4.0,Unlicense/MIT,See offered license expression,LOCAL_TEXT_COLLECTED,4a3997e91d668ea1d8595bdef15625a77cf2308a,https://github.com/BurntSushi/rust-csv
+csv-core,0.1.13,Unlicense/MIT,See offered license expression,LOCAL_TEXT_COLLECTED,a0a3c9e4b493c216fb6d8284c9ac918444ba67f3,https://github.com/BurntSushi/rust-csv
+cursor-icon,1.2.0,MIT OR Apache-2.0 OR Zlib,See offered license expression,LOCAL_TEXT_COLLECTED,766287581de8b4895d018c2d15ada77627a954f0,https://github.com/rust-windowing/cursor-icon
+data-url,0.3.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,91377f48bf35011d042aa5abef9e7f2a0a625aaa,https://github.com/servo/rust-url
+derive_more,2.1.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,f7bb41ac054c060caaf5ff3212e74e42794cb4b4,https://github.com/JelteF/derive_more
+derive_more-impl,2.1.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,f7bb41ac054c060caaf5ff3212e74e42794cb4b4,https://github.com/JelteF/derive_more
+digest,0.10.7,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,344389411fd9718a0742435152e933a9e71461ee,https://github.com/RustCrypto/traits
+displaydoc,0.2.7,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,20016487354a96b22a7b97974483ae4f51a1bddc,https://github.com/yaahc/displaydoc
+document-features,0.2.12,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,721e708012254b81760bd2befdae0970e7a2615e,https://github.com/slint-ui/document-features
+dpi,0.1.2,Apache-2.0 AND MIT,See offered license expression,LOCAL_TEXT_COLLECTED,587ade844dfb0eada3696ba1cb263c66eea80581,https://github.com/rust-windowing/winit
+either,1.19.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,1e4326df5972eb4a0ced66cb3b67fa0c5aca8493,https://github.com/rayon-rs/either
+equivalent,1.0.3,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,4ee88130bd4ab3229e785533da2af641be22deac,https://github.com/indexmap-rs/equivalent
+error-code,3.4.0,BSL-1.0,See offered license expression,LOCAL_TEXT_COLLECTED,e4615e514db3ff64f5f1b328b4865b20a3dcdbc3,https://github.com/DoumanAsh/error-code
+euclid,0.22.14,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,60f2bd96deec0c0683eeddd737e0dc070a25e9af,https://github.com/servo/euclid
+fallible-iterator,0.3.0,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,11cfa0558045e52bdb473c9eab6a1eb35a54e302,https://github.com/sfackler/rust-fallible-iterator
+fallible-streaming-iterator,0.1.9,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,,https://github.com/sfackler/fallible-streaming-iterator
+fdeflate,0.3.7,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,c365c7e6ffa81feb2e1fb762eed7299f05c9b0ca,https://github.com/image-rs/fdeflate
+field-offset,0.3.6,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,95b242e2bd69b7dec41cdd82b780232fcbba15ca,https://github.com/Diggsey/rust-field-offset
+filetime,0.2.29,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ab5ee65b5e4fe2de19dbe7d4fe08bc31e945949c,https://github.com/alexcrichton/filetime
+find-msvc-tools,0.1.15,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ffbb10da608f715ed69a4561c4cbdca7c6fbbba6,https://github.com/rust-lang/cc-rs
+fixed_decimal,0.7.3,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+flate2,1.1.10,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ed93d4fc60eaf876c6aded741bf992d524551930,https://github.com/rust-lang/flate2-rs
+float-cmp,0.9.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,4844daf1ad47c9363a96ba8954d3c30d6a008591,https://github.com/mikedilger/float-cmp
+foldhash,0.2.0,Zlib,See offered license expression,LOCAL_TEXT_COLLECTED,8f878c636fda9c9e93384824ea45e06d03f009f5,https://github.com/orlp/foldhash
+font-types,0.12.7,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ef666662f5985965bbbb726c4f77d15481831a1b,https://github.com/googlefonts/fontations
+fontdb,0.24.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,ecb707e6096b59146b750f66a32c125a43515192,https://github.com/RazrFalcon/fontdb
+fontique,0.11.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,eea3503dd6cf17130cbb07348e0ff2c918300e94,https://github.com/linebender/parley
+form_urlencoded,1.2.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,91377f48bf35011d042aa5abef9e7f2a0a625aaa,https://github.com/servo/rust-url
+futures-channel,0.3.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,705e6b5c0f06535b1aac1cb1989a172b3d45be8c,https://github.com/rust-lang/futures-rs
+futures-core,0.3.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,705e6b5c0f06535b1aac1cb1989a172b3d45be8c,https://github.com/rust-lang/futures-rs
+futures-io,0.3.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,705e6b5c0f06535b1aac1cb1989a172b3d45be8c,https://github.com/rust-lang/futures-rs
+futures-macro,0.3.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,705e6b5c0f06535b1aac1cb1989a172b3d45be8c,https://github.com/rust-lang/futures-rs
+futures-sink,0.3.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,705e6b5c0f06535b1aac1cb1989a172b3d45be8c,https://github.com/rust-lang/futures-rs
+futures-task,0.3.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,705e6b5c0f06535b1aac1cb1989a172b3d45be8c,https://github.com/rust-lang/futures-rs
+futures-util,0.3.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,705e6b5c0f06535b1aac1cb1989a172b3d45be8c,https://github.com/rust-lang/futures-rs
+generic-array,0.14.7,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,1397d2bb40c406901b7827161b73b34b056cbe3a,https://github.com/fizyk20/generic-array.git
+getrandom,0.4.3,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,5e7cd5733536844a9856dc7259bd4696bbe5e3ae,https://github.com/rust-random/getrandom
+gif,0.14.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,a0127e2acbef333398414bb61d097c19c1b09d8a,https://github.com/image-rs/image-gif
+gl_generator,0.14.0,Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,ea503e8d5fb6d73c6030e6191ce738cd3bf3433e,https://github.com/brendanzab/gl-rs/
+glob,0.3.4,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,cfa2a58f2e44373573f657ec25b3621e44714dee,https://github.com/rust-lang/glob
+glow,0.18.0,MIT OR Apache-2.0 OR Zlib,See offered license expression,LOCAL_TEXT_COLLECTED,62250dc64e7e531c280beea251f39aa49ba0b2f1,https://github.com/grovesNL/glow
+glutin,0.32.3,Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,20d1c103172aa4025f02cc94ca16a3169bea789c,https://github.com/rust-windowing/glutin
+glutin-winit,0.5.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,0811b6c753334f1681c7db8a48e407596cfa9366,https://github.com/rust-windowing/glutin
+glutin_egl_sys,0.7.1,Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d9b4fd7036386c5f23b0a1015a31a986805d4db3,https://github.com/rust-windowing/glutin
+glutin_wgl_sys,0.6.1,Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d9b4fd7036386c5f23b0a1015a31a986805d4db3,https://github.com/rust-windowing/glutin
+gpu-allocator,0.28.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,3d4466e3331c43d1f85b937b775427b07d7a32fe,https://github.com/Traverse-Research/gpu-allocator
+grid,1.0.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,8caa81908f77d898c9b9c764b374d61f61cd6a20,https://github.com/becheran/grid
+half,2.7.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,8cc891f3e4aad956eca7fa79b1f42f87ecd141ae,https://github.com/VoidStarKat/half-rs
+harfrust,0.12.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,60b28ea22b5261710018d69c168a762bcb28794c,https://github.com/harfbuzz/harfrust
+hashbrown,0.14.5,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,025d0f58b62d074f5fd660a22fe293cdc237d589,https://github.com/rust-lang/hashbrown
+hashbrown,0.16.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,1876e4f02708b93903d55ef598f68e82a826518f,https://github.com/rust-lang/hashbrown
+hashbrown,0.17.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,c62a63a61b7caf2de8f9ecb7b06a66b0ab6bdf3d,https://github.com/rust-lang/hashbrown
+hashlink,0.12.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,c7aaa3c2504c08baf8c97da11f3536258464da8f,https://github.com/djc/hashlink
+heck,0.5.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,070693322aee7c5c7fbee7c9964bf8d7d3a29c96,https://github.com/withoutboats/heck
+htmlparser,0.2.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,036a1f71cc277094f34b67d53c353a8634fab91b,https://github.com/jdrouet/htmlparser.git
+http,1.5.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,e559023f67e3fad6ecc3ee91307be178e0f13626,https://github.com/hyperium/http
+http-body,1.1.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,2fb78de9c875c364b7eb1a1a117acc3b83ffb13a,https://github.com/hyperium/http-body
+http-body-util,0.1.5,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,07838bd97b714b95bd783cd695ebf211b67545c4,https://github.com/hyperium/http-body
+httparse,1.10.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,9f29e79f9832dbd0ae5220acb17c1866745bdecd,https://github.com/seanmonstar/httparse
+hyper,1.12.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,7f67699ce32d717081deb7018b4da7d679277ac0,https://github.com/hyperium/hyper
+hyper-tls,0.6.0,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,0265e166a8886f01253050516316a95900315b81,https://github.com/hyperium/hyper-tls
+hyper-util,0.1.21,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,23a868965964c1d6bb1b94f30ba4c420a4bebe7c,https://github.com/hyperium/hyper-util
+i-slint-backend-selector,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+i-slint-backend-testing,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+i-slint-backend-winit,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+i-slint-common,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+i-slint-compiler,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+i-slint-core,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+i-slint-core-macros,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+i-slint-renderer-skia,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+i-slint-renderer-software,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+icu_collections,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_decimal,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_decimal_data,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_locale_core,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_locale_fallback,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_locale_fallback_data,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_normalizer,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_normalizer_data,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_plurals,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_plurals_data,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_properties,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_properties_data,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_provider,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_segmenter,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+icu_segmenter_data,2.4.0,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+idna,1.1.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,91377f48bf35011d042aa5abef9e7f2a0a625aaa,https://github.com/servo/rust-url/
+idna_adapter,1.2.2,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,1d9782f32c9e29218542b4a9411a82b35ec5c8cb,https://github.com/hsivonen/idna_adapter
+image,0.25.10,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,76e57184f22772dad1138e96954e57945406b15e,https://github.com/image-rs/image
+image-webp,0.2.4,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,08b57d473c90148dd4b37a075df365afc3dfcc2b,https://github.com/image-rs/image-webp
+imagesize,0.15.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,7dba0c7ae38ee1b90024f82cbb8fab12d6b1b4eb,https://github.com/Roughsketch/imagesize
+imgref,1.12.3,CC0-1.0 OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,24e3407e019abff846d2c42391084852eaa92721,https://github.com/kornelski/imgref
+indexmap,2.14.2,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,41a870887c4c77adf665886e63df08f406bfe37a,https://github.com/indexmap-rs/indexmap
+ipnet,2.12.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,13c5c5873c02127679b1e8e64b538e4e36942640,https://github.com/krisprice/ipnet
+itertools,0.13.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d5084d15e959b85d89a49e5cd33ad6267bc541a3,https://github.com/rust-itertools/itertools
+itertools,0.15.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,37bd72aa6d58e594711d127b52418ca5e58b6091,https://github.com/rust-itertools/itertools
+itoa,1.0.18,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,af77385d0daf4d0e949e81f2588be2e44f69f086,https://github.com/dtolnay/itoa
+jobserver,0.1.35,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,85ba04e3cf89e5c10e7b82de69f6be6dff9d3ec3,https://github.com/rust-lang/jobserver-rs
+keyboard-types,0.7.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,61a081f1e78a881a369abc22c3a0e37049bd655e,https://github.com/pyfisch/keyboard-types
+khronos_api,3.1.0,Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,f150967b1c44ae888e6676f93f639ebc82771bdc,https://github.com/brendanzab/gl-rs/
+kurbo,0.13.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,838b69ef35f3381cefc007d86aa8364f5a6dc673,https://github.com/linebender/kurbo
+lazy_static,1.5.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,4c1b9a170c157d679592e2682b13cc780c1db814,https://github.com/rust-lang-nursery/lazy-static.rs
+libc,0.2.191,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ccc2ff4aaab962f7fde7b8edda7379c045b1ca12,https://github.com/rust-lang/libc
+libloading,0.8.9,ISC,See offered license expression,LOCAL_TEXT_COLLECTED,f4ec9e702de2d0778bccff8525dc44e4cacac2d1,https://github.com/nagisa/rust_libloading/
+libm,0.2.16,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,dfd2203a4d6110820ad7bb65cafe1bf331a03a3d,https://github.com/rust-lang/compiler-builtins
+libsqlite3-sys,0.38.2,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,e88f112bef7899234a497baed5cc3c3d553deeb8,https://github.com/rusqlite/rusqlite
+linebender_resource_handle,0.1.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,bd8694ffca7550e8d569346c50de5fdcb5c51a7f,https://github.com/linebender/raw_resource_handle
+litemap,0.8.3,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,a14f2dad852be26bad277ae704abf27a15cbfed1,https://github.com/unicode-org/icu4x
+litrs,1.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,510d5d778413d51da7d11f8e498d27bba86739e1,https://github.com/LukasKalbertodt/litrs
+lock_api,0.4.14,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d7828fff7b5d6327ae608e82db45f888b344449a,https://github.com/Amanieu/parking_lot
+log,0.4.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,8034743dd9d7f7583bd9a670271483d176130911,https://github.com/rust-lang/log
+lyon_algorithms,1.0.22,MIT OR Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,db98d26a1a90076a7a894262dcb51117eef643c8,https://github.com/nical/lyon
+lyon_extra,1.1.0,MIT OR Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,56219c95c658d4f39de7b190d98e57d5773ba241,https://github.com/nical/lyon
+lyon_geom,1.0.20,MIT OR Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,db98d26a1a90076a7a894262dcb51117eef643c8,https://github.com/nical/lyon
+lyon_path,1.0.19,MIT OR Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,56219c95c658d4f39de7b190d98e57d5773ba241,https://github.com/nical/lyon
+memchr,2.8.3,Unlicense OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,5fdb40c054e1fff359a2f7bdf7f87a13b34b465d,https://github.com/BurntSushi/memchr
+memmap2,0.9.12,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,4692b056b327aa08dace3a7e345a99e4cff77534,https://github.com/RazrFalcon/memmap2-rs
+memoffset,0.9.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,153fc3d50f03755be53148bc3eb97390f9011e45,https://github.com/Gilnaa/memoffset
+minimal-lexical,0.2.1,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,e997c46656ebe83e696b866bd954da1fa3f64eef,https://github.com/Alexhuszagh/minimal-lexical
+miniz_oxide,0.8.9,MIT OR Zlib OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,44e43c7786e379b2b1a7fde4aa0e63be719e583d,https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide
+miniz_oxide,0.9.1,MIT OR Zlib OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,4e582392df3a739d2b0dfd2c537dc33e8942be38,https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide
+mio,1.2.4,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,79d1417c94e3a45c8bdd796e5422e22e8c488086,https://github.com/tokio-rs/mio
+moxcms,0.8.1,BSD-3-Clause OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,c4affa196727d17f21a7f6f148a558867decb470,https://github.com/awxkee/moxcms.git
+muda,0.19.3,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,a375127ff39aded0804924026bf554682291d972,https://github.com/tauri-apps/muda
+naga,30.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,40f4a34ebaf56f9a046231f54125ad046239d3f3,https://github.com/gfx-rs/wgpu
+naga-types,30.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,40f4a34ebaf56f9a046231f54125ad046239d3f3,https://github.com/gfx-rs/wgpu
+native-tls,0.2.18,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,3cf1877ee86814168255db6d73fbefc127211c1c,https://github.com/rust-native-tls/rust-native-tls
+natord,1.0.9,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,,https://github.com/lifthrasiir/rust-natord
+nom,7.1.3,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,869f8972a4383b13cf89574fda28cb7dbfd56517,https://github.com/Geal/nom
+num-traits,0.2.19,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,7ec3d41d39b28190ec1d42db38021107b3951f3a,https://github.com/rust-num/num-traits
+num_enum,0.7.6,BSD-3-Clause OR MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,f11d81c6cb644489f8a0fc24f9eea9a53d66f92e,https://github.com/illicitonion/num_enum
+num_enum_derive,0.7.6,BSD-3-Clause OR MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,f11d81c6cb644489f8a0fc24f9eea9a53d66f92e,https://github.com/illicitonion/num_enum
+once_cell,1.21.4,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,80fe900b21f6d76c1a2ed74d3343e8a3a88c46d0,https://github.com/matklad/once_cell
+ordered-float,5.5.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,d0ff7fb107c734fd8c43725e4e2f201b657b6288,https://github.com/reem/rust-ordered-float
+parking_lot,0.12.5,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d7828fff7b5d6327ae608e82db45f888b344449a,https://github.com/Amanieu/parking_lot
+parking_lot_core,0.9.12,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d7828fff7b5d6327ae608e82db45f888b344449a,https://github.com/Amanieu/parking_lot
+parlance,0.1.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,6e1143dda817360dd3a2a64f9133c6e5dfabd881,https://github.com/linebender/parley
+parley,0.11.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,eea3503dd6cf17130cbb07348e0ff2c918300e94,https://github.com/linebender/parley
+parley_data,0.11.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,eea3503dd6cf17130cbb07348e0ff2c918300e94,https://github.com/linebender/parley
+percent-encoding,2.3.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,91377f48bf35011d042aa5abef9e7f2a0a625aaa,https://github.com/servo/rust-url/
+pico-args,0.5.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,56e8872fa31f168fd87e84fdc5f24bd60875daea,https://github.com/RazrFalcon/pico-args
+pin-project,1.1.13,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,c3b6b85f7e1674602c0ed693da985b33b2452c3c,https://github.com/taiki-e/pin-project
+pin-project-internal,1.1.13,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,c3b6b85f7e1674602c0ed693da985b33b2452c3c,https://github.com/taiki-e/pin-project
+pin-project-lite,0.2.17,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,3bdf763446aa78f90e3bdac1ef583e014832ab4c,https://github.com/taiki-e/pin-project-lite
+pin-utils,0.1.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,1c8fe452e3f22c76cb35f4b171f090bf2d50890c,https://github.com/rust-lang/pin-utils
+pin-weak,1.1.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,4877a88cdf3ed33fc46f9e39f3d0fd5c54b49a61,https://github.com/sixtyfpsui/pin-weak
+pkg-config,0.3.34,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,a8852cc148f8f7d504bf3a62444c298dcd3637f0,https://github.com/rust-lang/pkg-config-rs
+png,0.18.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,2a3f980245e3ae38b82ade96533e7b450e8477bb,https://github.com/image-rs/image-png
+polycool,0.4.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,0ffc830eca99e68ba6bab54224cfac2c66bde2f9,https://github.com/linebender/kurbo
+portable-atomic,1.15.0,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,e4595528211f1d53b7f4d93e528ef84b491fc871,https://github.com/taiki-e/portable-atomic
+potential_utf,0.1.6,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,a14f2dad852be26bad277ae704abf27a15cbfed1,https://github.com/unicode-org/icu4x
+presser,0.3.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,eea263995892b761aae6307b0c2952cc7170a6bb,https://github.com/EmbarkStudios/presser
+prettyplease,0.2.37,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,c971184fa8c5ef5a2828196e35bd99469455b46b,https://github.com/dtolnay/prettyplease
+proc-macro-crate,3.5.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,8f3d8b04539f732e09c07907f138a248c8d0eed9,https://github.com/bkchr/proc-macro-crate
+proc-macro2,1.0.107,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ed8a5497669cd63db33bf24646f261b012bbbc4a,https://github.com/dtolnay/proc-macro2
+profiling,1.0.18,MIT OR Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,8271551172eb6fa4cba47369aedd93790c623df9,https://github.com/aclysma/profiling
+pulldown-cmark,0.13.5,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,48a2767b5b8ab0a4893e80d942e510065889fc6b,https://github.com/raphlinus/pulldown-cmark
+pxfm,0.1.30,BSD-3-Clause OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,acf7acd00cfc845307eda7b7b2de19e42303de82,https://github.com/awxkee/pxfm
+quick-error,2.0.1,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,25ab982bb0c43130ae48485151f4a232eeab7d0c,http://github.com/tailhook/quick-error
+quote,1.0.47,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,723dcb47d3f0ddc896e17287c8a8d3f2ea2317d5,https://github.com/dtolnay/quote
+range-alloc,0.1.5,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,34a5b93f04850e25315f87841d2555f2c0e0ed80,https://github.com/gfx-rs/range-alloc
+raw-window-handle,0.6.2,MIT OR Apache-2.0 OR Zlib,See offered license expression,LOCAL_TEXT_COLLECTED,5fda8e8420b069368e9450e70c2869e32dcdffc1,https://github.com/rust-windowing/raw-window-handle
+rayon,1.12.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,c9ced185ae3508246a9eb70c8407a1199bb1b77f,https://github.com/rayon-rs/rayon
+rayon-core,1.13.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,7af20d7692d5decbcb4adcaa079cd607e3e50814,https://github.com/rayon-rs/rayon
+read-fonts,0.41.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,cd4aaef57887dd1d8a5875e38c406843e66c9cab,https://github.com/googlefonts/fontations
+regex,1.13.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,2b527599eb9eea0dcc288c704584f242f26a5c61,https://github.com/rust-lang/regex
+regex-automata,0.4.18,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,e6ad938198e68339a593f85d228f2d44cb54718f,https://github.com/rust-lang/regex
+regex-syntax,0.8.11,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,140167995737fa11dfe11b8af8b9aa143b790b4e,https://github.com/rust-lang/regex
+renderdoc-sys,1.1.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,0276afc3686dd3ee9475798ed8ab89026d74143d,https://github.com/ebkalderon/renderdoc-rs
+reqwest,0.12.28,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ef2768a823b28bf00e23e218e034be035b08d770,https://github.com/seanmonstar/reqwest
+resvg,0.48.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,68b14c4c3bccdb60344c777406486b54c36ec1a4,https://github.com/linebender/resvg
+rgb,0.8.53,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,f453adedbbd1a672c654239b0eb0576de606d7d2,https://github.com/kornelski/rust-rgb
+rowan,0.17.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,c781c336f44a28210fefaa4d86b8c9902b781c8e,https://github.com/rust-analyzer/rowan
+roxmltree,0.21.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b04f75f6a0d17c6248de3eb1b1013bf1bbac44ae,https://github.com/RazrFalcon/roxmltree
+rspolib,0.1.2,MIT,See offered license expression,UPSTREAM_TEXT_COLLECTED,8170d99ebad29d894712ccb3dc6d0be2198d3055,https://github.com/mondeja/rspolib
+rusqlite,0.40.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,6d3c282dc5531a57eb4e22ece3207f00c95d0fb0,https://github.com/rusqlite/rusqlite
+rustc-hash,1.1.0,Apache-2.0/MIT,See offered license expression,LOCAL_TEXT_COLLECTED,6fc9a706a9312ee801c7e77ca06c0782fa9eadef,https://github.com/rust-lang-nursery/rustc-hash
+rustc-hash,2.1.3,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,c13e7ccca705e6255387a2ebc6dca142d6881621,https://github.com/rust-lang/rustc-hash
+rustc_version,0.4.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,eeca449cca83e24150e46739e797aa82e9142809,https://github.com/djc/rustc-version-rs
+rustls-pki-types,1.15.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,e29ad15465126acc089b39611bcec85e27ce0817,https://github.com/rustls/pki-types
+rustversion,1.0.23,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,3a7c76605450b9a7299c6502a421909de9126a59,https://github.com/dtolnay/rustversion
+ryu,1.0.23,Apache-2.0 OR BSL-1.0,See offered license expression,LOCAL_TEXT_COLLECTED,f0b52bb194befe6fd242154f2182fafd43a819b8,https://github.com/dtolnay/ryu
+schannel,0.1.30,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,91c925d987e6b1180bfb21fb29959ab3677adc8a,https://github.com/steffengy/schannel-rs
+scoped-tls-hkt,0.1.5,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,75d420981893bce1e0a5c305898aa7f8c4255cda,https://github.com/Diggsey/scoped-tls-hkt
+scopeguard,1.2.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,bb988222848d39b0b9037b29da3a3a1eb05ebf4b,https://github.com/bluss/scopeguard
+semver,1.0.28,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,7625c7aa3f0e8ba21e099d1765bcebcb72aa8816,https://github.com/dtolnay/semver
+serde,1.0.229,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8,https://github.com/serde-rs/serde
+serde_core,1.0.229,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8,https://github.com/serde-rs/serde
+serde_derive,1.0.229,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8,https://github.com/serde-rs/serde
+serde_json,1.0.154,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,20572a6d066958542d79cdd6cf1a7cd9f0c8e1f8,https://github.com/serde-rs/json
+serde_spanned,1.1.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,f72038c2508112dfaaedb227a511f91bf9b2015c,https://github.com/toml-rs/toml
+serde_urlencoded,0.7.1,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d8bc15d16adf6b3ba6ae46d199d7109cf5079efa,https://github.com/nox/serde_urlencoded
+sha2,0.10.9,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,82c36a428f8d6f05f3bfccdedb243e9d1f85359d,https://github.com/RustCrypto/hashes
+shlex,1.3.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,4a0724b0b62ef715467875b040a890ce75a8a829,https://github.com/comex/rust-shlex
+shlex,2.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,e82b1411beb7c92871c2c078c9ab415bbcf207ef,https://github.com/comex/rust-shlex
+simd-adler32,0.3.10,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,d93164f98d7fe2daf883f2e1bec82778dd26199a,https://github.com/mcountryman/simd-adler32
+simplecss,0.2.2,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,6eacb39ca5c4c2390bfde374ed0651f0e35c9d8d,https://github.com/linebender/simplecss
+siphasher,1.0.4,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ed028f01a16205b0819fa83b0cdc052e2d5ac3b7,https://github.com/jedisct1/rust-siphash
+skia-bindings,0.153.3,MIT,See offered license expression,UPSTREAM_TEXT_COLLECTED,b7f043e0b1e2a850e702245de811f01df1f6b0ff,https://github.com/rust-skia/rust-skia
+skia-safe,0.153.3,MIT,See offered license expression,UPSTREAM_TEXT_COLLECTED,b7f043e0b1e2a850e702245de811f01df1f6b0ff,https://github.com/rust-skia/rust-skia
+skrifa,0.44.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b373cdbc6043a791fb23b3e0f413649458f5e63a,https://github.com/googlefonts/fontations
+slab,0.4.12,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,a1e4346070a48c936d808de75191dee5d01e433c,https://github.com/tokio-rs/slab
+slint,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+slint-build,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+slint-macros,1.18.1,GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0,GPL-3.0-only,LOCAL_TEXT_COLLECTED,372cf0ee5577c3dfec309a45e7b778ba4e81b734,https://github.com/slint-ui/slint
+slotmap,1.1.1,Zlib,See offered license expression,LOCAL_TEXT_COLLECTED,2d56154b9b628f7d7a506f24ebc4f55a13ec8fed,https://github.com/orlp/slotmap
+smallvec,1.16.4,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,eab77462eda2767d2386f1d251928f474827e1c7,https://github.com/servo/rust-smallvec
+smol_str,0.2.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,aea39b4974f55e9380556272b1335e2f6fd13cc7,https://github.com/rust-analyzer/smol_str
+smol_str,0.3.7,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,81a8e1f6871919611868225d09386d4f830b0cc1,https://github.com/rust-lang/rust-analyzer/tree/master/lib/smol_str
+snafu,0.8.9,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,fd06040704379e9a76a9d35e34488d6f48849237,https://github.com/shepmaster/snafu
+snafu-derive,0.8.9,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,fd06040704379e9a76a9d35e34488d6f48849237,https://github.com/shepmaster/snafu
+socket2,0.6.5,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,239dd83a4ced08e514d2c38942aab99791119f0d,https://github.com/rust-lang/socket2
+softbuffer,0.4.8,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d871852faa1137d4615b99b9ad31c3ba80f345b5,https://github.com/rust-windowing/softbuffer
+spin_on,0.1.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,1605b63506316d89722c650e3fac6fdb643c3ef9,
+spirv,0.4.0+sdk-1.4.341.0,Apache-2.0,See offered license expression,UPSTREAM_TEXT_COLLECTED,8afc3d0ac8e158128cd1410bb2e4b4c26ab11bb4,https://github.com/gfx-rs/rspirv
+stable_deref_trait,1.2.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,30002b4228f7cdee309217b6bf6eee099dda0b00,https://github.com/storyyeller/stable_deref_trait
+static_assertions,1.1.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,18bc65a094d890fe1faa5d3ccb70f12b89eabf56,https://github.com/nvzqz/static-assertions-rs
+strict-num,0.1.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,edf5020c215063c3a9eb8fcac463c82eaceba6df,https://github.com/RazrFalcon/strict-num
+strum,0.28.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,7376771128834d28bb9beba5c39846cba62e71ec,https://github.com/Peternator7/strum
+strum_macros,0.28.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,7376771128834d28bb9beba5c39846cba62e71ec,https://github.com/Peternator7/strum
+svgtypes,0.16.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,fa62387aea54d7af49ad65b47bca8d731136dd56,https://github.com/linebender/svgtypes
+swash,0.2.10,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,7773843df0d63cd468db61a29c152b5e7a99d4ab,https://github.com/dfrg/swash
+syn,2.0.119,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,3295f9e9841785ac88a5e558c884854d5fb7d67f,https://github.com/dtolnay/syn
+syn,3.0.9,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,7c44a5565b4421035101cc16184e9af08ab5fc77,https://github.com/dtolnay/syn
+sync_wrapper,1.0.2,Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,55413956c36aeab47feb8c04d1b7a044d6df336a,https://github.com/Actyx/sync_wrapper
+synstructure,0.14.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,30cfafe36e42405e717a8e55da042a2835a698d7,https://github.com/mystor/synstructure
+sys-locale,0.3.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,7026899e5723a593a819abdf46e1d4b3794a4d68,https://github.com/1Password/sys-locale
+taffy,0.10.1,MIT,See offered license expression,UPSTREAM_TEXT_COLLECTED,639f0acdd20f914f847abffbeaa903d66cae4882,https://github.com/DioxusLabs/taffy
+tar,0.4.46,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,fc459c149f83bf4daceaa52e17d351989002e1a9,https://github.com/composefs/tar-rs
+text-size,1.1.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,5f22fbe12550a2c70caff9a8c5347d6722370469,https://github.com/rust-analyzer/text-size
+thiserror,2.0.21,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b1827ee06f81a7d7f954e676771e19a97f9f8e3b,https://github.com/dtolnay/thiserror
+thiserror-impl,2.0.21,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b1827ee06f81a7d7f954e676771e19a97f9f8e3b,https://github.com/dtolnay/thiserror
+tiny-skia,0.12.0,BSD-3-Clause,See offered license expression,LOCAL_TEXT_COLLECTED,e48b9027762d33731e60e40eb17eaa4f583b0185,https://github.com/linebender/tiny-skia
+tiny-skia-path,0.12.0,BSD-3-Clause,See offered license expression,LOCAL_TEXT_COLLECTED,e48b9027762d33731e60e40eb17eaa4f583b0185,https://github.com/linebender/tiny-skia/tree/master/path
+tinystr,0.8.5,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+tinyvec,1.13.3,Zlib OR Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,e343bbbb5a6594c9d57de718e6f232e6c0115dcb,https://github.com/Lokathor/tinyvec
+tokio,1.54.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,b53b2001ed2ccfd9b87e32a0c6da1a1eebdc80b8,https://github.com/tokio-rs/tokio
+tokio-macros,2.7.2,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,4308c74a65218e8ebea1a84e09c0ba4b0882f881,https://github.com/tokio-rs/tokio
+tokio-native-tls,0.3.1,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,775b6d69f42f76227c5a3c5ac5058da9ff095ca0,https://github.com/tokio-rs/tls
+toml,1.1.8+spec-1.1.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ceac6e4412420d5a5c19e4f7293ad005cf1a31b2,https://github.com/toml-rs/toml
+toml_datetime,1.1.2+spec-1.1.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,f72038c2508112dfaaedb227a511f91bf9b2015c,https://github.com/toml-rs/toml
+toml_edit,0.25.17+spec-1.1.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ceac6e4412420d5a5c19e4f7293ad005cf1a31b2,https://github.com/toml-rs/toml
+toml_parser,1.1.5+spec-1.1.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,ceac6e4412420d5a5c19e4f7293ad005cf1a31b2,https://github.com/toml-rs/toml
+toml_writer,1.1.3+spec-1.1.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,f72038c2508112dfaaedb227a511f91bf9b2015c,https://github.com/toml-rs/toml
+tower,0.5.3,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,4b0a6b0e688bd177eb2c9c97f5268dd9703c66fc,https://github.com/tower-rs/tower
+tower-http,0.6.11,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,1d082ef7bdb6d80a2964698804a46c338b4c6a99,https://github.com/tower-rs/tower-http
+tower-layer,0.3.3,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,fec9e559e276ba9609f939d3b0d2e4fa0504de6f,https://github.com/tower-rs/tower
+tower-service,0.3.3,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,646804d77eebf072dac180cb5e1256b9ee7e0229,https://github.com/tower-rs/tower
+tracing,0.1.44,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,2d55f6faf9be83e7e4634129fb96813241aac2b8,https://github.com/tokio-rs/tracing
+tracing-attributes,0.1.31,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,55086231ec4aaeffcaab9932e696f40278f06bd1,https://github.com/tokio-rs/tracing
+tracing-core,0.1.36,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,10a9e838a35e6ded79d66af246be2ee05417136d,https://github.com/tokio-rs/tracing
+try-lock,0.2.5,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,fd160ecd9105e8afcc43dbea450a0ef6e5128cce,https://github.com/seanmonstar/try-lock
+typed-index-collections,3.5.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,f87b25bb0c21c3b686b36d2b652ffab6312f3e68,https://github.com/zheland/typed-index-collections
+typenum,1.20.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,0db9a0f731981f29266b63586c29fa07e4477b1a,https://github.com/paholg/typenum
+unicase,2.10.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,1e739ff80fe2297c52efda9d05f0bea1038a7eb9,https://github.com/seanmonstar/unicase
+unicode-bidi,0.3.18,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,580b9c6c68fdb689916017e61d5052be3ed349b5,https://github.com/servo/unicode-bidi
+unicode-ident,1.0.27,(MIT OR Apache-2.0) AND Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,c1ac3afb721f3cea6527bc2255340a04d0de3ca0,https://github.com/dtolnay/unicode-ident
+unicode-linebreak,0.1.5,Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,,https://github.com/axelf4/unicode-linebreak
+unicode-script,0.5.8,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,20cae8782e71e26180198b350b1746c0ba042c41,https://github.com/unicode-rs/unicode-script
+unicode-segmentation,1.13.3,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,66a032fd8d667bc47ac5b640b151dff3f5356d07,https://github.com/unicode-rs/unicode-segmentation
+unicode-vo,0.1.0,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,f163f6cc40436cf793742607048273fbb8834fbd,https://github.com/RazrFalcon/unicode-vo
+unicode-width,0.2.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,9d98411769fe13c7c18cab0b3fbbab29ba8350ea,https://github.com/unicode-rs/unicode-width
+unicode-xid,0.2.6,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,5d50587f19713cd35f1f48e5d4d011aa9c54dbff,https://github.com/unicode-rs/unicode-xid
+unty,0.0.4,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,5455639ae05f42202a270f16bb4d79f6791d9b70,https://github.com/bincode-org/unty
+url,2.5.8,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d6ea13c5f8e7e6e627f6390161b3e185bda5e5ce,https://github.com/servo/rust-url
+usvg,0.48.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,68b14c4c3bccdb60344c777406486b54c36ec1a4,https://github.com/linebender/resvg
+utf8_iter,1.0.4,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,6b604ea2365bd535fb66eb4bfe92a9e00e333090,https://github.com/hsivonen/utf8_iter
+uuid,1.29.0,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,4643e607d0ded1f2f95c1c427456e17bd5edf708,https://github.com/uuid-rs/uuid
+vcpkg,0.2.15,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,e7d37e095ef2aa85c80242aa3850d442832b7b54,https://github.com/mcgoo/vcpkg-rs
+version_check,0.9.5,MIT/Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d77ef9f27cc336719b2d839d09ee6635dd22f758,https://github.com/SergioBenitez/version_check
+vtable,0.5.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b0fc6a7287a062fefb30133e6aecf0303f76357d,https://github.com/slint-ui/slint
+vtable-macro,0.5.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,b0fc6a7287a062fefb30133e6aecf0303f76357d,https://github.com/slint-ui/slint
+want,0.3.2,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,322291ce5a87c72ecfd83d383d0d7f5245cf72c6,https://github.com/seanmonstar/want
+webbrowser,1.2.5,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,278ec1b5aeeb07f9fcbda569cb075e58727ba623,https://github.com/amodm/webbrowser-rs
+weezl,0.1.12,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,c75ea1f6d935cc56bad8674396b7cb0dd7275f99,https://github.com/image-rs/weezl
+wgpu,30.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,40f4a34ebaf56f9a046231f54125ad046239d3f3,https://github.com/gfx-rs/wgpu
+wgpu-core,30.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,40f4a34ebaf56f9a046231f54125ad046239d3f3,https://github.com/gfx-rs/wgpu
+wgpu-core-deps-windows-linux-android,30.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,40f4a34ebaf56f9a046231f54125ad046239d3f3,https://github.com/gfx-rs/wgpu
+wgpu-hal,30.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,40f4a34ebaf56f9a046231f54125ad046239d3f3,https://github.com/gfx-rs/wgpu
+wgpu-naga-bridge,30.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,40f4a34ebaf56f9a046231f54125ad046239d3f3,https://github.com/gfx-rs/wgpu
+wgpu-types,30.0.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,40f4a34ebaf56f9a046231f54125ad046239d3f3,https://github.com/gfx-rs/wgpu
+windows,0.62.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-collections,0.3.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-core,0.62.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-future,0.3.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-implement,0.60.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-interface,0.59.3,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-link,0.2.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d468916ac27a36fb8a12bafc1bf5c0ec2fe92238,https://github.com/microsoft/windows-rs
+windows-numerics,0.3.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-registry,0.6.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-result,0.4.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-strings,0.5.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-sys,0.52.0,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,3a605cba064b26f2a198ac58085f8c8836f47c38,https://github.com/microsoft/windows-rs
+windows-sys,0.61.2,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,32c3144490c016fe496a0aed769bce60987a2e9d,https://github.com/microsoft/windows-rs
+windows-targets,0.52.6,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,db06b51c2ebb743efb544d40e3064efa49f28d38,https://github.com/microsoft/windows-rs
+windows-threading,0.2.1,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,d468916ac27a36fb8a12bafc1bf5c0ec2fe92238,https://github.com/microsoft/windows-rs
+windows_x86_64_msvc,0.52.6,MIT OR Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,db06b51c2ebb743efb544d40e3064efa49f28d38,https://github.com/microsoft/windows-rs
+winit,0.30.13,Apache-2.0,See offered license expression,LOCAL_TEXT_COLLECTED,e9809ef54b18499bb4f2cac945719ecc2a61061b,https://github.com/rust-windowing/winit
+winnow,1.0.4,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,7539ec0fc27144bfdcf9a68b0dbbec48bd0d5bae,https://github.com/winnow-rs/winnow
+writeable,0.6.4,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,a14f2dad852be26bad277ae704abf27a15cbfed1,https://github.com/unicode-org/icu4x
+xml-rs,0.8.29,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,33cdf417b112c0ebd1f0858b2a67464b3712a4c6,https://github.com/kornelski/xml-rs
+xmlwriter,0.1.0,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,5fdcff47da7d71896b55a1bc0e4b561171e232d6,https://github.com/RazrFalcon/xmlwriter
+yazi,0.2.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,8a710ce8d6d923a2dc41f78d1a534257dc2a37d8,https://github.com/dfrg/yazi
+yoke,0.8.4,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+yoke-derive,0.8.4,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,a59ab860d4bda548e94dfbf992d87fe1f761bc55,https://github.com/unicode-org/icu4x
+zeno,0.3.3,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,698399439f8035736d01de00cbcdc413b3976a18,https://github.com/dfrg/zeno
+zerocopy,0.8.63,BSD-2-Clause OR Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,c55af491426ef53f35fb8c6e83f220fa07712e66,https://github.com/google/zerocopy
+zerocopy-derive,0.8.63,BSD-2-Clause OR Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,c55af491426ef53f35fb8c6e83f220fa07712e66,https://github.com/google/zerocopy
+zerofrom,0.1.8,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,e9575f7e4b5aeddfeeb87ada5d3e715950e8233e,https://github.com/unicode-org/icu4x
+zerofrom-derive,0.1.8,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,ce235d80cf7cbd028e8bd59920420e1203b205b3,https://github.com/unicode-org/icu4x
+zeroize,1.9.1,Apache-2.0 OR MIT,See offered license expression,LOCAL_TEXT_COLLECTED,34a6ebcb9b920ec7ae5809e470fce94fe7c0cb55,https://github.com/RustCrypto/utils
+zerotrie,0.2.5,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,a14f2dad852be26bad277ae704abf27a15cbfed1,https://github.com/unicode-org/icu4x
+zerovec,0.11.9,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+zerovec-derive,0.11.7,Unicode-3.0,See offered license expression,LOCAL_TEXT_COLLECTED,031d9e89f6a3fd26a14491e090729d46094328fd,https://github.com/unicode-org/icu4x
+zlib-rs,0.6.8,Zlib,See offered license expression,LOCAL_TEXT_COLLECTED,0254e07204884bfc902d6ebb68c8b703d0ea49cf,https://github.com/trifectatechfoundation/zlib-rs
+zmij,1.0.23,MIT,See offered license expression,LOCAL_TEXT_COLLECTED,7b7cc48b58028e8af7be87e94c0c1c8936f1a57c,https://github.com/dtolnay/zmij
+zune-core,0.5.3,MIT OR Apache-2.0 OR Zlib,See offered license expression,LOCAL_TEXT_COLLECTED,de5dfc800cfa063116eb695edb6ccd01cb96ea7a,https://github.com/etemesi254/zune-image
+zune-jpeg,0.5.15,MIT OR Apache-2.0 OR Zlib,See offered license expression,LOCAL_TEXT_COLLECTED,31d81fed7551c8ccea456d9d8e2b1fd8bebb6995,https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg

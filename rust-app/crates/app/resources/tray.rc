@@ -1,0 +1,8 @@
+1 ICON "tray.ico"
+2 ICON "tray-enabled.ico"
+3 ICON "tray-disabled.ico"
+1 24 "app.manifest"
+101 RCDATA "../../../../LICENSE"
+102 RCDATA "../../../../NOTICE"
+103 RCDATA "../../../../licenses/LiveCaptions-TranslatorTray-Apache-2.0.txt"
+104 RCDATA "../../../../licenses/third-party/THIRD-PARTY-NOTICES.txt"

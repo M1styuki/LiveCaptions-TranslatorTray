@@ -1,0 +1,186 @@
+import { LineEdit, TextEdit, ScrollView, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
+import { EditableCombo, DecimalBox, IconButton, Surface, ActionButton, NavigationButton, PageEntrance } from "controls.slint";
+
+component Label inherits Text { color: Palette.foreground; font-size: 14px; }
+// The original prompt TextBox grows with wrapped content. Keep the standard
+// editor's IME, selection and clipboard behavior; measure only its outer height.
+component PromptEditor inherits Rectangle {
+    in-out property <string> text;
+    callback edited(string);
+    horizontal-stretch:1;vertical-stretch:0;
+    height:max(210px,measure.preferred-height + 24px);
+    measure := Text {
+        visible:false;width:max(0px,root.width - 24px);
+        text:root.text;wrap:word-wrap;
+    }
+    TextEdit {width:100%;height:100%;wrap:word-wrap;text <=> root.text;edited(value)=>{root.edited(value);}}
+}
+component Field inherits Rectangle {
+    in property <string> caption;
+    in-out property <string> value;
+    in property <bool> secret;
+    in property <length> field-width:10000px;
+    callback edited(string);
+    preferred-width:min(400px,root.field-width);
+    max-width:root.field-width;
+    min-width:0px;
+    horizontal-stretch:1;
+    height:54px;
+    VerticalBox {padding:0px;spacing:5px;Label {text:root.caption;}LineEdit {min-width:0px;height:30px;text <=> root.value;input-type:root.secret ? InputType.password : InputType.text;edited(value)=>{root.edited(value);}}}
+}
+
+export struct ApiEditor { service:string, config-index:int, config-count:int, model-name:string, api-url:string, api-key:string, app-id:string, app-key:string, app-secret:string, source-language:string, keep-alive:string, temperature-text:string }
+
+component ApiEditorSection inherits Surface {
+    in-out property <ApiEditor> entry;
+    in property <bool> models-loading;
+    in property <[string]> model-labels;
+    callback config-action(int);
+    callback field-edited(string,string);
+    callback temperature-stepped(int);
+    callback models-requested();
+    callback model-selected(int);
+    property <bool> llm: root.entry.service == "Ollama" || root.entry.service == "OpenAI" || root.entry.service == "OpenRouter" || root.entry.service == "LMStudio";
+    vertical-stretch:0;
+    VerticalBox {
+        padding:20px;spacing:18px;
+        HorizontalBox {padding:0px;spacing:8px;
+            Label {text:"配置";font-weight:600;vertical-alignment:center;}
+            IconButton {width:32px;height:30px;icon:@image-url("../../../assets/original-icons/previous.svg");label:"上一个配置";enabled:root.entry.config-index > 0;clicked=>{root.config-action(0);}}
+            Label {text:(root.entry.config-index + 1) + " / " + root.entry.config-count;vertical-alignment:center;}
+            IconButton {width:32px;height:30px;icon:@image-url("../../../assets/original-icons/next.svg");label:"下一个配置";enabled:root.entry.config-index + 1 < root.entry.config-count;clicked=>{root.config-action(1);}}
+            Rectangle {horizontal-stretch:1;}
+            ActionButton {text:"新建";clicked=>{root.config-action(2);}}
+            ActionButton {text:"删除";clicked=>{root.config-action(3);}}
+        }
+        Rectangle {height:1px;background:Palette.border;}
+        if root.llm && root.entry.service != "LMStudio": Field {caption:"模型名称";value <=> root.entry.model-name;edited(value)=>{root.field-edited("ModelName",value);}}
+        if root.entry.service == "LMStudio": VerticalBox {
+            padding:0px;spacing:7px;
+            Label {text:"模型名称";}
+            HorizontalBox {padding:0px;spacing:12px;
+                EditableCombo {horizontal-stretch:1;value <=> root.entry.model-name;choices:root.model-labels;choices-enabled:!root.models-loading && root.model-labels.length > 0;edited(value)=>{root.field-edited("ModelName",value);}chosen(index,value)=>{root.model-selected(index);}}
+                ActionButton {text:root.models-loading ? "加载中…" : "加载模型";enabled:!root.models-loading;clicked=>{root.models-requested();}}
+            }
+        }
+        if root.entry.service != "OpenRouter": Field {caption:root.entry.service == "Ollama" || root.entry.service == "LMStudio" ? "API 基础地址" : "API 地址";value <=> root.entry.api-url;edited(value)=>{root.field-edited("ApiUrl",value);}}
+        if root.entry.service == "OpenAI": Label {text:"使用完整聊天接口地址，例如 https://api.deepseek.com/chat/completions";font-size:12px;opacity:0.65;wrap:word-wrap;}
+        if root.entry.service == "Youdao": Field {caption:"应用 Key";value <=> root.entry.app-key;edited(value)=>{root.field-edited("AppKey",value);}}
+        if root.entry.service == "Baidu": Field {caption:"应用 ID";value <=> root.entry.app-id;edited(value)=>{root.field-edited("AppId",value);}}
+        if root.entry.service == "Youdao" || root.entry.service == "Baidu": Field {caption:"应用密钥";value <=> root.entry.app-secret;secret:true;edited(value)=>{root.field-edited("AppSecret",value);}}
+        if root.entry.service != "Youdao" && root.entry.service != "Baidu" && root.entry.service != "Ollama" && root.entry.service != "LMStudio": Field {caption:"API 密钥";value <=> root.entry.api-key;secret:true;edited(value)=>{root.field-edited("ApiKey",value);}}
+        if root.llm: VerticalBox {
+            padding:0px;spacing:7px;
+            Label {text:"温度";}
+            DecimalBox {label:"温度";value <=> root.entry.temperature-text;edited(value)=>{root.field-edited("Temperature",value);}stepped(delta)=>{root.temperature-stepped(delta);}}
+        }
+        if root.entry.service == "MTranServer": Field {field-width:160px;caption:"源语言";value <=> root.entry.source-language;edited(value)=>{root.field-edited("SourceLanguage",value);}}
+    }
+}
+export component ApiWindow inherits Window {
+    in-out property <bool> native-material:false;
+    out property <bool> frame-dark:Palette.color-scheme == ColorScheme.dark;
+    callback frame-theme-changed();
+    changed frame-dark=>{root.frame-theme-changed();}
+    title: "API 设置";
+    preferred-width: 950px;
+    preferred-height: 600px;
+    min-width: 760px;
+    min-height: 360px;
+    in property <string> ui-font-family:"Segoe UI";
+    default-font-family:root.ui-font-family;
+    default-font-size: 14px;
+    no-frame:true;
+    always-on-top:true;
+    background: root.native-material ? transparent : (root.frame-dark ? #272727 : Palette.background);
+    in-out property <int> section: 0;
+    in property <string> service;
+    in property <int> config-index;
+    in property <int> config-count: 1;
+    in-out property <string> prompt;
+    in-out property <string> model-name;
+    in-out property <string> api-url;
+    in-out property <string> api-key;
+    in-out property <string> app-id;
+    in-out property <string> app-key;
+    in-out property <string> app-secret;
+    in-out property <string> source-language;
+    in-out property <string> keep-alive;
+    in-out property <string> temperature-text: "1.0";
+    in property <string> message;
+    in property <bool> models-loading;
+    in property <[string]> model-labels;
+    property <bool> llm: root.service == "Ollama" || root.service == "OpenAI" || root.service == "OpenRouter" || root.service == "LMStudio";
+    callback section-changed(int);
+    callback config-action(int);
+    callback field-edited(string,string);
+    callback prompt-edited(string);
+    callback temperature-stepped(int);
+    callback models-requested();
+    callback model-selected(int);
+    callback window-action(int);
+    in property <[ApiEditor]> editors;
+    in-out property <ApiEditor> active-editor;
+    callback editor-field-edited(int,string,string);
+    callback editor-action(int,int,int);
+    changed section => {root.reveal-current-section();}
+    public function scroll-position() -> length {return content.content-y;}
+    public function section-count() -> int {return root.editors.length;}
+    public function reveal-current-section() {
+        content.content-y = 0px;
+    }
+
+
+    VerticalBox {
+        padding:0px;spacing:0px;
+        Rectangle {height:30px;
+            HorizontalBox {padding:0px;spacing:0px;
+                Rectangle {horizontal-stretch:1;
+                    Text {x:14px;text:"翻译服务设置";font-size:12px;color:Palette.foreground;opacity:0.8;vertical-alignment:center;}
+                    TouchArea {pointer-event(event)=>{if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {root.window-action(2);}}}
+                }
+                IconButton {width:38px;height:30px;icon-size:14px;icon:@image-url("../../../assets/icons/minimize.svg");label:"最小化";clicked=>{root.window-action(0);}}
+                IconButton {width:38px;height:30px;icon-size:14px;icon:@image-url("../../../assets/icons/close.svg");label:"关闭 API 设置";clicked=>{root.window-action(1);}}
+            }
+        }
+        HorizontalBox {padding:0px;spacing:0px;
+            ScrollView {width:190px;content-width:self.visible-width;
+                VerticalBox {padding:12px;spacing:5px;
+                    for name[index] in ["提示词", "Ollama", "LMStudio", "OpenAI 兼容", "OpenRouter", "DeepL", "Youdao", "MTranServer", "Baidu", "LibreTranslate"]: NavigationButton {
+                        text:name;selected:root.section == index;
+                        clicked=>{root.section=index;root.section-changed(index);}
+                    }
+                    Rectangle {vertical-stretch:1;}
+                }
+            }
+            Rectangle {width:1px;background:Palette.border;}
+            PageEntrance {
+                revision:root.section;
+                content:=ScrollView {
+                    content-width:self.visible-width;
+                    VerticalBox {padding:24px;spacing:16px;
+                        Label {text:root.section == 0 ? "提示词" : (root.service == "OpenAI" ? "OpenAI 兼容" : root.service);font-size:24px;font-weight:700;}
+                        Label {text:root.section == 0 ? "自定义翻译要求，适用于模型翻译服务。" : "修改后自动保存；配置此服务不会切换当前翻译服务。";font-size:12px;opacity:0.65;wrap:word-wrap;}
+                        if root.message != "": Label {text:root.message;wrap:word-wrap;}
+                        if root.section == 0: Surface {
+                            VerticalBox {padding:20px;spacing:12px;
+                                Label {text:"{0} 代表目标语言，需保留在提示词中。源文本用 🔤 标记包围。";wrap:word-wrap;}
+                                PromptEditor {text <=> root.prompt;edited(value)=>{root.prompt-edited(value);}}
+                            }
+                        }
+                        if root.section > 0 && root.section <= root.editors.length: ApiEditorSection {
+                            entry <=> root.active-editor;models-loading:root.models-loading;model-labels:root.model-labels;
+                            field-edited(field,value)=>{root.editor-field-edited(root.section,field,value);}
+                            config-action(action)=>{root.editor-action(root.section,0,action);}
+                            temperature-stepped(delta)=>{root.editor-action(root.section,1,delta);}
+                            models-requested=>{root.editor-action(root.section,2,0);}
+                            model-selected(model)=>{root.editor-action(root.section,3,model);}
+                        }
+                        Rectangle {vertical-stretch:1;}
+                    }
+                }
+            }
+        }
+    }
+    TouchArea {x:root.width - 12px;y:root.height - 12px;width:12px;height:12px;mouse-cursor:nwse-resize;pointer-event(event)=>{if event.kind==PointerEventKind.down && event.button==PointerEventButton.left {root.window-action(3);}}}
+}
