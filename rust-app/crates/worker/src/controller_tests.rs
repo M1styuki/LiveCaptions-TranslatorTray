@@ -783,7 +783,6 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
     startup::run(&root, screen, &ui, &jobs);
     caption_toggle::run(&root, screen, &ui, &jobs);
     capture_cutoff::run(&root, screen, &ui, &jobs);
-    original_number_input(&ui, &windows.borrow()[0]);
     flat_controls::run(&windows);
     let actual = root.canonicalize().unwrap();
     assert_eq!(actual.parent(), Some(parent.as_path()));
