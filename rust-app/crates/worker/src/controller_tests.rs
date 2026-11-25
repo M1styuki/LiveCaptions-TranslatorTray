@@ -713,7 +713,7 @@ fn settings_layout_across_window_sizes() {
     assert!(window.debug_bounds("悬浮字幕前文句数").is_some());
     assert!(window.debug_bounds("上下文句数").is_none());
     ui.set_context_aware(true);
-    for width in [800., 900., 1280.] {
+    for width in [480., 800., 900., 1280.] {
         redraw(&mut window, width, 600.);
         let contexts = window.debug_bounds("上下文句数").unwrap();
         let sentences = window.debug_bounds("悬浮字幕前文句数").unwrap();
@@ -755,6 +755,12 @@ fn settings_layout_across_window_sizes() {
         after.top() > visible.top(),
         "no scroll over input: {visible:?} -> {after:?}"
     );
+    ui.set_page(0);
+    redraw(&mut window, 480., 240.);
+    let source = window.debug_bounds("source").unwrap();
+    let translation = window.debug_bounds("translation").unwrap();
+    assert!(source.top() >= px(48.));
+    assert!(translation.top() - source.bottom() >= px(12.));
 }
 
 fn original_number_input(ui: &MainWindow, window: &mut VisualTestContext) {

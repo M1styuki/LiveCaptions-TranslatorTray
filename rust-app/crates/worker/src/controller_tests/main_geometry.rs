@@ -95,11 +95,11 @@ pub(super) fn run(root: &std::path::Path, screen: Screen, ui: &MainWindow, jobs:
             owner
                 .borrow_mut()
                 .setting_edited("CaptionLogEnabled", "true");
-            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 660.0);
+            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 500.0);
             owner
                 .borrow_mut()
                 .setting_edited("CaptionLogEnabled", "false");
-            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 660.0);
+            assert_eq!(owner.borrow().test_main_geometry().bounds.height, 500.0);
             // Close before any debounce tick: final physical bounds still save.
             owner.borrow_mut().test_main_native_resize(
                 Bounds {

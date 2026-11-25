@@ -166,7 +166,7 @@ impl Controller {
                 settings.window_anchor(WindowKind::Main),
             )
         };
-        let base = geometry::restore(bounds, anchor.as_ref(), &monitors, (800.0, 240.0))
+        let base = geometry::restore(bounds, anchor.as_ref(), &monitors, (1.0, 1.0))
             .ok_or_else(|| io::Error::other("无法找到可用显示器。"))?;
         let available = monitors
             .iter()
@@ -208,7 +208,7 @@ impl Controller {
             },
             Some(&anchor),
             &monitors,
-            (800.0, required.min(available)),
+            (1.0, 1.0),
         )
         .ok_or_else(|| io::Error::other("窗口尺寸无效。"))?;
         let mut state = self.geometry.state.borrow_mut();

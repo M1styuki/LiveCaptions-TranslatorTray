@@ -216,6 +216,7 @@ impl AssetSource for Assets {
 pub struct Palette {
     pub dark: bool,
     pub window_background: Hsla,
+    pub sidebar: Hsla,
     pub background: Hsla,
     pub foreground: Hsla,
     pub control: Hsla,
@@ -233,6 +234,7 @@ impl Palette {
         Self {
             dark,
             window_background: theme(0xfafafa, 0x272727),
+            sidebar: theme(0xf0f0f0, 0x202020),
             background: theme(0xfafafa, 0x1c1c1c),
             foreground: alpha(0x000000e6, 0xffffffff),
             control: alpha(0xffffffb3, 0xffffff0f),
@@ -479,57 +481,59 @@ pub fn toggle(
             .flex_shrink_0()
             .flex()
             .items_center()
-            .gap(px(10.))
             .child(
-                div().w(px(42.)).h(px(22.)).flex_shrink_0().child(
-                    canvas(
-                        move |_, window, cx| {
-                            animate(
-                                "switch-slide",
-                                if checked { 1. } else { 0. },
-                                Duration::from_millis(180),
-                                window,
-                                cx,
-                            )
-                        },
-                        move |bounds, phase, window, _| {
-                            window.paint_quad(gpui::quad(
-                                bounds,
-                                px(11.),
-                                p.control.opacity(1. - phase),
-                                px(0.),
-                                p.border,
-                                gpui::BorderStyle::Solid,
-                            ));
-                            window.paint_quad(gpui::quad(
-                                bounds,
-                                px(11.),
-                                p.accent.opacity(phase),
-                                px(1.),
-                                p.border,
-                                gpui::BorderStyle::Solid,
-                            ));
-                            let knob = Bounds::new(
-                                point(bounds.left() + px(4. + 19. * phase), bounds.top() + px(4.)),
-                                gpui::size(px(14.), px(14.)),
-                            );
-                            window.paint_quad(gpui::quad(
-                                knob,
-                                px(7.),
+                canvas(
+                    move |_, window, cx| {
+                        animate(
+                            "switch-slide",
+                            if checked { 1. } else { 0. },
+                            Duration::from_millis(180),
+                            window,
+                            cx,
+                        )
+                    },
+                    move |bounds, phase, window, _| {
+                        window.paint_quad(gpui::quad(
+                            bounds,
+                            px(11.),
+                            p.control.opacity(1. - phase),
+                            px(0.),
+                            p.border,
+                            gpui::BorderStyle::Solid,
+                        ));
+                        window.paint_quad(gpui::quad(
+                            bounds,
+                            px(11.),
+                            p.accent.opacity(phase),
+                            px(1.),
+                            p.border,
+                            gpui::BorderStyle::Solid,
+                        ));
+                        let radius = (bounds.size.height * 0.5 - px(4.)).max(px(0.));
+                        let cx = bounds.left()
+                            + bounds.size.height * 0.5
+                            + (bounds.size.width - bounds.size.height) * phase;
+                        let cy = bounds.center().y;
+                        let left = point(cx - radius, cy);
+                        let right = point(cx + radius, cy);
+                        let radii = point(radius, radius);
+                        let mut path = gpui::PathBuilder::fill();
+                        path.move_to(left);
+                        path.arc_to(radii, px(0.), false, true, right);
+                        path.arc_to(radii, px(0.), false, true, left);
+                        path.close();
+                        if let Ok(disc) = path.build() {
+                            window.paint_path(
+                                disc,
                                 if checked { p.accent_text } else { p.foreground },
-                                px(0.),
-                                p.border,
-                                gpui::BorderStyle::Solid,
-                            ));
-                        },
-                    )
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .size_full(),
-                ),
-            )
-            .child(if checked { "开" } else { "关" }),
+                            );
+                        }
+                    },
+                )
+                .w(px(42.))
+                .h(px(22.))
+                .flex_shrink_0(),
+            ),
         format!("{title}：{}", if checked { "已开启" } else { "已关闭" }),
         p,
     )
@@ -1168,6 +1172,7 @@ pub fn number<T: 'static>(
     tip(
         field_shell(title, p, &focus, window, 30.)
             .w(px(130.))
+            .pr(px(3.))
             .on_key_down(move |event, _, cx| {
                 if event.keystroke.key == "up" || event.keystroke.key == "down" {
                     let key = key.clone();
@@ -1198,23 +1203,16 @@ pub fn number<T: 'static>(
                         row()
                             .id(("step", delta as i32 as usize))
                             .debug_selector(|| format!("{id}-{delta}"))
-                            .h_full()
-                            .w(px(28.))
+                            .relative()
+                            .h(px(24.))
+                            .w(px(26.))
                             .flex_shrink_0()
                             .justify_center(),
                         p.foreground.opacity(0.07),
                         p.foreground.opacity(0.12),
                         4.,
                     )
-                    .child(icon(
-                        if delta > 0 {
-                            "original-icons/number-increase.svg"
-                        } else {
-                            "original-icons/number-decrease.svg"
-                        },
-                        14.,
-                        p.foreground,
-                    ))
+                    .child(chevron(p.foreground, delta > 0))
                     .on_mouse_down(MouseButton::Left, move |_, window, _| {
                         focus.focus(window);
                         let step = step.clone();

@@ -95,7 +95,6 @@ impl WindowState {
         &self,
         title: &'static str,
         initial: (f32, f32),
-        minimum: (f32, f32),
         create: impl FnOnce(&mut Window, &mut gpui::Context<V>) -> V + 'static,
     ) -> gpui::Result<()> {
         let Some(app) = runtime::app() else {
@@ -116,7 +115,6 @@ impl WindowState {
                     }),
                     window_background: WindowBackgroundAppearance::Opaque,
                     window_decorations: Some(WindowDecorations::Client),
-                    window_min_size: Some(size(px(minimum.0), px(minimum.1))),
                     show: false,
                     focus: false,
                     ..Default::default()

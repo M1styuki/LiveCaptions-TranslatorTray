@@ -3,6 +3,93 @@ use gpui::{Bounds, Pixels, canvas, size};
 use std::time::Duration;
 use std::{cell::Cell, rc::Rc};
 
+#[derive(Clone, Default)]
+pub(super) struct WheelMotion {
+    glide: Rc<Cell<Option<Glide>>>,
+    scheduled: Rc<Cell<bool>>,
+}
+
+#[derive(Clone, Copy)]
+struct Glide {
+    from: Pixels,
+    target: Pixels,
+    last: Pixels,
+    start: std::time::Instant,
+}
+
+impl WheelMotion {
+    pub(super) fn cancel(&self) {
+        self.glide.set(None);
+    }
+
+    fn advance(&self, scroll: &ScrollHandle, window: &mut Window) {
+        let Some(mut glide) = self.glide.get() else {
+            return;
+        };
+        let mut offset = scroll.offset();
+        if (offset.y - glide.last).abs() > px(1.) {
+            self.cancel();
+            return;
+        }
+        let t = (glide.start.elapsed().as_secs_f32() / 0.12).min(1.);
+        offset.y = glide.target + (glide.from - glide.target) * (1. - t).powi(3);
+        scroll.set_offset(offset);
+        window.refresh();
+        if t >= 1. {
+            self.cancel();
+        } else {
+            glide.last = offset.y;
+            self.glide.set(Some(glide));
+            if self.scheduled.replace(true) {
+                return;
+            }
+            let motion = self.clone();
+            let scroll = scroll.clone();
+            window.on_next_frame(move |window, _| {
+                motion.scheduled.set(false);
+                motion.advance(&scroll, window);
+            });
+        }
+    }
+
+    pub(super) fn handle(
+        &self,
+        event: &gpui::ScrollWheelEvent,
+        scroll: &ScrollHandle,
+        window: &mut Window,
+        cx: &mut gpui::App,
+    ) {
+        let gpui::ScrollDelta::Lines(lines) = event.delta else {
+            self.cancel();
+            return;
+        };
+        if lines.y == 0. || lines.y.abs() < 1. {
+            self.cancel();
+            return;
+        }
+        let y = scroll.offset().y;
+        let active = self.glide.get();
+        let base = active
+            .filter(|g| (g.last - y).abs() <= px(1.) && (g.target - y) * lines.y >= px(0.))
+            .map_or(y, |g| g.target);
+        let target = (base + px(lines.y * 24.)).clamp(-scroll.max_offset().height, px(0.));
+        cx.stop_propagation();
+        if y == target {
+            self.cancel();
+            return;
+        }
+        self.glide.set(Some(Glide {
+            from: y,
+            target,
+            last: y,
+            start: std::time::Instant::now(),
+        }));
+        if active.is_none() {
+            self.advance(scroll, window);
+        }
+    }
+}
+
 #[derive(Default)]
 pub(super) struct Interval {
     bounds: Rc<Cell<Bounds<Pixels>>>,
@@ -370,21 +457,18 @@ impl MainView {
                 }),
             ))
             .children((!s.autostart_message.is_empty()).then(|| note(s.autostart_message.clone())));
+        let wheel = self.wheel.clone();
+        let scroll = self.scroll.clone();
         scroller(
             "settings-scroll",
             &self.scroll,
             col()
+                .on_scroll_wheel(move |event, window, cx| wheel.handle(event, &scroll, window, cx))
                 .w_full()
                 .max_w(px(880.))
                 .mx_auto()
                 .p(px(22.))
                 .gap(px(16.))
-                .child(
-                    col()
-                        .gap(px(4.))
-                        .child(heading("设置"))
-                        .child(note("翻译服务、字幕显示与上下文设置。")),
-                )
                 .child(translate)
                 .child(divider(p))
                 .child(context)
@@ -411,12 +495,15 @@ fn set(ui: &MainWindow, field: &'static str, value: impl ToString) {
 
 fn setting_row(title: &'static str, description: &'static str, control: impl IntoElement) -> Div {
     row()
+        .flex_wrap()
+        .justify_end()
         .min_h(px(46.))
         .py(px(6.))
         .gap(px(16.))
         .child(
             col()
                 .flex_1()
+                .flex_basis(px(126.))
                 .min_w_0()
                 .gap(px(3.))
                 .child(label(title))

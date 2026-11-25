@@ -22,16 +22,14 @@ pub(super) struct MainView {
     last_page: Option<i32>,
     delete_focus: Option<(FocusHandle, FocusHandle)>,
     interval: settings::Interval,
+    wheel: settings::WheelMotion,
 }
 
 impl MainWindow {
     pub fn show(&self) -> gpui::Result<()> {
         let ui = self.clone();
-        self.window().show(
-            "实时字幕翻译",
-            (900., 600.),
-            (800., 240.),
-            move |window, cx| {
+        self.window()
+            .show("实时字幕翻译", (900., 600.), move |window, cx| {
                 let weak = ui.as_weak();
                 ui.set_frame_dark(super::native::is_dark(window.appearance()));
                 window.on_window_should_close(cx, move |_, _| {
@@ -65,8 +63,7 @@ impl MainWindow {
                     ui: ui.as_weak(),
                     ..Default::default()
                 }
-            },
-        )
+            })
     }
 
     pub fn hide(&self) -> gpui::Result<()> {
@@ -83,6 +80,7 @@ impl Render for MainView {
         let s = ui.state();
         let p = Palette::new(s.frame_dark);
         if self.last_page.replace(s.page) != Some(s.page) {
+            self.wheel.cancel();
             self.fields.clear();
             self.interval = settings::Interval::default();
             self.dropdowns.close();
@@ -140,7 +138,7 @@ impl Render for MainView {
                     .flex_1()
                     .min_h_0()
                     .w_full()
-                    .child(sidebar(&s, &ui, p))
+                    .child(sidebar(&s, &ui, p, window.viewport_size().width < px(620.)))
                     .child(
                         col()
                             .flex_1()
@@ -187,7 +185,7 @@ impl Render for MainView {
     }
 }
 
-fn sidebar(s: &MainState, ui: &MainWindow, p: Palette) -> Div {
+fn sidebar(s: &MainState, ui: &MainWindow, p: Palette, compact: bool) -> Div {
     let navs = [
         ("字幕", "original-icons/home.svg"),
         ("设置", "original-icons/settings.svg"),
@@ -198,7 +196,10 @@ fn sidebar(s: &MainState, ui: &MainWindow, p: Palette) -> Div {
     let topmost = ui.clone();
     let (paused, enabled, pinned) = (s.log_only, s.captions_enabled, s.topmost);
     col()
-        .w(px(144.))
+        .w(px(if compact { 60. } else { 144. }))
+        .bg(p.sidebar)
+        .border_r_1()
+        .border_color(p.surface_border)
         .h_full()
         .flex_shrink_0()
         .px(px(10.))
@@ -208,16 +209,29 @@ fn sidebar(s: &MainState, ui: &MainWindow, p: Palette) -> Div {
         .children(navs.into_iter().enumerate().map(|(index, (name, icon))| {
             let ui = ui.clone();
             let index = index as i32;
-            nav(name, name, Some(icon), s.page == index, p, move || {
-                ui.set_page(index);
-                ui.invoke_page_changed(index);
-            })
+            let item = nav(
+                name,
+                if compact { "" } else { name },
+                Some(icon),
+                s.page == index,
+                p,
+                move || {
+                    ui.set_page(index);
+                    ui.invoke_page_changed(index);
+                },
+            );
+            if compact {
+                tip(item.pl_0().gap_0().justify_center(), name, p)
+            } else {
+                item
+            }
         }))
         .child(div().flex_1())
         .child(divider(p).opacity(0.45))
         .child(
             row()
-                .h(px(32.))
+                .when(compact, |d| d.flex_col())
+                .when(!compact, |d| d.h(px(32.)))
                 .gap(px(6.))
                 .child(icon_button(
                     "pause",
@@ -291,11 +305,13 @@ fn sidebar(s: &MainState, ui: &MainWindow, p: Palette) -> Div {
 
 impl MainView {
     fn captions(&self, s: &MainState, ui: &MainWindow, p: Palette) -> impl IntoElement {
+        let wheel = self.wheel.clone();
+        let scroll = self.scroll.clone();
         let mut content = col()
-            .pl(px(5.))
-            .pr(px(15.))
-            .py(px(5.))
-            .gap(px(3.))
+            .on_scroll_wheel(move |event, window, cx| wheel.handle(event, &scroll, window, cx))
+            .px(px(20.))
+            .py(px(18.))
+            .gap(px(12.))
             .child(caption(
                 "source",
                 s.source_caption.clone(),
@@ -327,11 +343,10 @@ impl MainView {
                     .then(|| label(s.copy_message.clone()).text_size(px(12.))),
             );
         if s.caption_log_enabled {
-            content = content.child(col().children(s.caption_cards.iter().enumerate().map(
-                |(index, card)| {
+            content = content.child(col().gap(px(14.)).children(
+                s.caption_cards.iter().enumerate().map(|(index, card)| {
                     col()
-                        .p(px(4.))
-                        .gap(px(3.))
+                        .gap(px(8.))
                         .child(caption(
                             ("source-card", index),
                             card.source.clone(),
@@ -350,8 +365,8 @@ impl MainView {
                             ui,
                             p,
                         ))
-                },
-            )));
+                }),
+            ));
         }
         scroller("captions-scroll", &self.scroll, content)
     }
@@ -602,12 +617,14 @@ fn caption(
         div()
             .id(id.clone())
             .debug_selector(|| id.to_string())
+            .relative()
             .w_full()
             .min_h(px(min))
-            .p(px(8.))
+            .px(px(14.))
+            .py(px(10.))
             .text_size(px(font_size as f32))
             .line_height(relative(1.24))
-            .bg(p.control)
+            .contour(Some(p.control), None, 9.)
             .cursor_pointer()
             .child(text)
             .on_mouse_down(MouseButton::Left, move |_, _, _| {

@@ -207,14 +207,9 @@ impl AutoHeight {
     pub fn is_manual(self) -> bool {
         self.manual
     }
-    /// Necessary growth remains possible after manual sizing; automatic shrink
-    /// never erases a user's chosen larger height during this window lifetime.
+    /// Auto-fit until the user sets a window height.
     pub fn adjusted(self, current: f64, required: f64) -> f64 {
-        if !self.manual || current < required {
-            required
-        } else {
-            current
-        }
+        if self.manual { current } else { required }
     }
 }
 
@@ -464,7 +459,7 @@ mod tests {
         assert_eq!(policy.adjusted(360.0, 170.0), 170.0);
         policy.mark_manual();
         assert_eq!(policy.adjusted(500.0, 220.0), 500.0);
-        assert_eq!(policy.adjusted(500.0, 660.0), 660.0);
+        assert_eq!(policy.adjusted(500.0, 660.0), 500.0);
         assert_eq!(policy.adjusted(660.0, 170.0), 660.0);
         assert!(policy.is_manual());
         assert!(AutoHeight::new(true).is_manual());

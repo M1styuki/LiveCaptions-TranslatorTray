@@ -21,11 +21,8 @@ impl ApiWindow {
 
     pub fn show(&self) -> gpui::Result<()> {
         let ui = self.clone();
-        self.window().show(
-            "API 设置",
-            Self::INITIAL_SIZE,
-            (760., 360.),
-            move |window, cx| {
+        self.window()
+            .show("API 设置", Self::INITIAL_SIZE, move |window, cx| {
                 let weak = ui.as_weak();
                 ui.set_frame_dark(super::native::is_dark(window.appearance()));
                 window.on_window_should_close(cx, move |_, _| {
@@ -53,8 +50,7 @@ impl ApiWindow {
                     ui: ui.as_weak(),
                     ..Default::default()
                 }
-            },
-        )
+            })
     }
 
     pub fn hide(&self) -> gpui::Result<()> {
@@ -96,20 +92,30 @@ impl Render for ApiView {
             "Baidu",
             "LibreTranslate",
         ];
-        let sidebar = col().w(px(190.)).h_full().flex_shrink_0().child(scroller(
-            "api-navigation",
-            &self.nav_scroll,
-            col()
-                .p(px(12.))
-                .gap(px(5.))
-                .children(navs.into_iter().enumerate().map(|(index, name)| {
-                    let ui = ui.clone();
-                    let index = index as i32;
-                    nav(name, name, None, index == s.section, p, move || {
-                        ui.invoke_section_changed(index)
-                    })
-                })),
-        ));
+        let sidebar_width = if window.viewport_size().width < px(640.) {
+            128.
+        } else {
+            190.
+        };
+        let sidebar = col()
+            .w(px(sidebar_width))
+            .bg(p.sidebar)
+            .h_full()
+            .flex_shrink_0()
+            .child(scroller(
+                "api-navigation",
+                &self.nav_scroll,
+                col()
+                    .p(px(12.))
+                    .gap(px(5.))
+                    .children(navs.into_iter().enumerate().map(|(index, name)| {
+                        let ui = ui.clone();
+                        let index = index as i32;
+                        nav(name, name, None, index == s.section, p, move || {
+                            ui.invoke_section_changed(index)
+                        })
+                    })),
+            ));
         let title = if s.section == 0 {
             "提示词"
         } else if s.service == "OpenAI" {
