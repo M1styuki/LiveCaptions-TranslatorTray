@@ -434,7 +434,7 @@ fn openai_tries_each_template_once_caches_success_and_scopes_by_active_configura
         for (index, row) in rows[..8].iter().enumerate() {
             let body: Value = serde_json::from_slice(&row.body).unwrap();
             let keys = body.as_object().unwrap();
-            let extras: Vec<_> = keys
+            let mut extras: Vec<_> = keys
                 .keys()
                 .filter(|key| {
                     ![
@@ -449,6 +449,8 @@ fn openai_tries_each_template_once_caches_success_and_scopes_by_active_configura
                 })
                 .map(String::as_str)
                 .collect();
+            // JSON object member order is independent of this contract.
+            extras.sort_unstable();
             assert_eq!(
                 extras,
                 match index {
