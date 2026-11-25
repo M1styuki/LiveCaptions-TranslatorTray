@@ -160,6 +160,7 @@ impl Interval {
     }
 }
 
+const DROPDOWN_WIDTH: f32 = 160.;
 const SERVICES: [&str; 11] = [
     "Google",
     "Google2",
@@ -245,12 +246,12 @@ impl MainView {
                         true,
                         move || api_ui.invoke_api_requested(),
                     ))
-                    .child(div().w(px(180.)).child(service)),
+                    .child(div().w(px(DROPDOWN_WIDTH)).child(service)),
             ))
             .child(setting_row(
                 "目标语言",
                 "译文的语言代码，例如 zh-CN。",
-                div().w(px(180.)).child(language),
+                div().w(px(DROPDOWN_WIDTH)).child(language),
             ))
             .child(setting_row(
                 "调用间隔",
