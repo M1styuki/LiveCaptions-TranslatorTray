@@ -233,6 +233,7 @@ impl MainView {
         let translate = col()
             .child(setting_row(
                 "翻译服务",
+                "Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。",
                 row()
                     .gap(px(8.))
                     .child(action(
@@ -246,9 +247,14 @@ impl MainView {
                     ))
                     .child(div().w(px(180.)).child(service)),
             ))
-            .child(setting_row("目标语言", div().w(px(180.)).child(language)))
+            .child(setting_row(
+                "目标语言",
+                "译文的语言代码，例如 zh-CN。",
+                div().w(px(180.)).child(language),
+            ))
             .child(setting_row(
                 "调用间隔",
+                "按字幕内容变化次数控制调用频率，数值越小越频繁。",
                 row()
                     .gap(px(12.))
                     .child(note(format!("{} 次", s.max_sync_interval)))
@@ -306,15 +312,24 @@ impl MainView {
         let config = ui.clone();
         let aware = s.context_aware;
         let context = col()
-            .child(setting_row("前文句数", sentences))
+            .child(setting_row(
+                "前文句数",
+                "悬浮字幕中保留的前文句数，可设为 0–6。",
+                sentences,
+            ))
             .child(setting_row(
                 "上下文翻译",
+                "向翻译服务提供前文；模型服务会使用更多 token。",
                 toggle("context-aware", "上下文翻译", aware, p, move || {
                     set(&config, "ContextAware", !aware)
                 }),
             ))
             .when(aware, |group| {
-                group.child(setting_row("上下文句数", context))
+                group.child(setting_row(
+                    "上下文句数",
+                    "翻译时提供给服务的前文句数，可设为 1–10。",
+                    context,
+                ))
             });
 
         let visibility = ui.clone();
@@ -326,6 +341,7 @@ impl MainView {
         let display = col()
             .child(setting_row(
                 "显示系统字幕",
+                "在系统字幕中修改源语言；隐藏窗口后仍可识别。",
                 toggle(
                     "system-captions",
                     "显示系统字幕",
@@ -336,6 +352,7 @@ impl MainView {
             ))
             .child(setting_row(
                 "显示翻译延迟",
+                "在字幕页显示最近一次翻译请求的耗时，单位为毫秒。",
                 toggle(
                     "latency",
                     "显示翻译延迟",
@@ -346,6 +363,7 @@ impl MainView {
             ))
             .child(setting_row(
                 "自启动",
+                "登录 Windows 后驻留托盘；字幕需手动开启。",
                 toggle("autostart", "开机自启动", checked, p, move || {
                     autostart.invoke_autostart_changed(!checked)
                 }),
@@ -360,7 +378,12 @@ impl MainView {
                 .mx_auto()
                 .p(px(22.))
                 .gap(px(16.))
-                .child(heading("设置"))
+                .child(
+                    col()
+                        .gap(px(4.))
+                        .child(heading("设置"))
+                        .child(note("翻译服务、字幕显示与上下文设置。")),
+                )
                 .child(translate)
                 .child(divider(p))
                 .child(context)
@@ -385,10 +408,18 @@ fn set(ui: &MainWindow, field: &'static str, value: impl ToString) {
     ui.invoke_setting_edited(field.into(), value);
 }
 
-fn setting_row(title: &'static str, control: impl IntoElement) -> Div {
+fn setting_row(title: &'static str, description: &'static str, control: impl IntoElement) -> Div {
     row()
         .min_h(px(46.))
+        .py(px(6.))
         .gap(px(16.))
-        .child(label(title).flex_1())
+        .child(
+            col()
+                .flex_1()
+                .min_w_0()
+                .gap(px(3.))
+                .child(label(title))
+                .child(note(description)),
+        )
         .child(control)
 }
