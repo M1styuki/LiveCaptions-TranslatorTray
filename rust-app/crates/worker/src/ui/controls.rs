@@ -554,8 +554,6 @@ pub fn titlebar(
         .w_full()
         .flex_shrink_0()
         .bg(p.titlebar)
-        .border_b_1()
-        .border_color(p.pane_divider)
         .child(
             row()
                 .flex_1()
