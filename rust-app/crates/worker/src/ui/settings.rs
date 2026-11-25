@@ -345,7 +345,7 @@ impl MainView {
                 "按字幕内容变化次数控制调用频率，数值越小越频繁。",
                 row()
                     .gap(px(12.))
-                    .child(note(format!("{} 次", s.max_sync_interval)))
+                    .child(note(format!("{} 次", s.max_sync_interval)).text_size(px(12.)))
                     .child(row().w(px(180.)).child(slider)),
             ));
 

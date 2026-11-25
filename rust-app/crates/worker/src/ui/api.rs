@@ -99,7 +99,7 @@ impl Render for ApiView {
         };
         let sidebar = col()
             .w(px(sidebar_width))
-            .bg(p.sidebar)
+            .bg(p.window_background)
             .h_full()
             .flex_shrink_0()
             .child(scroller(
@@ -161,7 +161,7 @@ impl Render for ApiView {
                     .min_h_0()
                     .w_full()
                     .child(sidebar)
-                    .child(div().w(px(1.)).h_full().flex_shrink_0().bg(p.border))
+                    .child(div().w(px(1.)).h_full().flex_shrink_0().bg(p.pane_divider))
                     .child(col().flex_1().h_full().min_w_0().child(entrance(
                         ("api-page", s.section as usize),
                         scroller("api-scroll", &self.scroll, content),

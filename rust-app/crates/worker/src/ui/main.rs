@@ -95,21 +95,17 @@ impl Render for MainView {
         let caption_log = (s.page == 0).then(|| {
             let ui = ui.clone();
             let checked = s.caption_log_enabled;
-            icon_button(
+            titlebar_button(
+                p,
                 "caption-cards",
+                None,
                 if checked {
                     "original-icons/history.svg"
                 } else {
                     "original-icons/history-dismiss.svg"
                 },
                 "字幕历史卡片",
-                p,
                 checked,
-                false,
-                true,
-                32.,
-                30.,
-                16.,
                 move || {
                     ui.set_caption_log_enabled(!checked);
                     ui.invoke_setting_edited("CaptionLogEnabled".into(), (!checked).to_string());
@@ -197,9 +193,9 @@ fn sidebar(s: &MainState, ui: &MainWindow, p: Palette, compact: bool) -> Div {
     let (paused, enabled, pinned) = (s.log_only, s.captions_enabled, s.topmost);
     col()
         .w(px(if compact { 60. } else { 144. }))
-        .bg(p.sidebar)
+        .bg(p.window_background)
         .border_r_1()
-        .border_color(p.surface_border)
+        .border_color(p.pane_divider)
         .h_full()
         .flex_shrink_0()
         .px(px(10.))

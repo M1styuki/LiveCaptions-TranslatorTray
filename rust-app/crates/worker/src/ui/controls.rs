@@ -217,8 +217,7 @@ pub struct Palette {
     pub dark: bool,
     pub window_background: Hsla,
     pub titlebar: Hsla,
-    pub titlebar_border: Hsla,
-    pub sidebar: Hsla,
+    pub pane_divider: Hsla,
     pub background: Hsla,
     pub foreground: Hsla,
     pub control: Hsla,
@@ -236,9 +235,8 @@ impl Palette {
         Self {
             dark,
             window_background: theme(0xfafafa, 0x272727),
-            titlebar: theme(0xffffff, 0x303030),
-            titlebar_border: theme(0xd8d8d8, 0x424242),
-            sidebar: theme(0xf0f0f0, 0x202020),
+            titlebar: theme(0xf0f0f0, 0x202020),
+            pane_divider: theme(0xc6c6c6, 0x505050),
             background: theme(0xfafafa, 0x1c1c1c),
             foreground: alpha(0x000000e6, 0xffffffff),
             control: alpha(0xffffffb3, 0xffffff0f),
@@ -262,8 +260,8 @@ pub fn label(text: impl Into<SharedString>) -> Div {
 }
 pub fn note(text: impl Into<SharedString>) -> Div {
     label(text)
-        .text_size(px(12.))
-        .line_height(px(16.))
+        .text_size(px(11.))
+        .line_height(px(15.))
         .opacity(0.65)
 }
 pub fn heading(text: impl Into<SharedString>) -> Div {
@@ -558,7 +556,7 @@ pub fn titlebar(
         .flex_shrink_0()
         .bg(p.titlebar)
         .border_b_1()
-        .border_color(p.titlebar_border)
+        .border_color(p.pane_divider)
         .child(
             row()
                 .flex_1()
@@ -573,27 +571,30 @@ pub fn titlebar(
         .child(titlebar_button(
             p,
             "minimize",
-            gpui::WindowControlArea::Min,
+            Some(gpui::WindowControlArea::Min),
             "icons/minimize.svg",
             "最小化",
+            false,
             move || minimize(0),
         ))
         .child(titlebar_button(
             p,
             "close",
-            gpui::WindowControlArea::Close,
+            Some(gpui::WindowControlArea::Close),
             "icons/close.svg",
             close_title,
+            false,
             move || close(1),
         ))
 }
 
-fn titlebar_button(
+pub fn titlebar_button(
     p: Palette,
     id: &'static str,
-    area: gpui::WindowControlArea,
+    area: Option<gpui::WindowControlArea>,
     path: &'static str,
     title: &'static str,
+    selected: bool,
     callback: impl Fn() + 'static,
 ) -> Stateful<Div> {
     tip(
@@ -606,7 +607,8 @@ fn titlebar_button(
                     .h_full()
                     .flex_shrink_0()
                     .justify_center()
-                    .window_control_area(area),
+                    .when_some(area, |d, area| d.window_control_area(area))
+                    .when(selected, |d| d.bg(p.control)),
                 p.foreground.opacity(0.10),
                 p.foreground.opacity(0.14),
                 0.,
@@ -614,7 +616,11 @@ fn titlebar_button(
             p,
             callback,
         )
-        .child(icon(path, 14., p.foreground)),
+        .child(icon(
+            path,
+            if area.is_some() { 14. } else { 16. },
+            if selected { p.accent } else { p.foreground },
+        )),
         title,
         p,
     )
