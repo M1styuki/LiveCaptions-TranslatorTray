@@ -114,7 +114,7 @@ impl WindowState {
                         appears_transparent: true,
                         ..Default::default()
                     }),
-                    window_background: WindowBackgroundAppearance::Transparent,
+                    window_background: WindowBackgroundAppearance::Opaque,
                     window_decorations: Some(WindowDecorations::Client),
                     window_min_size: Some(size(px(minimum.0), px(minimum.1))),
                     show: false,

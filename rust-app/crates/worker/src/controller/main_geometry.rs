@@ -45,21 +45,20 @@ struct Fixture {
 pub(super) fn hwnd(ui: &crate::MainWindow) -> Option<usize> {
     ui.window().hwnd()
 }
-fn round_frame(window: &WindowState, dark: bool) -> bool {
+fn style_frame(window: &WindowState, dark: bool) {
     if let Some(window) = window.hwnd() {
         // Cosmetic DWM policy must not make a usable settings window fail.
         let _ = window_geometry::round_corners(window);
-        return window_geometry::mica_backdrop(window, dark).is_ok();
+        let _ = window_geometry::set_frame_dark(window, dark);
     }
-    false
 }
 
 pub(super) fn style_main(ui: &crate::MainWindow) {
-    ui.set_native_material(round_frame(ui.window(), ui.get_frame_dark()));
+    style_frame(ui.window(), ui.get_frame_dark());
 }
 
 pub(super) fn style_api(ui: &crate::ApiWindow) {
-    ui.set_native_material(round_frame(ui.window(), ui.get_frame_dark()));
+    style_frame(ui.window(), ui.get_frame_dark());
 }
 
 pub(super) fn center_api(ui: &crate::ApiWindow) {

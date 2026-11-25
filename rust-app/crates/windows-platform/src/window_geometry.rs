@@ -120,33 +120,18 @@ pub fn round_corners(window: usize) -> io::Result<()> {
     .map_err(io::Error::other)
 }
 
-/// Use the same Windows 11 Mica material as the original FluentWindow.
-/// Callers keep their opaque fallback unless all required DWM calls succeed.
-pub fn mica_backdrop(window: usize, dark: bool) -> io::Result<()> {
-    use windows::Win32::Graphics::Dwm::{
-        DWMSBT_MAINWINDOW, DWMWA_SYSTEMBACKDROP_TYPE, DWMWA_USE_IMMERSIVE_DARK_MODE,
-        DwmSetWindowAttribute,
-    };
+pub fn set_frame_dark(window: usize, dark: bool) -> io::Result<()> {
+    use windows::Win32::Graphics::Dwm::{DWMWA_USE_IMMERSIVE_DARK_MODE, DwmSetWindowAttribute};
     let window = HWND(window as *mut _);
     own_window(window)?;
     let dark = BOOL(i32::from(dark));
-    // SAFETY: own live HWND and exact attribute sizes. The renderer creates
-    // the transparent client surface; extending the full non-client frame
-    // would also paint native caption buttons over the custom title bar.
-    // This changes only this worker's main/API window, never OS preferences.
+    // SAFETY: validated HWND, live BOOL and matching attribute size.
     unsafe {
         DwmSetWindowAttribute(
             window,
             DWMWA_USE_IMMERSIVE_DARK_MODE,
             std::ptr::from_ref(&dark).cast(),
             size_of_val(&dark) as u32,
-        )
-        .map_err(io::Error::other)?;
-        DwmSetWindowAttribute(
-            window,
-            DWMWA_SYSTEMBACKDROP_TYPE,
-            std::ptr::from_ref(&DWMSBT_MAINWINDOW).cast(),
-            size_of_val(&DWMSBT_MAINWINDOW) as u32,
         )
         .map_err(io::Error::other)
     }

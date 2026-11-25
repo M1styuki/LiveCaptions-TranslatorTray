@@ -32,7 +32,6 @@ component! {
     properties {
         available_window_height: f32 = 10000.0,
         ui_font_family: String = "Segoe UI".into(),
-        native_material: bool = false,
         frame_dark: bool = Default::default(),
         page: i32 = 1,
         log_only: bool = false,
@@ -103,7 +102,6 @@ component! {
 component! {
     ApiWindow, ApiState, ApiActions, ApiView;
     properties {
-        native_material: bool = false,
         frame_dark: bool = Default::default(),
         ui_font_family: String = "Segoe UI".into(),
         section: i32 = 0,

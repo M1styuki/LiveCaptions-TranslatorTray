@@ -215,6 +215,7 @@ impl AssetSource for Assets {
 #[derive(Clone, Copy)]
 pub struct Palette {
     pub dark: bool,
+    pub window_background: Hsla,
     pub background: Hsla,
     pub foreground: Hsla,
     pub control: Hsla,
@@ -231,6 +232,7 @@ impl Palette {
         let alpha = |light, shade| rgba(if dark { shade } else { light }).into();
         Self {
             dark,
+            window_background: theme(0xfafafa, 0x272727),
             background: theme(0xfafafa, 0x1c1c1c),
             foreground: alpha(0x000000e6, 0xffffffff),
             control: alpha(0xffffffb3, 0xffffff0f),
@@ -535,7 +537,6 @@ pub fn toggle(
 
 pub fn titlebar(
     p: Palette,
-    material: bool,
     title: &'static str,
     child: Option<AnyElement>,
     close_title: &'static str,
@@ -547,7 +548,7 @@ pub fn titlebar(
         .h(px(30.))
         .w_full()
         .flex_shrink_0()
-        .when(!material && p.dark, |d| d.bg(rgb(0x202020)))
+        .when(p.dark, |d| d.bg(rgb(0x202020)))
         .child(
             row()
                 .flex_1()
@@ -1056,7 +1057,7 @@ pub fn sync_theme(window: Option<&mut Window>, cx: &mut gpui::App) {
     gpui_component::Theme::sync_system_appearance(window, cx);
     let theme = gpui_component::Theme::global_mut(cx);
     let palette = Palette::new(theme.is_dark());
-    theme.background = rgba(0x00000000).into();
+    theme.background = palette.window_background;
     theme.foreground = palette.foreground;
     theme.primary = palette.accent;
 }

@@ -140,16 +140,9 @@ impl Render for ApiView {
             .text_size(px(14.))
             .line_height(px(20.))
             .text_color(p.foreground)
-            .when(!s.native_material, |d| {
-                d.bg(if p.dark {
-                    gpui::rgb(0x272727).into()
-                } else {
-                    p.background
-                })
-            })
+            .bg(p.window_background)
             .child(titlebar(
                 p,
-                s.native_material,
                 "翻译服务设置",
                 None,
                 "关闭 API 设置",
