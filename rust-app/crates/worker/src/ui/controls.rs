@@ -216,6 +216,8 @@ impl AssetSource for Assets {
 pub struct Palette {
     pub dark: bool,
     pub window_background: Hsla,
+    pub titlebar: Hsla,
+    pub titlebar_border: Hsla,
     pub sidebar: Hsla,
     pub background: Hsla,
     pub foreground: Hsla,
@@ -234,6 +236,8 @@ impl Palette {
         Self {
             dark,
             window_background: theme(0xfafafa, 0x272727),
+            titlebar: theme(0xffffff, 0x303030),
+            titlebar_border: theme(0xd8d8d8, 0x424242),
             sidebar: theme(0xf0f0f0, 0x202020),
             background: theme(0xfafafa, 0x1c1c1c),
             foreground: alpha(0x000000e6, 0xffffffff),
@@ -552,7 +556,9 @@ pub fn titlebar(
         .h(px(30.))
         .w_full()
         .flex_shrink_0()
-        .when(p.dark, |d| d.bg(rgb(0x202020)))
+        .bg(p.titlebar)
+        .border_b_1()
+        .border_color(p.titlebar_border)
         .child(
             row()
                 .flex_1()
