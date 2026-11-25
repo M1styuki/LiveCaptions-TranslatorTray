@@ -1,11 +1,18 @@
 use futures::{StreamExt, channel::mpsc};
 use gpui::{App, AsyncApp, Task};
-use std::{cell::RefCell, rc::Rc, sync::OnceLock, time::Duration};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::OnceLock, time::Duration};
 
 type Job = Box<dyn FnOnce() + Send>;
+
+#[derive(Default)]
+struct UiJobs {
+    scheduled: bool,
+    pending: VecDeque<Box<dyn FnOnce()>>,
+}
 static WORKER_JOBS: OnceLock<mpsc::UnboundedSender<Job>> = OnceLock::new();
 
 thread_local! {
+    static UI_JOBS: RefCell<UiJobs> = RefCell::default();
     static APP: RefCell<Option<AsyncApp>> = const { RefCell::new(None) };
 }
 
@@ -28,10 +35,32 @@ pub fn app() -> Option<AsyncApp> {
 /// Controller callbacks run between GPUI updates. In particular they can open a
 /// second window or restore a native window's geometry.
 pub fn dispatch(job: impl FnOnce() + 'static) {
-    if let Some(app) = app() {
-        app.spawn(async move |_| job()).detach();
-    } else {
+    let Some(app) = app() else {
         job();
+        return;
+    };
+    // GPUI may draw between input events. Commit their snapshots in order.
+    let schedule = UI_JOBS.with_borrow_mut(|ui| {
+        ui.pending.push_back(Box::new(job));
+        !std::mem::replace(&mut ui.scheduled, true)
+    });
+    if schedule {
+        app.spawn(async move |_| {
+            loop {
+                let next = UI_JOBS.with_borrow_mut(|ui| {
+                    let next = ui.pending.pop_front();
+                    if next.is_none() {
+                        ui.scheduled = false;
+                    }
+                    next
+                });
+                let Some(job) = next else {
+                    break;
+                };
+                job();
+            }
+        })
+        .detach();
     }
 }
 

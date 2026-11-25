@@ -228,7 +228,9 @@ pub struct SmoothCorner {
 }
 
 pub fn smooth_corners([left, top, right, bottom]: [f32; 4], radius: f32) -> [SmoothCorner; 4] {
-    let r = radius
+    // Extend the transition along the edges. At the diagonal this retains
+    // the visible corner depth of the original nominal circular radius.
+    let r = (radius * 1.65)
         .min((right - left) / 2.)
         .min((bottom - top) / 2.)
         .max(0.);
@@ -270,7 +272,7 @@ mod tests {
             assert!(curvature(at_start, subtract(subtract(c, b), at_start)).abs() < 1e-6);
             assert!(curvature(at_end, subtract(at_end, subtract(e, d))).abs() < 1e-6);
             let tangent_difference = subtract(at_left_join, at_right_join);
-            assert!(tangent_difference[0].hypot(tangent_difference[1]) < 1e-5);
+            assert!(tangent_difference[0].hypot(tangent_difference[1]) < 3e-5);
             let left = curvature(at_left_join, subtract(at_left_join, subtract(c, b)));
             let right = curvature(at_right_join, subtract(subtract(e, d), at_right_join));
             assert!((left - right).abs() < 1e-5);

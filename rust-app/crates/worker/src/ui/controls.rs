@@ -303,8 +303,6 @@ pub fn button(
     radius: f32,
     callback: impl Fn() + 'static,
 ) -> Stateful<Div> {
-    let callback = Rc::new(callback);
-    let click = callback.clone();
     div()
         .id(id)
         .relative()
@@ -336,24 +334,29 @@ pub fn button(
             };
             pointer_feedback(d, hover, press, radius)
         })
-        .when(enabled, |d| {
-            d.focusable()
-                .tab_stop(true)
-                .cursor_pointer()
-                .focus(|s| s.text_color(p.accent))
-                .on_click(move |_, _, _| {
-                    let click = click.clone();
-                    runtime::dispatch(move || click());
-                })
-                .on_key_down(move |e: &KeyDownEvent, _, cx| {
-                    if e.keystroke.key == "enter" || e.keystroke.key == "space" {
-                        cx.stop_propagation();
-                        let action = callback.clone();
-                        runtime::dispatch(move || action());
-                    }
-                })
-        })
+        .when(enabled, |d| activate(d, p, callback))
         .when(!enabled, |d| d.opacity(0.4))
+}
+
+fn activate(control: Stateful<Div>, p: Palette, callback: impl Fn() + 'static) -> Stateful<Div> {
+    let callback = Rc::new(callback);
+    let click = callback.clone();
+    control
+        .focusable()
+        .tab_stop(true)
+        .cursor_pointer()
+        .focus(|s| s.text_color(p.accent))
+        .on_click(move |_, _, _| {
+            let click = click.clone();
+            runtime::dispatch(move || click());
+        })
+        .on_key_down(move |e: &KeyDownEvent, _, cx| {
+            if e.keystroke.key == "enter" || e.keystroke.key == "space" {
+                cx.stop_propagation();
+                let callback = callback.clone();
+                runtime::dispatch(move || callback());
+            }
+        })
 }
 
 pub fn icon_button(
@@ -465,7 +468,7 @@ pub fn toggle(
     callback: impl Fn() + 'static,
 ) -> Stateful<Div> {
     tip(
-        button(id, p, false, false, true, false, 6., callback)
+        activate(div().id(id), p, callback)
             .w(px(82.))
             .h(px(32.))
             .flex_shrink_0()
@@ -473,51 +476,53 @@ pub fn toggle(
             .items_center()
             .gap(px(10.))
             .child(
-                div()
-                    .w(px(42.))
-                    .h(px(22.))
-                    .contour(Some(p.control), None, 11.)
-                    .child(
-                        canvas(
-                            move |_, window, cx| {
-                                animate(
-                                    "switch-slide",
-                                    if checked { 1. } else { 0. },
-                                    Duration::from_millis(180),
-                                    window,
-                                    cx,
-                                )
-                            },
-                            move |bounds, phase, window, _| {
-                                super::shape::paint_fill(
-                                    bounds,
-                                    p.accent.opacity(phase),
-                                    11.,
-                                    window,
-                                );
-                                super::shape::paint_outline(bounds, p.border, 11., window);
-                                let knob = Bounds::new(
-                                    point(
-                                        bounds.left() + px(4. + 19. * phase),
-                                        bounds.top() + px(4.),
-                                    ),
-                                    gpui::size(px(14.), px(14.)),
-                                );
-                                window.paint_quad(gpui::quad(
-                                    knob,
-                                    px(7.),
-                                    if checked { p.accent_text } else { p.foreground },
-                                    px(0.),
-                                    p.border,
-                                    gpui::BorderStyle::Solid,
-                                ));
-                            },
-                        )
-                        .absolute()
-                        .top_0()
-                        .left_0()
-                        .size_full(),
-                    ),
+                div().w(px(42.)).h(px(22.)).child(
+                    canvas(
+                        move |_, window, cx| {
+                            animate(
+                                "switch-slide",
+                                if checked { 1. } else { 0. },
+                                Duration::from_millis(180),
+                                window,
+                                cx,
+                            )
+                        },
+                        move |bounds, phase, window, _| {
+                            window.paint_quad(gpui::quad(
+                                bounds,
+                                px(11.),
+                                p.control.opacity(1. - phase),
+                                px(0.),
+                                p.border,
+                                gpui::BorderStyle::Solid,
+                            ));
+                            window.paint_quad(gpui::quad(
+                                bounds,
+                                px(11.),
+                                p.accent.opacity(phase),
+                                px(1.),
+                                p.border,
+                                gpui::BorderStyle::Solid,
+                            ));
+                            let knob = Bounds::new(
+                                point(bounds.left() + px(4. + 19. * phase), bounds.top() + px(4.)),
+                                gpui::size(px(14.), px(14.)),
+                            );
+                            window.paint_quad(gpui::quad(
+                                knob,
+                                px(7.),
+                                if checked { p.accent_text } else { p.foreground },
+                                px(0.),
+                                p.border,
+                                gpui::BorderStyle::Solid,
+                            ));
+                        },
+                    )
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full(),
+                ),
             )
             .child(if checked { "开" } else { "关" }),
         format!("{title}：{}", if checked { "已开启" } else { "已关闭" }),
@@ -601,6 +606,8 @@ pub enum Edit {
 struct Field {
     state: Entity<InputState>,
     observed: Rc<RefCell<String>>,
+    applied: RefCell<String>,
+    pending: Rc<Cell<usize>>,
     held: Rc<Cell<(i32, u64)>>,
     reset: Rc<Cell<bool>>,
     _events: Subscription,
@@ -645,6 +652,8 @@ impl Fields {
             });
             let observed = Rc::new(RefCell::new(value.to_owned()));
             let observed_in = observed.clone();
+            let pending = Rc::new(Cell::new(0));
+            let pending_event = pending.clone();
             let callback = Rc::new(callback);
             let reset = Rc::new(Cell::new(false));
             let reset_for_event = reset.clone();
@@ -666,11 +675,18 @@ impl Fields {
                     reset_for_event.set(true);
                 }
                 let callback = callback.clone();
-                runtime::dispatch(move || callback(edit));
+                let pending = pending_event.clone();
+                pending.set(pending.get() + 1);
+                runtime::dispatch(move || {
+                    callback(edit);
+                    pending.set(pending.get() - 1);
+                });
             });
             let entry = self.0.entry(id).or_insert(Field {
                 state,
                 observed,
+                applied: RefCell::new(value.to_owned()),
+                pending,
                 held: Rc::default(),
                 reset,
                 _events: events,
@@ -679,14 +695,21 @@ impl Fields {
         };
 
         let focus = entry.state.focus_handle(cx);
-        if existed
-            && (force_value || entry.reset.replace(false) || !focus.is_focused(window))
-            && *entry.observed.borrow() != value
-        {
-            *entry.observed.borrow_mut() = value.to_owned();
-            entry.state.update(cx, |state, cx| {
-                state.set_value(value.to_owned(), window, cx)
-            });
+        let focused = focus.is_focused(window);
+        if existed && entry.pending.get() == 0 {
+            let reset = entry.reset.replace(false);
+            let model_changed = *entry.applied.borrow() != value;
+            // A re-render with the previous model must not overwrite a draft
+            // the editor just emitted. Only apply new model values or a reset.
+            if reset || !focused || (force_value && model_changed) {
+                *entry.applied.borrow_mut() = value.to_owned();
+                if *entry.observed.borrow() != value {
+                    *entry.observed.borrow_mut() = value.to_owned();
+                    entry.state.update(cx, |state, cx| {
+                        state.set_value(value.to_owned(), window, cx)
+                    });
+                }
+            }
         }
         let input = Input::new(&entry.state)
             .appearance(false)
