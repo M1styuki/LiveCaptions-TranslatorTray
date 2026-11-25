@@ -728,15 +728,33 @@ fn settings_layout_across_window_sizes() {
     }
     redraw(&mut window, 900., 360.);
     let field = window.debug_bounds("悬浮字幕前文句数").unwrap();
-    let position = field.center();
+    let service = window.debug_bounds("service").unwrap();
+    let position = point(field.left() - px(30.), service.center().y);
     window.simulate_mouse_move(position, None, Modifiers::none());
     window.simulate_event(gpui::ScrollWheelEvent {
         position,
-        delta: gpui::ScrollDelta::Pixels(point(px(0.), px(-90.))),
+        delta: gpui::ScrollDelta::Pixels(point(px(0.), px(-120.))),
         ..Default::default()
     });
     redraw(&mut window, 900., 360.);
-    assert!(window.debug_bounds("悬浮字幕前文句数").unwrap().top() < field.top());
+    let visible = window.debug_bounds("悬浮字幕前文句数").unwrap();
+    assert!(
+        visible.top() < field.top(),
+        "no page scroll at {position:?}: {field:?} -> {visible:?}"
+    );
+    assert!(visible.center().y < px(360.) && visible.center().y > px(30.));
+    window.simulate_mouse_move(visible.center(), None, Modifiers::none());
+    window.simulate_event(gpui::ScrollWheelEvent {
+        position: visible.center(),
+        delta: gpui::ScrollDelta::Pixels(point(px(0.), px(60.))),
+        ..Default::default()
+    });
+    redraw(&mut window, 900., 360.);
+    let after = window.debug_bounds("悬浮字幕前文句数").unwrap();
+    assert!(
+        after.top() > visible.top(),
+        "no scroll over input: {visible:?} -> {after:?}"
+    );
 }
 
 fn original_number_input(ui: &MainWindow, window: &mut VisualTestContext) {
