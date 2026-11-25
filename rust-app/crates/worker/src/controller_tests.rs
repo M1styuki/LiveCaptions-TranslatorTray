@@ -708,22 +708,39 @@ fn settings_layout_across_window_sizes() {
     ui.set_page(1);
     ui.show().unwrap();
     let mut window = VisualTestContext::from_window(ui.window().test_handle(), &jobs);
+    ui.set_context_aware(false);
+    redraw(&mut window, 900., 600.);
+    assert!(window.debug_bounds("悬浮字幕前文句数").is_some());
+    assert!(window.debug_bounds("上下文句数").is_none());
+    ui.set_context_aware(true);
     for width in [800., 900., 1280.] {
         redraw(&mut window, width, 600.);
         let contexts = window.debug_bounds("上下文句数").unwrap();
         let sentences = window.debug_bounds("悬浮字幕前文句数").unwrap();
-        assert_eq!(contexts.top(), sentences.top());
-        assert_eq!(sentences.left() - contexts.right(), px(18.));
+        assert!(contexts.top() > sentences.bottom());
+        assert_eq!(contexts.right(), sentences.right());
         let service = window.debug_bounds("service").unwrap();
         let language = window.debug_bounds("target-language").unwrap();
         let slider = window.debug_bounds("interval-slider").unwrap();
-        assert!(service.right() < language.left());
-        assert_eq!(service.top(), language.top());
+        assert!(service.bottom() < language.top());
+        assert_eq!(service.right(), language.right());
         assert_eq!(slider.right(), language.right());
     }
+    redraw(&mut window, 900., 360.);
+    let field = window.debug_bounds("悬浮字幕前文句数").unwrap();
+    let position = field.center();
+    window.simulate_mouse_move(position, None, Modifiers::none());
+    window.simulate_event(gpui::ScrollWheelEvent {
+        position,
+        delta: gpui::ScrollDelta::Pixels(point(px(0.), px(-90.))),
+        ..Default::default()
+    });
+    redraw(&mut window, 900., 360.);
+    assert!(window.debug_bounds("悬浮字幕前文句数").unwrap().top() < field.top());
 }
 
 fn original_number_input(ui: &MainWindow, window: &mut VisualTestContext) {
+    ui.set_context_aware(true);
     ui.set_data_state(2);
     ui.set_data_message(String::new());
     ui.set_retry_save(false);

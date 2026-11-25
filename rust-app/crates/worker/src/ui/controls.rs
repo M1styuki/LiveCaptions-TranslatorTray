@@ -1039,7 +1039,7 @@ impl Dropdowns {
 
 pub fn entrance(id: impl Into<gpui::ElementId>, content: impl IntoElement) -> impl IntoElement {
     div().relative().size_full().overflow_hidden().child(
-        div()
+        col()
             .absolute()
             .left_0()
             .size_full()
@@ -1105,7 +1105,7 @@ pub fn scroller(id: &'static str, scroll: &ScrollHandle, content: Div) -> impl I
                 .min_h_0()
                 .overflow_y_scroll()
                 .track_scroll(scroll)
-                .child(content),
+                .child(content.flex_shrink_0()),
         )
         .child(gpui_component::scroll::Scrollbar::vertical(scroll))
 }
@@ -1162,6 +1162,7 @@ pub fn number<T: 'static>(
         step(delta);
     });
     let wheel = step.clone();
+    let wheel_focus = focus.clone();
     let key = step.clone();
     tip(
         field_shell(title, p, &focus, window, 30.)
@@ -1174,9 +1175,9 @@ pub fn number<T: 'static>(
                     runtime::dispatch(move || key(delta));
                 }
             })
-            .on_scroll_wheel(move |event, _, cx| {
+            .on_scroll_wheel(move |event, window, cx| {
                 let y = event.delta.pixel_delta(px(20.)).y;
-                if y != px(0.) {
+                if y != px(0.) && wheel_focus.is_focused(window) {
                     let wheel = wheel.clone();
                     cx.stop_propagation();
                     runtime::dispatch(move || wheel(if y > px(0.) { 1 } else { -1 }));

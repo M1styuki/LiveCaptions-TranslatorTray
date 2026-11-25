@@ -230,45 +230,30 @@ impl MainView {
 
         let slider = self.interval.render(ui, s.max_sync_interval, p);
         let api_ui = ui.clone();
-        let service = row()
-            .gap(px(8.))
-            .child(div().flex_1().min_w_0().child(service))
-            .child(action(
-                "configure-api",
-                "配置服务",
-                "配置翻译服务",
-                p,
-                false,
-                true,
-                move || api_ui.invoke_api_requested(),
+        let translate = col()
+            .child(setting_row(
+                "翻译服务",
+                row()
+                    .gap(px(8.))
+                    .child(action(
+                        "configure-api",
+                        "配置服务",
+                        "配置翻译服务",
+                        p,
+                        false,
+                        true,
+                        move || api_ui.invoke_api_requested(),
+                    ))
+                    .child(div().w(px(180.)).child(service)),
+            ))
+            .child(setting_row("目标语言", div().w(px(180.)).child(language)))
+            .child(setting_row(
+                "调用间隔",
+                row()
+                    .gap(px(12.))
+                    .child(note(format!("{} 次", s.max_sync_interval)))
+                    .child(row().w(px(180.)).child(slider)),
             ));
-        let translate = group("翻译", p)
-            .child(
-                row()
-                    .gap(px(18.))
-                    .child(column("翻译服务", service).flex_basis(px(104.)))
-                    .child(column("目标语言", language)),
-            )
-            .child(note("Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。"))
-            .child(divider(p))
-            .child(
-                row()
-                    .gap(px(16.))
-                    .child(
-                        col()
-                            .flex_1()
-                            .min_w_0()
-                            .gap(px(4.))
-                            .child(
-                                row()
-                                    .gap(px(8.))
-                                    .child(label("API 调用间隔"))
-                                    .child(note(format!("{} 次", s.max_sync_interval))),
-                            )
-                            .child(note("按字幕内容变化次数计，数值越小，调用越频繁。")),
-                    )
-                    .child(row().w(px(220.)).child(slider)),
-            );
 
         let config = ui.clone();
         let count = s.num_contexts;
@@ -320,87 +305,51 @@ impl MainView {
         );
         let config = ui.clone();
         let aware = s.context_aware;
-        let context = group("上下文", p)
-            .child(
-                row()
-                    .gap(px(16.))
-                    .child(description(
-                        "结合前文翻译",
-                        "向翻译服务提供前文；模型服务会使用更多 token。",
-                    ))
-                    .child(toggle(
-                        "context-aware",
-                        "上下文翻译",
-                        aware,
-                        p,
-                        move || set(&config, "ContextAware", !aware),
-                    )),
-            )
-            .child(
-                row()
-                    .gap(px(18.))
-                    .child(number_column("上下文句数", context))
-                    .child(number_column("悬浮字幕前文句数", sentences)),
-            );
+        let context = col()
+            .child(setting_row("前文句数", sentences))
+            .child(setting_row(
+                "上下文翻译",
+                toggle("context-aware", "上下文翻译", aware, p, move || {
+                    set(&config, "ContextAware", !aware)
+                }),
+            ))
+            .when(aware, |group| {
+                group.child(setting_row("上下文句数", context))
+            });
 
         let visibility = ui.clone();
-        let is_hidden = s.live_captions_hidden;
-        let title = if is_hidden {
-            "显示系统字幕"
-        } else {
-            "隐藏系统字幕"
-        };
+        let hidden = s.live_captions_hidden;
         let latency = ui.clone();
         let latency_checked = s.latency_show;
-        let display = group("显示", p)
-            .child(
-                row()
-                    .gap(px(16.))
-                    .child(description(
-                        "Windows 实时字幕",
-                        "在系统字幕中修改源语言；隐藏窗口后仍可识别。",
-                    ))
-                    .child(action(
-                        "system-captions",
-                        title,
-                        title,
-                        p,
-                        false,
-                        true,
-                        move || visibility.invoke_captions_visibility_changed(!is_hidden),
-                    )),
-            )
-            .child(divider(p))
-            .child(
-                row()
-                    .gap(px(16.))
-                    .child(label("显示翻译延迟").flex_1())
-                    .child(toggle(
-                        "latency",
-                        "显示延迟",
-                        latency_checked,
-                        p,
-                        move || set(&latency, "LatencyShow", !latency_checked),
-                    )),
-            );
         let autostart = ui.clone();
         let checked = s.autostart_enabled;
-        let startup = group("启动", p)
-            .child(
-                row()
-                    .gap(px(16.))
-                    .child(description(
-                        "开机自启动",
-                        "登录 Windows 后驻留托盘；字幕需手动开启。",
-                    ))
-                    .child(toggle(
-                        "autostart",
-                        "开机自启动",
-                        checked,
-                        p,
-                        move || autostart.invoke_autostart_changed(!checked),
-                    )),
-            )
+        let display = col()
+            .child(setting_row(
+                "显示系统字幕",
+                toggle(
+                    "system-captions",
+                    "显示系统字幕",
+                    !hidden,
+                    p,
+                    move || visibility.invoke_captions_visibility_changed(!hidden),
+                ),
+            ))
+            .child(setting_row(
+                "显示翻译延迟",
+                toggle(
+                    "latency",
+                    "显示翻译延迟",
+                    latency_checked,
+                    p,
+                    move || set(&latency, "LatencyShow", !latency_checked),
+                ),
+            ))
+            .child(setting_row(
+                "自启动",
+                toggle("autostart", "开机自启动", checked, p, move || {
+                    autostart.invoke_autostart_changed(!checked)
+                }),
+            ))
             .children((!s.autostart_message.is_empty()).then(|| note(s.autostart_message.clone())));
         scroller(
             "settings-scroll",
@@ -413,9 +362,10 @@ impl MainView {
                 .gap(px(16.))
                 .child(heading("设置"))
                 .child(translate)
+                .child(divider(p))
                 .child(context)
-                .child(display)
-                .child(startup),
+                .child(divider(p))
+                .child(display),
         )
     }
 }
@@ -435,36 +385,10 @@ fn set(ui: &MainWindow, field: &'static str, value: impl ToString) {
     ui.invoke_setting_edited(field.into(), value);
 }
 
-fn group(title: &'static str, p: Palette) -> Div {
-    surface(p).p(px(18.)).gap(px(12.)).child(
-        label(title)
-            .text_size(px(16.))
-            .font_weight(FontWeight::SEMIBOLD),
-    )
-}
-
-fn column(title: &'static str, content: impl IntoElement) -> Div {
-    col()
-        .flex_1()
-        .min_w_0()
-        .gap(px(7.))
-        .child(label(title))
-        .child(content)
-}
-
-fn description(title: &'static str, details: &'static str) -> Div {
-    col()
-        .flex_1()
-        .gap(px(4.))
-        .child(label(title))
-        .child(note(details))
-}
-
-fn number_column(title: &'static str, content: impl IntoElement) -> Div {
-    col()
-        .w(px(130.))
-        .flex_shrink_0()
-        .gap(px(7.))
-        .child(label(title))
-        .child(content)
+fn setting_row(title: &'static str, control: impl IntoElement) -> Div {
+    row()
+        .min_h(px(46.))
+        .gap(px(16.))
+        .child(label(title).flex_1())
+        .child(control)
 }
