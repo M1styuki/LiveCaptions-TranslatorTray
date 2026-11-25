@@ -212,16 +212,14 @@ pub(crate) fn work_area(window: usize) -> io::Result<Bounds> {
 
 /// Match the original ownerless WPF CenterScreen startup location. Call once
 /// for a newly created API window, never for later theme/redraw notifications.
-pub fn center_on_cursor_monitor(window: usize) -> io::Result<()> {
+pub fn center_on_cursor_monitor(window: usize, size: (f64, f64)) -> io::Result<()> {
     let handle = HWND(window as *mut _);
     own_window(handle)?;
     let mut cursor = POINT::default();
-    let mut rect = RECT::default();
     // SAFETY: initialized output pointers and an HWND checked to be ours.
     // Reading the pointer position does not move it or synthesize any input.
     let (display, dpi) = unsafe {
         GetCursorPos(&mut cursor).map_err(io::Error::other)?;
-        GetWindowRect(handle, &mut rect).map_err(io::Error::other)?;
         (
             monitor_info(MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST))?,
             windows::Win32::UI::HiDpi::GetDpiForWindow(handle),
@@ -230,20 +228,29 @@ pub fn center_on_cursor_monitor(window: usize) -> io::Result<()> {
     if dpi == 0 {
         return Err(io::Error::other("无法读取窗口 DPI。"));
     }
-    // Preserve the logical size if the pointer is on a monitor with another
-    // scale. The application receives the native move, size and DPI notifications.
-    let ratio = display.scale * 96.0 / f64::from(dpi);
-    let width = f64::from(rect.right - rect.left) * ratio;
-    let height = f64::from(rect.bottom - rect.top) * ratio;
-    apply(
-        window,
-        Bounds {
-            x: display.work_area.x + (display.work_area.width - width) / 2.0,
-            y: display.work_area.y + (display.work_area.height - height) / 2.0,
-            width,
-            height,
-        },
-    )
+    let place = |dpi: u32| {
+        let scale = f64::from(dpi) / 96.0;
+        let work = display.work_area;
+        let width = (size.0 * scale).min(work.width);
+        let height = (size.1 * scale).min(work.height);
+        apply_client(
+            window,
+            Bounds {
+                x: work.x + (work.width - width) / 2.0,
+                y: work.y + (work.height - height) / 2.0,
+                width,
+                height,
+            },
+            scale,
+        )
+    };
+    place(dpi)?;
+    // Moving onto a monitor with different scaling can change the HWND's DPI.
+    let actual = unsafe { windows::Win32::UI::HiDpi::GetDpiForWindow(handle) };
+    if actual > 0 && actual != dpi {
+        place(actual)?;
+    }
+    Ok(())
 }
 
 fn client_rect(window: HWND) -> io::Result<RECT> {

@@ -1160,6 +1160,7 @@ fn file_lifecycle_fixture(
     lock.execute_batch("BEGIN EXCLUSIVE").unwrap();
     let target = root.join("preserved-on-error.CSV");
     fs::write(&target, b"old complete CSV fixture").unwrap();
+    let preserved_bytes = fs::read(&target).unwrap();
     ui.invoke_file_requested(3);
     owner
         .borrow_mut()
@@ -1176,7 +1177,7 @@ fn file_lifecycle_fixture(
     });
     assert!(ui.window().is_visible(), "failed export remains reviewable");
     assert!(!owner.borrow().test_data_stopped());
-    assert_eq!(fs::read(&target).unwrap(), b"old complete CSV fixture");
+    assert_eq!(fs::read(&target).unwrap(), preserved_bytes);
     assert!(
         !fs::read_dir(root).unwrap().any(|entry| entry
             .unwrap()

@@ -64,7 +64,8 @@ pub(super) fn style_api(ui: &crate::ApiWindow) {
 
 pub(super) fn center_api(ui: &crate::ApiWindow) {
     if let Some(window) = ui.window().hwnd() {
-        let _ = window_geometry::center_on_cursor_monitor(window);
+        let (width, height) = crate::ApiWindow::INITIAL_SIZE;
+        let _ = window_geometry::center_on_cursor_monitor(window, (width.into(), height.into()));
     }
 }
 

@@ -253,11 +253,15 @@ pub fn label(text: impl Into<SharedString>) -> Div {
     div().text_size(px(14.)).child(text.into())
 }
 pub fn note(text: impl Into<SharedString>) -> Div {
-    label(text).text_size(px(12.)).opacity(0.65)
+    label(text)
+        .text_size(px(12.))
+        .line_height(px(16.))
+        .opacity(0.65)
 }
 pub fn heading(text: impl Into<SharedString>) -> Div {
     label(text)
         .text_size(px(24.))
+        .line_height(px(32.))
         .font_weight(gpui::FontWeight::BOLD)
 }
 pub fn surface(p: Palette) -> Div {
@@ -469,14 +473,13 @@ pub fn toggle(
 ) -> Stateful<Div> {
     tip(
         activate(div().id(id), p, callback)
-            .w(px(82.))
             .h(px(32.))
             .flex_shrink_0()
             .flex()
             .items_center()
             .gap(px(10.))
             .child(
-                div().w(px(42.)).h(px(22.)).child(
+                div().w(px(42.)).h(px(22.)).flex_shrink_0().child(
                     canvas(
                         move |_, window, cx| {
                             animate(
@@ -559,6 +562,7 @@ pub fn titlebar(
         .child(titlebar_button(
             p,
             "minimize",
+            gpui::WindowControlArea::Min,
             "icons/minimize.svg",
             "最小化",
             move || minimize(0),
@@ -566,6 +570,7 @@ pub fn titlebar(
         .child(titlebar_button(
             p,
             "close",
+            gpui::WindowControlArea::Close,
             "icons/close.svg",
             close_title,
             move || close(1),
@@ -575,19 +580,30 @@ pub fn titlebar(
 fn titlebar_button(
     p: Palette,
     id: &'static str,
+    area: gpui::WindowControlArea,
     path: &'static str,
     title: &'static str,
     callback: impl Fn() + 'static,
 ) -> Stateful<Div> {
     tip(
-        button(id, p, false, false, true, false, 0., callback)
-            .w(px(38.))
-            .h(px(30.))
-            .flex_shrink_0()
-            .flex()
-            .items_center()
-            .justify_center()
-            .child(icon(path, 14., p.foreground)),
+        activate(
+            pointer_feedback(
+                row()
+                    .id(id)
+                    .relative()
+                    .w(px(38.))
+                    .h_full()
+                    .flex_shrink_0()
+                    .justify_center()
+                    .window_control_area(area),
+                p.foreground.opacity(0.10),
+                p.foreground.opacity(0.14),
+                0.,
+            ),
+            p,
+            callback,
+        )
+        .child(icon(path, 14., p.foreground)),
         title,
         p,
     )

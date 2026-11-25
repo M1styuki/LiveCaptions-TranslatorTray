@@ -17,11 +17,13 @@ pub(super) struct ApiView {
 }
 
 impl ApiWindow {
+    pub(crate) const INITIAL_SIZE: (f32, f32) = (950., 600.);
+
     pub fn show(&self) -> gpui::Result<()> {
         let ui = self.clone();
         self.window().show(
             "API 设置",
-            (950., 600.),
+            Self::INITIAL_SIZE,
             (760., 360.),
             move |window, cx| {
                 let weak = ui.as_weak();
@@ -464,19 +466,25 @@ impl ApiView {
         if llm {
             let update = edit("Temperature");
             let ui = ui.clone();
-            form = form.child(col().gap(px(7.)).child(label("温度")).child(number(
-                &mut self.fields,
-                "Temperature",
-                "温度",
-                "控制译文随机性；数值越低越稳定",
-                &entry.temperature_text,
-                p,
-                None,
-                window,
-                cx,
-                update,
-                move |delta| ui.invoke_editor_action(section, 1, delta),
-            )));
+            form = form.child(
+                row()
+                    .justify_between()
+                    .gap(px(12.))
+                    .child(label("温度"))
+                    .child(number(
+                        &mut self.fields,
+                        "Temperature",
+                        "温度",
+                        "控制译文随机性；数值越低越稳定",
+                        &entry.temperature_text,
+                        p,
+                        None,
+                        window,
+                        cx,
+                        update,
+                        move |delta| ui.invoke_editor_action(section, 1, delta),
+                    )),
+            );
         }
         if service == "MTranServer" {
             form = form.child(field(
@@ -525,17 +533,25 @@ fn field<T: 'static>(
             }
         },
     );
-    col()
-        .w_full()
-        .when_some(width, |d, width| d.max_w(px(width)))
-        .h(px(54.))
-        .gap(px(5.))
-        .child(label(title))
-        .child(tip(
-            field_shell(title, p, &focus, window, 30.)
-                .px(px(10.))
-                .child(input),
-            hint,
-            p,
-        ))
+    let input = tip(
+        field_shell(title, p, &focus, window, 30.)
+            .px(px(10.))
+            .child(input),
+        hint,
+        p,
+    );
+    if let Some(width) = width {
+        row()
+            .justify_between()
+            .gap(px(12.))
+            .child(label(title))
+            .child(input.w(px(width)))
+    } else {
+        col()
+            .w_full()
+            .h(px(54.))
+            .gap(px(5.))
+            .child(label(title))
+            .child(input)
+    }
 }

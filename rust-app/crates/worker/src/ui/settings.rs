@@ -76,11 +76,18 @@ impl Interval {
                             let center = bounds.center();
                             let start = bounds.left() + px(10.);
                             let active = width * percent;
-                            let track =
-                                Bounds::new(point(start, center.y - px(2.)), size(width, px(4.)));
+                            let track = Bounds::new(
+                                point(bounds.left(), center.y - px(2.)),
+                                size(bounds.size.width, px(4.)),
+                            );
+                            let fill_width = match value {
+                                0 => px(0.),
+                                10 => track.size.width,
+                                _ => active + px(10.),
+                            };
                             super::super::shape::paint_fill(track, p.border, 2., window);
                             super::super::shape::paint_fill(
-                                Bounds::new(track.origin, size(active, track.size.height)),
+                                Bounds::new(track.origin, size(fill_width, track.size.height)),
                                 p.accent,
                                 2.,
                                 window,
@@ -227,7 +234,7 @@ impl MainView {
             .child(
                 row()
                     .gap(px(18.))
-                    .child(column("翻译服务", service))
+                    .child(column("翻译服务", service).flex_basis(px(104.)))
                     .child(column("目标语言", language)),
             )
             .child(
@@ -258,8 +265,9 @@ impl MainView {
                             .child(label("API 调用间隔"))
                             .child(
                                 label(format!("{} 次", s.max_sync_interval))
-                                    .min_w(px(32.))
-                                    .text_color(p.foreground.opacity(0.75)),
+                                    .min_w(px(28.))
+                                    .text_size(px(12.))
+                                    .text_color(p.foreground.opacity(0.65)),
                             ),
                     )
                     .child(slider),
@@ -335,6 +343,7 @@ impl MainView {
             .child(
                 row()
                     .gap(px(18.))
+                    .justify_between()
                     .child(number_column("上下文句数", context))
                     .child(number_column("悬浮字幕前文句数", sentences)),
             );
