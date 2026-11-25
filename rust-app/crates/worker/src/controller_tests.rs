@@ -696,6 +696,33 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
     fs::remove_dir_all(actual).unwrap();
 }
 
+#[test]
+fn settings_layout_across_window_sizes() {
+    let jobs = TestAppContext::single();
+    jobs.update(|cx| {
+        gpui_component::init(cx);
+        crate::ui::runtime::start(cx);
+    });
+    let ui = MainWindow::new().unwrap();
+    ui.set_data_state(2);
+    ui.set_page(1);
+    ui.show().unwrap();
+    let mut window = VisualTestContext::from_window(ui.window().test_handle(), &jobs);
+    for width in [800., 900., 1280.] {
+        redraw(&mut window, width, 600.);
+        let contexts = window.debug_bounds("上下文句数").unwrap();
+        let sentences = window.debug_bounds("悬浮字幕前文句数").unwrap();
+        assert_eq!(contexts.top(), sentences.top());
+        assert_eq!(sentences.left() - contexts.right(), px(18.));
+        let service = window.debug_bounds("service").unwrap();
+        let language = window.debug_bounds("target-language").unwrap();
+        let slider = window.debug_bounds("interval-slider").unwrap();
+        assert!(service.right() < language.left());
+        assert_eq!(service.top(), language.top());
+        assert_eq!(slider.right(), language.right());
+    }
+}
+
 fn original_number_input(ui: &MainWindow, window: &mut VisualTestContext) {
     ui.set_data_state(2);
     ui.set_data_message(String::new());

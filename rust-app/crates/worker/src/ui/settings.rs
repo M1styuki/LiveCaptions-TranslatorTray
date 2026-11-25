@@ -230,6 +230,18 @@ impl MainView {
 
         let slider = self.interval.render(ui, s.max_sync_interval, p);
         let api_ui = ui.clone();
+        let service = row()
+            .gap(px(8.))
+            .child(div().flex_1().min_w_0().child(service))
+            .child(action(
+                "configure-api",
+                "配置服务",
+                "配置翻译服务",
+                p,
+                false,
+                true,
+                move || api_ui.invoke_api_requested(),
+            ));
         let translate = group("翻译", p)
             .child(
                 row()
@@ -237,42 +249,26 @@ impl MainView {
                     .child(column("翻译服务", service).flex_basis(px(104.)))
                     .child(column("目标语言", language)),
             )
+            .child(note("Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。"))
+            .child(divider(p))
             .child(
                 row()
-                    .gap(px(12.))
+                    .gap(px(16.))
                     .child(
-                        note("Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。")
+                        col()
                             .flex_1()
-                            .min_w_0(),
-                    )
-                    .child(action(
-                        "configure-api",
-                        "配置翻译服务",
-                        "配置翻译服务",
-                        p,
-                        true,
-                        true,
-                        move || api_ui.invoke_api_requested(),
-                    )),
-            )
-            .child(
-                row()
-                    .gap(px(14.))
-                    .child(
-                        row()
-                            .gap(px(8.))
-                            .flex_shrink_0()
-                            .child(label("API 调用间隔"))
+                            .min_w_0()
+                            .gap(px(4.))
                             .child(
-                                label(format!("{} 次", s.max_sync_interval))
-                                    .min_w(px(28.))
-                                    .text_size(px(12.))
-                                    .text_color(p.foreground.opacity(0.65)),
-                            ),
+                                row()
+                                    .gap(px(8.))
+                                    .child(label("API 调用间隔"))
+                                    .child(note(format!("{} 次", s.max_sync_interval))),
+                            )
+                            .child(note("按字幕内容变化次数计，数值越小，调用越频繁。")),
                     )
-                    .child(slider),
-            )
-            .child(note("按字幕内容变化次数控制调用频率，数值越小越频繁。"));
+                    .child(row().w(px(220.)).child(slider)),
+            );
 
         let config = ui.clone();
         let count = s.num_contexts;
@@ -410,10 +406,12 @@ impl MainView {
             "settings-scroll",
             &self.scroll,
             col()
+                .w_full()
+                .max_w(px(880.))
+                .mx_auto()
                 .p(px(22.))
                 .gap(px(16.))
                 .child(heading("设置"))
-                .child(note("翻译服务、字幕显示与上下文设置。"))
                 .child(translate)
                 .child(context)
                 .child(display)
