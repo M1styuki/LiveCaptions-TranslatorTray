@@ -343,7 +343,6 @@ impl MainView {
             .child(
                 row()
                     .gap(px(18.))
-                    .justify_between()
                     .child(number_column("上下文句数", context))
                     .child(number_column("悬浮字幕前文句数", sentences)),
             );
