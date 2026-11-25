@@ -229,15 +229,24 @@ pub struct Palette {
 }
 
 impl Palette {
+    pub fn for_window(dark: bool, mica: bool) -> Self {
+        let mut palette = Self::new(dark);
+        if mica {
+            palette.titlebar = palette.titlebar.opacity(0.20);
+            palette.window_background = palette.window_background.opacity(0.55);
+        }
+        palette
+    }
+
     pub fn new(dark: bool) -> Self {
         let theme = |light, shade| rgb(if dark { shade } else { light }).into();
         let alpha = |light, shade| rgba(if dark { shade } else { light }).into();
         Self {
             dark,
-            window_background: theme(0xeeeeee, 0x202020),
-            titlebar: theme(0xe3e3e3, 0x191919),
-            pane_divider: theme(0xb8b8b8, 0x4a4a4a),
-            background: theme(0xf2f2f2, 0x181818),
+            window_background: theme(0xf4f4f4, 0x262626),
+            titlebar: theme(0xeeeeee, 0x202020),
+            pane_divider: theme(0xc9c9c9, 0x454545),
+            background: theme(0xf9f9f9, 0x2c2c2c),
             foreground: alpha(0x000000e6, 0xffffffff),
             control: alpha(0xffffff66, 0xffffff0e),
             border: alpha(0x00000073, 0xffffff1e),
@@ -1070,7 +1079,8 @@ pub fn sync_theme(window: Option<&mut Window>, cx: &mut gpui::App) {
     gpui_component::Theme::sync_system_appearance(window, cx);
     let theme = gpui_component::Theme::global_mut(cx);
     let palette = Palette::new(theme.is_dark());
-    theme.background = palette.window_background;
+    // Each window paints its own fallback or content layer over the DWM backdrop.
+    theme.background = gpui::transparent_black();
     theme.foreground = palette.foreground;
     theme.primary = palette.accent;
 }

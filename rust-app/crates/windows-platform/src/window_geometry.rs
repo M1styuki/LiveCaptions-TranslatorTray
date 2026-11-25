@@ -120,6 +120,44 @@ pub fn round_corners(window: usize) -> io::Result<()> {
     .map_err(io::Error::other)
 }
 
+pub fn enable_mica(window: usize) -> io::Result<()> {
+    use windows::Win32::{
+        Graphics::Dwm::{
+            DWMSBT_MAINWINDOW, DWMWA_SYSTEMBACKDROP_TYPE, DwmExtendFrameIntoClientArea,
+            DwmSetWindowAttribute,
+        },
+        UI::{
+            Controls::MARGINS,
+            WindowsAndMessaging::{GWL_EXSTYLE, GetWindowLongW, WS_EX_NOREDIRECTIONBITMAP},
+        },
+    };
+    let window = HWND(window as *mut _);
+    own_window(window)?;
+    // GPUI's HWND swap chain ignores alpha when DirectComposition is disabled.
+    unsafe {
+        if GetWindowLongW(window, GWL_EXSTYLE) as u32 & WS_EX_NOREDIRECTIONBITMAP.0 == 0 {
+            return Err(io::ErrorKind::Unsupported.into());
+        }
+        DwmSetWindowAttribute(
+            window,
+            DWMWA_SYSTEMBACKDROP_TYPE,
+            std::ptr::from_ref(&DWMSBT_MAINWINDOW).cast(),
+            size_of_val(&DWMSBT_MAINWINDOW) as u32,
+        )
+        .map_err(io::Error::other)?;
+        DwmExtendFrameIntoClientArea(
+            window,
+            &MARGINS {
+                cxLeftWidth: -1,
+                cxRightWidth: -1,
+                cyTopHeight: -1,
+                cyBottomHeight: -1,
+            },
+        )
+        .map_err(io::Error::other)
+    }
+}
+
 pub fn set_frame_dark(window: usize, dark: bool) -> io::Result<()> {
     use windows::Win32::Graphics::Dwm::{DWMWA_USE_IMMERSIVE_DARK_MODE, DwmSetWindowAttribute};
     let window = HWND(window as *mut _);

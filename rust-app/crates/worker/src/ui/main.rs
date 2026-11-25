@@ -78,7 +78,7 @@ impl Render for MainView {
             return div();
         };
         let s = ui.state();
-        let p = Palette::new(s.frame_dark);
+        let p = Palette::for_window(s.frame_dark, ui.window().has_mica());
         if self.last_page.replace(s.page) != Some(s.page) {
             self.wheel.cancel();
             self.fields.clear();
@@ -131,6 +131,7 @@ impl Render for MainView {
             .child(
                 row()
                     .items_start()
+                    .bg(p.window_background)
                     .flex_1()
                     .min_h_0()
                     .w_full()
@@ -147,6 +148,7 @@ impl Render for MainView {
         if s.retry_save || (!s.data_message.is_empty() && s.data_message != "设置已保存。") {
             let retry_ui = ui.clone();
             let message = row()
+                .bg(p.window_background)
                 .w_full()
                 .p(px(4.))
                 .gap(px(8.))
@@ -177,7 +179,7 @@ impl Render for MainView {
         } else {
             self.delete_focus = None;
         }
-        layout.bg(p.window_background)
+        layout
     }
 }
 
@@ -193,7 +195,6 @@ fn sidebar(s: &MainState, ui: &MainWindow, p: Palette, compact: bool) -> Div {
     let (paused, enabled, pinned) = (s.log_only, s.captions_enabled, s.topmost);
     col()
         .w(px(if compact { 60. } else { 144. }))
-        .bg(p.window_background)
         .border_r_1()
         .border_color(p.pane_divider)
         .h_full()

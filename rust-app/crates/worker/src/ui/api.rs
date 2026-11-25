@@ -70,7 +70,7 @@ impl Render for ApiView {
             return div();
         };
         let s = ui.state();
-        let p = Palette::new(s.frame_dark);
+        let p = Palette::for_window(s.frame_dark, ui.window().has_mica());
         let editor = (s.section, s.active_editor.config_index);
         let previous = self.last_editor.replace(editor);
         if previous != Some(editor) {
@@ -99,7 +99,6 @@ impl Render for ApiView {
         };
         let sidebar = col()
             .w(px(sidebar_width))
-            .bg(p.window_background)
             .h_full()
             .flex_shrink_0()
             .child(scroller(
@@ -146,7 +145,6 @@ impl Render for ApiView {
             .text_size(px(14.))
             .line_height(px(20.))
             .text_color(p.foreground)
-            .bg(p.window_background)
             .child(titlebar(
                 p,
                 "翻译服务设置",
@@ -157,6 +155,7 @@ impl Render for ApiView {
             .child(
                 row()
                     .items_start()
+                    .bg(p.window_background)
                     .flex_1()
                     .min_h_0()
                     .w_full()

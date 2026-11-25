@@ -29,6 +29,7 @@ type BoundsChanged = Rc<dyn Fn(bool)>;
 pub struct WindowState {
     handle: Cell<Option<AnyWindowHandle>>,
     hwnd: Cell<Option<usize>>,
+    mica: Cell<bool>,
     visible: Cell<bool>,
     size: Cell<Option<Size<Pixels>>>,
     close: RefCell<Option<Close>>,
@@ -61,6 +62,9 @@ impl WindowState {
 
     pub fn hwnd(&self) -> Option<usize> {
         self.hwnd.get()
+    }
+    pub fn has_mica(&self) -> bool {
+        self.mica.get()
     }
     pub fn is_visible(&self) -> bool {
         self.visible.get()
@@ -134,6 +138,11 @@ impl WindowState {
                 }
             })?;
             self.hwnd.set(hwnd);
+            self.mica.set(
+                hwnd.is_some_and(|hwnd| {
+                    windows_platform::window_geometry::enable_mica(hwnd).is_ok()
+                }),
+            );
             self.handle.set(Some(handle.into()));
         }
         let was_visible = self.visible.replace(true);
@@ -154,6 +163,7 @@ impl WindowState {
                 let _ = app.update_window(handle, |_, window, _| window.remove_window());
             }
             self.hwnd.set(None);
+            self.mica.set(false);
         } else if let Some(hwnd) = self.native() {
             unsafe {
                 let _ = ShowWindow(hwnd, SW_HIDE);
