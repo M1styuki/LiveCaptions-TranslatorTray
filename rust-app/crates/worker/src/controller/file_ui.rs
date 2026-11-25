@@ -72,7 +72,7 @@ impl Controller {
         let callback = Arc::new(move |result| {
             *slot.lock().unwrap() = Some(Selection { generation, result });
             let ui = weak.clone();
-            let _ = slint::invoke_from_event_loop(move || {
+            let _ = crate::ui::invoke_from_event_loop(move || {
                 if let Some(ui) = ui.upgrade() {
                     ui.invoke_host_wakeup();
                 }

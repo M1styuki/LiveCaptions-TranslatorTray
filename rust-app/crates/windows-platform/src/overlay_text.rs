@@ -1,5 +1,5 @@
 //! Thread-local DirectWrite layouts and real glyph-outline drawing into one
-//! premultiplied BGRA DIB. No Slint transparency or repeated-offset text copies.
+//! premultiplied BGRA DIB. Translucent shapes and text are composited in the same surface.
 use std::{ffi::c_void, ptr::NonNull};
 use windows::{
     Win32::{
@@ -265,14 +265,28 @@ impl Canvas {
             let brush = self
                 .target()
                 .CreateSolidColorBrush(&color(rgb, opacity), None)?;
-            self.target().FillRoundedRectangle(
-                &D2D1_ROUNDED_RECT {
-                    rect,
-                    radiusX: radius,
-                    radiusY: radius,
-                },
-                &brush,
+            let geometry = self.factory.CreatePathGeometry()?;
+            let sink = geometry.Open()?;
+            let corners = captions_core::geometry::smooth_corners(
+                [rect.left, rect.top, rect.right, rect.bottom],
+                radius,
             );
+            let at = |[x, y]: [f32; 2]| Vector2 { X: x, Y: y };
+            sink.BeginFigure(at(corners[0].start), D2D1_FIGURE_BEGIN_FILLED);
+            for corner in corners {
+                sink.AddLine(at(corner.start));
+                for [first, second, end] in corner.segments {
+                    sink.AddBezier(&D2D1_BEZIER_SEGMENT {
+                        point1: at(first),
+                        point2: at(second),
+                        point3: at(end),
+                    });
+                }
+            }
+            sink.EndFigure(D2D1_FIGURE_END_CLOSED);
+            sink.Close()?;
+            self.target()
+                .FillGeometry(&geometry, &brush, None::<&ID2D1Brush>);
         }
         Ok(())
     }

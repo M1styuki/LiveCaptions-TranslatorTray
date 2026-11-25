@@ -1,11 +1,10 @@
 use super::*;
-use slint::platform::{Key, WindowEvent};
 pub(super) fn run(
     root: &std::path::Path,
     screen: Screen,
     ui: &MainWindow,
-    jobs: &mpsc::Receiver<Job>,
-    window: &MinimalSoftwareWindow,
+    jobs: &TestAppContext,
+    window: &mut VisualTestContext,
 ) {
     let directory = root.join("delete-ui-data");
     fs::create_dir(&directory).unwrap();
@@ -44,47 +43,24 @@ pub(super) fn run(
         "confirm callback alone is not authorization"
     );
     assert_eq!(count(), 3);
-    let evidence = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../evidence/functional")
-        .join(format!(
-            "delete-dialog-offscreen-{}",
-            windows_platform::desktop::instance_id().unwrap()
-        ));
-    fs::create_dir_all(&evidence).unwrap();
-    fs::write(evidence.join("scope.json"),br#"{"scope":"virtual Slint confirmation/input only, real isolated SQLite; not visible desktop acceptance","size":[775,360],"default_action":"cancel"}"#).unwrap();
     ui.invoke_delete_action(0);
     assert!(ui.get_delete_confirm());
-    for (name, theme) in [
-        ("dark", slint::language::ColorScheme::Dark),
-        ("light", slint::language::ColorScheme::Light),
-    ] {
-        ui.global::<crate::Palette>().set_color_scheme(theme);
-        std::thread::sleep(Duration::from_millis(180));
-        slint::platform::update_timers_and_animations();
-        snapshot(
-            window,
-            &evidence.join(format!("confirmation-{name}.bmp")),
-            775,
-            360,
-        );
+    for dark in [false, true] {
+        ui.set_frame_dark(dark);
+        redraw(window, 800., 420.);
     }
-    let key = |value: Key| {
-        ui.window()
-            .dispatch_event(WindowEvent::KeyPressed { text: value.into() });
-        ui.window()
-            .dispatch_event(WindowEvent::KeyReleased { text: value.into() });
-    };
-    key(Key::Return);
+    window.simulate_keystrokes("enter");
     assert!(!ui.get_delete_confirm(), "default Enter cancels");
     assert_eq!(count(), 3);
     ui.invoke_delete_action(0);
-    key(Key::Escape);
+    redraw(window, 800., 420.);
+    window.simulate_keystrokes("escape");
     assert!(!ui.get_delete_confirm());
     assert_eq!(count(), 3);
     ui.invoke_history_action(2, 0); // An older page result cannot restore rows.
     ui.invoke_delete_action(0);
-    key(Key::Tab);
-    key(Key::Return);
+    redraw(window, 800., 420.);
+    window.simulate_keystrokes("tab enter");
     assert!(
         ui.get_delete_busy(),
         "Tab from cancel reaches explicit confirmation"
@@ -143,8 +119,4 @@ pub(super) fn run(
     drop(database);
     owner.borrow_mut().main_closed();
     until_owner(&owner, jobs, || owner.borrow().test_data_stopped());
-    println!(
-        "Delete controller evidence: {}; virtual Enter/Escape cancellation, explicit Tab/Enter confirmation, page invalidation, config/unrelated file preservation, Exit failure visibility and manual retry PASS",
-        evidence.display()
-    );
 }

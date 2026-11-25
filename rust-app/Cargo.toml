@@ -20,8 +20,12 @@ captions-core = { path = "crates/core" }
 storage = { path = "crates/storage" }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "net", "macros"] }
 reqwest = { version = "0.12", default-features = false, features = ["native-tls", "json", "system-proxy"] }
-slint = { version = "=1.18.1", default-features = false, features = ["std", "compat-1-18", "backend-winit", "renderer-software", "renderer-skia", "raw-window-handle-06", "accessibility"] }
-slint-build = "=1.18.1"
+
+gpui = "=0.2.2"
+paste = "1"
+gpui-component = "=0.5.1"
+futures = "0.3"
+raw-window-handle = "0.6"
 
 [profile.release]
 opt-level = "s"

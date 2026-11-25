@@ -54,7 +54,7 @@ pub struct Mailbox {
     sources: Mutex<Sources>,
     source_space: Condvar,
     wake_pending: AtomicBool,
-    ui: slint::Weak<MainWindow>,
+    ui: crate::ui::Weak<MainWindow>,
 }
 impl Mailbox {
     #[cfg(test)]
@@ -69,7 +69,7 @@ impl Mailbox {
     pub fn test_fault(&self, session: u64, message: String) {
         self.post(|updates| updates.status = Some((session, Status::Fault(message))));
     }
-    pub fn new(ui: slint::Weak<MainWindow>) -> Arc<Self> {
+    pub fn new(ui: crate::ui::Weak<MainWindow>) -> Arc<Self> {
         Arc::new(Self {
             updates: Mutex::default(),
             sources: Mutex::default(),
@@ -85,7 +85,7 @@ impl Mailbox {
     fn wake(&self) {
         if !self.wake_pending.swap(true, Ordering::AcqRel) {
             let ui = self.ui.clone();
-            let _ = slint::invoke_from_event_loop(move || {
+            let _ = crate::ui::invoke_from_event_loop(move || {
                 if let Some(ui) = ui.upgrade() {
                     ui.invoke_host_wakeup();
                 }
@@ -337,7 +337,7 @@ mod capture_tests {
     use super::*;
     use std::sync::mpsc;
     fn filled() -> (Arc<Mailbox>, Arc<AtomicU64>) {
-        let mailbox = Mailbox::new(slint::Weak::default());
+        let mailbox = Mailbox::new(crate::ui::Weak::default());
         mailbox.begin_capture(1);
         let revision = Arc::new(AtomicU64::new(0));
         for index in 1..=MAX_CAPTURE_WAITING {

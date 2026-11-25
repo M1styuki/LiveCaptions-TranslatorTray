@@ -218,8 +218,65 @@ impl AutoHeight {
     }
 }
 
+/// A corner made from two cubics. Both outer handles lie on their
+/// straight edges, so curvature is zero at the joins. The reflected
+/// halves have matching tangent and curvature at the diagonal.
+#[derive(Clone, Copy)]
+pub struct SmoothCorner {
+    pub start: [f32; 2],
+    pub segments: [[[f32; 2]; 3]; 2],
+}
+
+pub fn smooth_corners([left, top, right, bottom]: [f32; 4], radius: f32) -> [SmoothCorner; 4] {
+    let r = radius
+        .min((right - left) / 2.)
+        .min((bottom - top) / 2.)
+        .max(0.);
+    let corner = |x, y, dx, dy| {
+        let at = |along, across| [x + dx * along - dy * across, y + dy * along + dx * across];
+        SmoothCorner {
+            start: at(0., 0.),
+            segments: [
+                [at(0.275, 0.), at(0.6, 0.), at(0.8, 0.2)],
+                [at(1., 0.4), at(1., 0.725), at(1., 1.)],
+            ],
+        }
+    };
+    [
+        corner(right - r, top, r, 0.),
+        corner(right, bottom - r, 0., r),
+        corner(left + r, bottom, -r, 0.),
+        corner(left, top + r, 0., -r),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn smooth_corner_curvature_matches_at_straight_edges_and_middle() {
+        let subtract = |a: [f32; 2], b: [f32; 2]| [a[0] - b[0], a[1] - b[1]];
+        let curvature = |tangent: [f32; 2], acceleration: [f32; 2]| {
+            (tangent[0] * acceleration[1] - tangent[1] * acceleration[0])
+                / tangent[0].hypot(tangent[1]).powi(3)
+        };
+        for corner in smooth_corners([0., 0., 100., 60.], 10.) {
+            let [[b, c, midpoint], [d, e, end]] = corner.segments;
+            let a = corner.start;
+            let at_start = subtract(b, a);
+            let at_left_join = subtract(midpoint, c);
+            let at_right_join = subtract(d, midpoint);
+            let at_end = subtract(end, e);
+            assert!(curvature(at_start, subtract(subtract(c, b), at_start)).abs() < 1e-6);
+            assert!(curvature(at_end, subtract(at_end, subtract(e, d))).abs() < 1e-6);
+            let tangent_difference = subtract(at_left_join, at_right_join);
+            assert!(tangent_difference[0].hypot(tangent_difference[1]) < 1e-5);
+            let left = curvature(at_left_join, subtract(at_left_join, subtract(c, b)));
+            let right = curvature(at_right_join, subtract(subtract(e, d), at_right_join));
+            assert!((left - right).abs() < 1e-5);
+        }
+    }
+
     use super::*;
     fn bounds(x: f64, y: f64, width: f64, height: f64) -> Bounds {
         Bounds {

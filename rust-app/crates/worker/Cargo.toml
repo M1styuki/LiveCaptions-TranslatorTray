@@ -4,22 +4,24 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-build = "build.rs"
 
 [dependencies]
 protocol.workspace = true
 windows-platform.workspace = true
-slint = { workspace = true, features = ["unstable-winit-030"] }
+gpui.workspace = true
+paste.workspace = true
+gpui-component.workspace = true
+futures.workspace = true
+raw-window-handle.workspace = true
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse"] }
 providers.workspace = true
 tokio.workspace = true
 captions-core.workspace = true
 storage.workspace = true
 serde_json.workspace = true
 
-[build-dependencies]
-slint-build.workspace = true
-
 [dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
 windows-platform = { workspace = true, features = ["test-support"] }
 rusqlite = { version = "=0.40.1", features = ["bundled", "backup"] }
 providers = { workspace = true, features = ["test-support"] }

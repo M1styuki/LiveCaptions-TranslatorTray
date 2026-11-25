@@ -8,15 +8,15 @@ mod flow;
 mod flow_tests;
 mod models;
 mod shutdown;
+mod ui;
 mod ui_bridge;
 
 use controller::Controller;
 use protocol::{Envelope, Message, PROTOCOL_VERSION, Ready};
-use slint::ComponentHandle;
 use std::{cell::RefCell, io, path::PathBuf, rc::Rc};
 use ui_bridge::Bridge;
 
-slint::include_modules!();
+use ui::{ApiEditor, ApiWindow, HistoryItem, MainWindow};
 
 pub fn run(
     mut args: impl Iterator<Item = std::ffi::OsString>,
@@ -41,12 +41,32 @@ pub fn run(
         _ => return Err(io::Error::other("Worker must be launched by the tray host").into()),
     };
     let pipe = windows_platform::pipe_client::connect(&pipe, host_pid)?;
-    slint::BackendSelector::new()
-        .backend_name("winit".into())
-        // Skia preserves subpixel coverage for rounded controls and thin borders.
-        // The OpenGL surface also preserves alpha for the Windows Mica backdrop.
-        .renderer_name("skia-opengl".into())
-        .select()?;
+    let result = Rc::new(RefCell::new(None));
+    let outcome = result.clone();
+    gpui::Application::new()
+        .with_assets(ui::controls::Assets)
+        .run(move |cx| {
+            gpui_component::init(cx);
+            ui::controls::sync_theme(None, cx);
+            ui::runtime::start(cx);
+            ui::runtime::dispatch(move || {
+                let setup = setup(pipe, data_dir);
+                if setup.is_err() {
+                    let _ = ui::quit_event_loop();
+                }
+                *outcome.borrow_mut() = Some(setup);
+            });
+        });
+    if let Some(controller) = result.borrow_mut().take().transpose()? {
+        controller.0.borrow().bridge.finish();
+    }
+    Ok(())
+}
+
+fn setup(
+    pipe: windows_platform::pipe_stream::PipeStream,
+    data_dir: PathBuf,
+) -> Result<(Rc<RefCell<Controller>>, MainWindow), Box<dyn std::error::Error>> {
     let ui = MainWindow::new()?;
     let (width, height) = windows_platform::desktop::screen_size();
     let screen = captions_core::settings::Screen::new(width, height)
@@ -126,7 +146,6 @@ pub fn run(
     let weak = Rc::downgrade(&controller);
     let ui_weak = ui.as_weak();
     ui.on_window_action(move |action| {
-        use slint::winit_030::{WinitWindowAccessor, winit::window::ResizeDirection};
         let Some(ui) = ui_weak.upgrade() else {
             return;
         };
@@ -136,16 +155,7 @@ pub fn run(
             }
             let _ = ui.hide();
         } else {
-            ui.window().with_winit_window(|window| match action {
-                0 => window.set_minimized(true),
-                2 => {
-                    let _ = window.drag_window();
-                }
-                3 => {
-                    let _ = window.drag_resize_window(ResizeDirection::SouthEast);
-                }
-                _ => {}
-            });
+            ui.window().action(action);
         }
     });
     Controller::bind_history(&controller);
@@ -154,11 +164,14 @@ pub fn run(
     Controller::bind_delete(&controller);
     Controller::bind_main_geometry(&controller);
     let weak = Rc::downgrade(&controller);
+    let ui_weak = ui.as_weak();
     ui.window().on_close_requested(move || {
         if let Some(controller) = weak.upgrade() {
             controller.borrow_mut().main_closed();
         }
-        slint::CloseRequestResponse::HideWindow
+        if let Some(ui) = ui_weak.upgrade() {
+            let _ = ui.hide();
+        }
     });
     controller.borrow().bridge.send(Envelope::new(
         0,
@@ -167,8 +180,5 @@ pub fn run(
             protocol_version: PROTOCOL_VERSION,
         }),
     ))?;
-    // Engine may run while all Slint windows are hidden; controller alone decides exit.
-    slint::run_event_loop_until_quit()?;
-    controller.borrow().bridge.finish();
-    Ok(())
+    Ok((controller, ui))
 }

@@ -1,6 +1,10 @@
 # Third-party license record
 
-The Rust application uses Slint under GPL-3.0-only. The upstream reference
+GPUI-NOTICES.txt lists the current Windows x64 application and build dependencies and collects their license and notice texts. The executable embeds this file as resource 104.
+
+## Slint release archive
+
+The previous Slint release used Slint under GPL-3.0-only. The upstream reference
 project keeps its Apache-2.0 license. See the root LICENSE and NOTICE.
 
 inventory.json and inventory.csv identify the locked Windows x64 source and

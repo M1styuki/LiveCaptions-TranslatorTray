@@ -1,12 +1,7 @@
 //! Actual controller callbacks/SQLite with a virtual UI and no ASR/HTTP.
 use super::*;
 
-pub(super) fn run(
-    root: &std::path::Path,
-    screen: Screen,
-    ui: &MainWindow,
-    jobs: &mpsc::Receiver<Job>,
-) {
+pub(super) fn run(root: &std::path::Path, screen: Screen, ui: &MainWindow, jobs: &TestAppContext) {
     let directory = root.join("capture-cutoff-data");
     fs::create_dir(&directory).unwrap();
     ui.set_data_state(0);

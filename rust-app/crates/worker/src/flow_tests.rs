@@ -288,7 +288,7 @@ impl Fixture {
         ));
         let mut flow = Flow::new("flow-instance".into());
         flow.begin(Settings::defaults(screen), log_only);
-        let mailbox = Mailbox::new(slint::Weak::default());
+        let mailbox = Mailbox::new(crate::ui::Weak::default());
         mailbox.test_begin_capture(1);
         let mut fixture = Self {
             flow,

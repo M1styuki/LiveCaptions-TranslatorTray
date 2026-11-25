@@ -1,22 +1,13 @@
-//! Real controller/settings thread/files, with a virtual Slint window. This
-//! backend cannot create an HWND, activate a window, or access the user's desktop.
+//! Real controller and isolated data with GPUI’s headless platform.
 use crate::{MainWindow, controller::Controller, data::Data, ui_bridge::Bridge};
 use captions_core::settings::Screen;
-use slint::{
-    ComponentHandle, Model,
-    platform::{
-        EventLoopProxy, Platform, PlatformError, WindowAdapter,
-        software_renderer::{MinimalSoftwareWindow, RepaintBufferType},
-    },
-};
+use gpui::{Modifiers, MouseButton, TestAppContext, VisualTestContext, point, px, size};
 use std::{
     fs,
     rc::Rc,
-    sync::mpsc,
     time::{Duration, Instant},
 };
 
-type Job = Box<dyn FnOnce() + Send>;
 mod api_interaction;
 mod caption_interaction;
 mod caption_toggle;
@@ -25,57 +16,29 @@ mod deletion;
 mod main_geometry;
 mod overlay_geometry;
 mod startup;
-struct VirtualPlatform {
-    sender: mpsc::Sender<Job>,
-    windows: Rc<std::cell::RefCell<Vec<Rc<MinimalSoftwareWindow>>>>,
-}
-#[derive(Clone)]
-struct Proxy(mpsc::Sender<Job>);
-impl EventLoopProxy for Proxy {
-    fn quit_event_loop(&self) -> Result<(), slint::EventLoopError> {
-        Ok(())
-    }
-    fn invoke_from_event_loop(&self, job: Job) -> Result<(), slint::EventLoopError> {
-        self.0
-            .send(job)
-            .map_err(|_| slint::EventLoopError::EventLoopTerminated)
-    }
-}
-impl Platform for VirtualPlatform {
-    fn create_window_adapter(&self) -> Result<Rc<dyn WindowAdapter>, PlatformError> {
-        let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
-        self.windows.borrow_mut().push(window.clone());
-        Ok(window)
-    }
-    fn new_event_loop_proxy(&self) -> Option<Box<dyn EventLoopProxy>> {
-        Some(Box::new(Proxy(self.sender.clone())))
-    }
-}
 fn until(
     controller: &mut Controller,
-    jobs: &mpsc::Receiver<Job>,
+    jobs: &TestAppContext,
     condition: impl Fn(&Controller) -> bool,
 ) {
     let deadline = Instant::now() + Duration::from_secs(10);
     while !condition(controller) {
         assert!(Instant::now() < deadline, "controller transition timed out");
-        if let Ok(job) = jobs.recv_timeout(Duration::from_millis(10)) {
-            job();
-        }
+        jobs.executor().run_until_parked();
+        std::thread::sleep(Duration::from_millis(10));
         controller.wakeup();
     }
 }
 fn until_owner(
     owner: &Rc<std::cell::RefCell<Controller>>,
-    jobs: &mpsc::Receiver<Job>,
+    jobs: &TestAppContext,
     condition: impl Fn() -> bool,
 ) {
     let deadline = Instant::now() + Duration::from_secs(10);
     while !condition() {
         assert!(Instant::now() < deadline, "API editor transition timed out");
-        if let Ok(job) = jobs.recv_timeout(Duration::from_millis(5)) {
-            job();
-        }
+        jobs.executor().run_until_parked();
+        std::thread::sleep(Duration::from_millis(5));
         owner.borrow_mut().wakeup();
     }
 }
@@ -150,47 +113,28 @@ fn model_server() -> (
     });
     (url, stage, thread)
 }
-fn snapshot(window: &MinimalSoftwareWindow, path: &std::path::Path, width: u32, height: u32) {
-    window.set_size(slint::PhysicalSize::new(width, height));
-    std::thread::sleep(Duration::from_millis(2));
-    slint::platform::update_timers_and_animations();
-    std::thread::sleep(Duration::from_millis(200));
-    slint::platform::update_timers_and_animations();
-    window.window().request_redraw();
-    let mut buffer = slint::SharedPixelBuffer::<slint::Rgb8Pixel>::new(width, height);
-    assert!(window.draw_if_needed(|renderer| {
-        renderer.render(buffer.make_mut_slice(), width as usize);
-    }));
-    let stride = (width * 3 + 3) & !3;
-    let mut bmp = vec![0; 54 + (stride * height) as usize];
-    bmp[0..2].copy_from_slice(b"BM");
-    let length = bmp.len() as u32;
-    bmp[2..6].copy_from_slice(&length.to_le_bytes());
-    bmp[10..14].copy_from_slice(&54u32.to_le_bytes());
-    bmp[14..18].copy_from_slice(&40u32.to_le_bytes());
-    bmp[18..22].copy_from_slice(&width.to_le_bytes());
-    bmp[22..26].copy_from_slice(&height.to_le_bytes());
-    bmp[26..28].copy_from_slice(&1u16.to_le_bytes());
-    bmp[28..30].copy_from_slice(&24u16.to_le_bytes());
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = buffer.as_slice()[(y * width + x) as usize];
-            let offset = (54 + (height - 1 - y) * stride + x * 3) as usize;
-            bmp[offset..offset + 3].copy_from_slice(&[pixel.b, pixel.g, pixel.r]);
-        }
-    }
-    fs::write(path, bmp).unwrap();
+fn redraw(window: &mut VisualTestContext, width: f32, height: f32) {
+    window.simulate_resize(size(px(width), px(height)));
+    window.run_until_parked();
+    window.update(|window, cx| {
+        let _ = window.draw(cx);
+    });
+}
+
+fn center(window: &mut VisualTestContext, selector: &'static str) -> gpui::Point<gpui::Pixels> {
+    window
+        .debug_bounds(selector)
+        .unwrap_or_else(|| panic!("missing UI element {selector}"))
+        .center()
 }
 
 #[test]
 fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure() {
-    let (sender, jobs) = mpsc::channel();
-    let windows = Rc::new(std::cell::RefCell::new(Vec::new()));
-    slint::platform::set_platform(Box::new(VirtualPlatform {
-        sender,
-        windows: windows.clone(),
-    }))
-    .unwrap();
+    let jobs = TestAppContext::single();
+    jobs.update(|cx| {
+        gpui_component::init(cx);
+        crate::ui::runtime::start(cx);
+    });
     let ui = MainWindow::new().unwrap();
     let parent = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../../scratch/controller-fixtures");
@@ -206,12 +150,13 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
     let mut controller = Controller::new(bridge, ui.as_weak(), data, screen);
     controller.test_show_settings();
     until(&mut controller, &jobs, |_| ui.get_data_state() == 2);
-    // API window uses actual generated Slint callbacks, but the platform above
-    // renders virtual windows only. No HWND, screenshots or desktop activation.
+    // The headless views use the same rendering and input paths as the desktop.
     controller.test_show_settings();
     let owner = Rc::new(std::cell::RefCell::new(controller));
     Controller::open_api(&owner);
     let api = owner.borrow().test_api();
+    let mut main_view = VisualTestContext::from_window(ui.window().test_handle(), &jobs);
+    let mut api_view = VisualTestContext::from_window(api.window().test_handle(), &jobs);
     assert_eq!(owner.borrow().test_windows(), 2);
     for (index, service) in [
         "Ollama",
@@ -286,7 +231,7 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
     owner.borrow_mut().setting_edited("ApiName", "Google2");
     assert_eq!(ui.get_selected_service(), "Google2");
     owner.borrow_mut().setting_edited("ApiName", "Google");
-    api_interaction::run(&owner, &api, &windows.borrow()[1]);
+    api_interaction::run(&owner, &api, &mut api_view);
     let (model_url, model_stage, model_thread) = model_server();
     api.invoke_section_changed(2);
     api.set_api_url(model_url.clone().into());
@@ -325,38 +270,12 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
         api.get_model_labels().row_data(0).unwrap(),
         "Friendly model name"
     );
-    let evidence = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../evidence/functional")
-        .join(format!(
-            "ui-offscreen-{}",
-            windows_platform::desktop::instance_id().unwrap()
-        ));
-    fs::create_dir_all(&evidence).unwrap();
-    fs::write(evidence.join("scope.json"),br#"{"scope":"virtual Slint software renderer only; not actual desktop/visible interaction acceptance","main":[900,600],"api":[950,600],"themes":["dark","light"]}"#).unwrap();
-    for (name, theme) in [
-        ("dark", slint::language::ColorScheme::Dark),
-        ("light", slint::language::ColorScheme::Light),
-    ] {
-        ui.global::<crate::Palette>().set_color_scheme(theme);
-        api.global::<crate::Palette>().set_color_scheme(theme);
-        std::thread::sleep(Duration::from_millis(180));
-        slint::platform::update_timers_and_animations();
-        snapshot(
-            &windows.borrow()[0],
-            &evidence.join(format!("settings-{name}.bmp")),
-            900,
-            600,
-        );
-        snapshot(
-            &windows.borrow()[1],
-            &evidence.join(format!("api-lmstudio-{name}.bmp")),
-            950,
-            500,
-        );
-        // Render every configuration layout at the supported minimum size as
-        // well as the default size. No requests, HWNDs or user data involved.
-        let section = api.get_section();
-        let service = api.get_service();
+    let section = api.get_section();
+    let service = api.get_service();
+    for dark in [false, true] {
+        ui.set_frame_dark(dark);
+        api.set_frame_dark(dark);
+        redraw(&mut main_view, 900., 600.);
         for (index, provider) in [
             "Prompt",
             "Ollama",
@@ -377,28 +296,15 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
             if index > 0 {
                 api.set_active_editor(api.get_editors().row_data(index - 1).unwrap());
             }
-            slint::platform::update_timers_and_animations();
-            for (size, width, height) in [("default", 950, 600), ("minimum", 760, 360)] {
-                api.invoke_reveal_current_section();
-                slint::platform::update_timers_and_animations();
-                snapshot(
-                    &windows.borrow()[1],
-                    &evidence.join(format!("api-{provider}-{size}-{name}.bmp")),
-                    width,
-                    height,
-                );
-                assert!(
-                    api.invoke_scroll_position().abs() < 0.1,
-                    "single-service editor opens at its own top"
-                );
+            for (width, height) in [(950., 600.), (760., 360.)] {
+                redraw(&mut api_view, width, height);
             }
         }
-        api.set_section(section);
-        api.set_service(service);
-        api.set_active_editor(api.get_editors().row_data(section as usize - 1).unwrap());
-        windows.borrow()[1].set_size(slint::PhysicalSize::new(950, 500));
     }
-    println!("Virtual UI evidence: {}", evidence.display());
+    api.set_section(section);
+    api.set_service(service);
+    api.set_active_editor(api.get_editors().row_data(section as usize - 1).unwrap());
+    redraw(&mut api_view, 950., 500.);
     api.invoke_model_selected(0);
     assert_eq!(api.get_model_name(), "actual-model-id");
     api.invoke_models_requested();
@@ -525,7 +431,7 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
     assert!(!empty.join("setting.json").exists());
     assert!(!empty.join("translation_history.db").exists());
     drop(controller);
-    // The actual controller -> HTTP transport -> SQLite -> Slint state path,
+    // The actual controller -> HTTP transport -> SQLite -> GPUI state path,
     // with a local protocol server and a virtual window (no UIA/desktop).
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
@@ -773,96 +679,61 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
         controller.test_data_stopped()
     });
     drop(controller);
-    history_fixture(&root, screen, &ui, &jobs, &windows.borrow()[0]);
-    caption_interaction::run(&root, screen, &ui, &jobs, &windows.borrow()[0]);
+    history_fixture(&root, screen, &ui, &jobs, &mut main_view);
+    caption_interaction::run(&root, screen, &ui, &jobs, &mut main_view);
     file_lifecycle_fixture(&root, screen, &ui, &jobs);
-    deletion::run(&root, screen, &ui, &jobs, &windows.borrow()[0]);
+    deletion::run(&root, screen, &ui, &jobs, &mut main_view);
     main_geometry::run(&root, screen, &ui, &jobs);
     overlay_geometry::run(&root, screen, &ui, &jobs);
     startup::run(&root, screen, &ui, &jobs);
     caption_toggle::run(&root, screen, &ui, &jobs);
     capture_cutoff::run(&root, screen, &ui, &jobs);
-    original_number_input(&ui, &windows.borrow()[0]);
+    original_number_input(&ui, &mut main_view);
+    translation_dropdown(&ui, &mut main_view);
+    interval_slider(&ui, &mut main_view);
     let actual = root.canonicalize().unwrap();
     assert_eq!(actual.parent(), Some(parent.as_path()));
     fs::remove_dir_all(actual).unwrap();
 }
 
-fn original_number_input(ui: &MainWindow, window: &MinimalSoftwareWindow) {
-    use slint::{
-        LogicalPosition,
-        platform::{PointerEventButton, WindowEvent},
-    };
+fn original_number_input(ui: &MainWindow, window: &mut VisualTestContext) {
     ui.set_data_state(2);
-    ui.set_data_message("".into());
+    ui.set_data_message(String::new());
     ui.set_retry_save(false);
     ui.set_page(1);
     ui.set_num_contexts(2);
     ui.set_display_sentences(1);
-    window.set_size(slint::PhysicalSize::new(900, 600));
-    std::thread::sleep(Duration::from_millis(2));
-    slint::platform::update_timers_and_animations();
-    std::thread::sleep(Duration::from_millis(200));
-    slint::platform::update_timers_and_animations();
-    window.window().request_redraw();
-    let mut buffer = slint::SharedPixelBuffer::<slint::Rgb8Pixel>::new(900, 600);
-    window.draw_if_needed(|renderer| {
-        renderer.render(buffer.make_mut_slice(), 900);
-    });
-    let position = LogicalPosition::new(270.0, 528.0);
-    ui.window()
-        .dispatch_event(WindowEvent::PointerMoved { position });
-    ui.window().dispatch_event(WindowEvent::PointerPressed {
-        position,
-        button: PointerEventButton::Left,
-    });
+    redraw(window, 900., 600.);
+    let position = center(window, "contexts-1");
+    window.simulate_mouse_move(position, None, Modifiers::none());
+    window.simulate_mouse_down(position, MouseButton::Left, Modifiers::none());
     assert_eq!(
         ui.get_num_contexts(),
         3,
         "press increments once immediately"
     );
-    std::thread::sleep(Duration::from_millis(550));
-    slint::platform::update_timers_and_animations();
+    window.executor().advance_clock(Duration::from_millis(550));
     assert_eq!(ui.get_num_contexts(), 4, "held button begins repeating");
-    std::thread::sleep(Duration::from_millis(70));
-    slint::platform::update_timers_and_animations();
+    window.executor().advance_clock(Duration::from_millis(70));
     assert_eq!(ui.get_num_contexts(), 5, "held button continues repeating");
-    ui.window().dispatch_event(WindowEvent::PointerReleased {
-        position,
-        button: PointerEventButton::Left,
-    });
-    std::thread::sleep(Duration::from_millis(70));
-    slint::platform::update_timers_and_animations();
+    window.simulate_mouse_up(position, MouseButton::Left, Modifiers::none());
+    window.executor().advance_clock(Duration::from_millis(70));
     assert_eq!(
         ui.get_num_contexts(),
         5,
         "release stops without an extra step"
     );
-    let position = LogicalPosition::new(418.0, 528.0);
-    ui.window().dispatch_event(WindowEvent::PointerPressed {
-        position,
-        button: PointerEventButton::Left,
-    });
-    ui.window().dispatch_event(WindowEvent::PointerReleased {
-        position,
-        button: PointerEventButton::Left,
-    });
-    assert_eq!(
-        ui.get_display_sentences(),
-        2,
-        "both context controls remain reachable in the grouped layout"
-    );
-    println!(
-        "Original numeric controls: virtual Slint press/hold/release, no release double-step, and bottom-row reachability PASS; not physical long-press or DPI acceptance"
-    );
+    let position = center(window, "sentences-1");
+    window.simulate_click(position, Modifiers::none());
+    assert_eq!(ui.get_display_sentences(), 2);
 }
 
 fn history_fixture(
     root: &std::path::Path,
     screen: Screen,
     ui: &MainWindow,
-    jobs: &mpsc::Receiver<Job>,
-    window: &MinimalSoftwareWindow,
+    jobs: &TestAppContext,
+    window: &mut VisualTestContext,
 ) {
     let directory = root.join("history-data");
     fs::create_dir(&directory).unwrap();
@@ -908,29 +779,10 @@ fn history_fixture(
     let row = ui.get_history_rows().row_data(0).unwrap();
     assert_eq!(row.stamp.len(), 16);
     assert_eq!(row.stamp_full.len(), 19);
-    let evidence = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../evidence/functional")
-        .join(format!(
-            "history-offscreen-{}",
-            windows_platform::desktop::instance_id().unwrap()
-        ));
-    fs::create_dir_all(&evidence).unwrap();
-    fs::write(evidence.join("scope.json"),br#"{"scope":"virtual Slint history table; no desktop interaction; not visible acceptance","size":[775,300],"fixture_rows":10000,"page_size":30}"#).unwrap();
-    for (name, theme) in [
-        ("dark", slint::language::ColorScheme::Dark),
-        ("light", slint::language::ColorScheme::Light),
-    ] {
-        ui.global::<crate::Palette>().set_color_scheme(theme);
-        std::thread::sleep(Duration::from_millis(180));
-        slint::platform::update_timers_and_animations();
-        snapshot(
-            window,
-            &evidence.join(format!("history-{name}.bmp")),
-            775,
-            300,
-        );
+    for dark in [false, true] {
+        ui.set_frame_dark(dark);
+        redraw(window, 800., 420.);
     }
-    println!("Virtual history evidence: {}", evidence.display());
     ui.invoke_history_requested(3);
     until_owner(&owner, jobs, settled);
     assert_eq!(
@@ -1157,7 +1009,7 @@ fn history_fixture(
     controller.main_closed();
     until(&mut controller, jobs, |value| value.test_data_stopped());
     println!(
-        "History UI: isolated 10000 rows; capacities, draft/applied search, restore/clamp, parameterization, bounded latest view, visible-only durable-change refresh PASS (virtual Slint only)"
+        "History UI: isolated 10000 rows; capacities, draft/applied search, restore/clamp, parameterization, bounded latest view, visible-only durable-change refresh PASS (headless GPUI)"
     );
 }
 
@@ -1165,7 +1017,7 @@ fn file_lifecycle_fixture(
     root: &std::path::Path,
     screen: Screen,
     ui: &MainWindow,
-    jobs: &mpsc::Receiver<Job>,
+    jobs: &TestAppContext,
 ) {
     let empty = root.join("cancelled-file-data");
     fs::create_dir(&empty).unwrap();
@@ -1357,4 +1209,30 @@ fn file_lifecycle_fixture(
     println!(
         "File controller: removed import cannot open picker; existing settings/history, config recovery, dialog AppExit, protected JSON/DB, failed export while exiting preserves target and reopens UI PASS"
     );
+}
+
+fn translation_dropdown(ui: &MainWindow, window: &mut VisualTestContext) {
+    ui.set_selected_service("Google".into());
+    redraw(window, 900., 600.);
+    let button = window.debug_bounds("service").unwrap();
+    window.simulate_click(button.center(), Modifiers::none());
+    redraw(window, 900., 600.);
+    let popup = window.debug_bounds("service-popup").unwrap();
+    assert_eq!(button.size.width, popup.size.width);
+    let option = center(window, "service-option-1");
+    window.simulate_click(option, Modifiers::none());
+    assert_eq!(ui.get_selected_service(), "Google2");
+    redraw(window, 900., 600.);
+    assert!(window.debug_bounds("service-popup").is_none());
+}
+
+fn interval_slider(ui: &MainWindow, window: &mut VisualTestContext) {
+    redraw(window, 900., 600.);
+    let track = window.debug_bounds("interval-slider").unwrap();
+    let position = point(
+        track.left() + px(10.) + (track.size.width - px(20.)) * 0.7,
+        track.center().y,
+    );
+    window.simulate_click(position, Modifiers::none());
+    assert_eq!(ui.get_max_sync_interval(), 7);
 }

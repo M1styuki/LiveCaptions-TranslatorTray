@@ -1,12 +1,8 @@
 use super::*;
 use protocol::{Empty, EngineState, Message};
+use std::sync::mpsc;
 
-pub(super) fn run(
-    root: &std::path::Path,
-    screen: Screen,
-    ui: &MainWindow,
-    jobs: &mpsc::Receiver<Job>,
-) {
+pub(super) fn run(root: &std::path::Path, screen: Screen, ui: &MainWindow, jobs: &TestAppContext) {
     let directory = root.join("caption-toggle");
     fs::create_dir(&directory).unwrap();
     ui.set_data_state(0);

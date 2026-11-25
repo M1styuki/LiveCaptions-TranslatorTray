@@ -1,17 +1,8 @@
 use super::Controller;
+use crate::ui::WindowState;
 use captions_core::{
     geometry::{self, AutoHeight, Placement},
     settings::WindowKind,
-};
-use slint::{
-    ComponentHandle,
-    winit_030::{
-        EventResult, WinitWindowAccessor,
-        winit::{
-            event::WindowEvent,
-            raw_window_handle::{HasWindowHandle, RawWindowHandle},
-        },
-    },
 };
 use std::{cell::RefCell, io, rc::Rc, time::Duration};
 use windows_platform::window_geometry;
@@ -23,7 +14,7 @@ struct State {
     auto: AutoHeight,
     expected: Option<(f64, f64)>,
     resized: bool,
-    timer: slint::Timer,
+    timer: crate::ui::Timer,
 }
 impl State {
     fn observe_resize(&mut self, bounds: captions_core::settings::Bounds) {
@@ -52,23 +43,10 @@ struct Fixture {
 }
 
 pub(super) fn hwnd(ui: &crate::MainWindow) -> Option<usize> {
-    window_hwnd(ui.window())
+    ui.window().hwnd()
 }
-fn window_hwnd(window: &slint::Window) -> Option<usize> {
-    window
-        .with_winit_window(|window| match window.window_handle().ok()?.as_raw() {
-            RawWindowHandle::Win32(handle) => Some(handle.hwnd.get() as usize),
-            _ => None,
-        })
-        .flatten()
-}
-
-fn round_frame(window: &slint::Window, dark: bool) -> bool {
-    use slint::winit_030::winit::platform::windows::WindowExtWindows;
-    // Preserve the original system shadow and the non-client edge DWM needs
-    // for a custom title bar. Winit owns the corresponding frame calculation.
-    window.with_winit_window(|window| window.set_undecorated_shadow(true));
-    if let Some(window) = window_hwnd(window) {
+fn round_frame(window: &WindowState, dark: bool) -> bool {
+    if let Some(window) = window.hwnd() {
         // Cosmetic DWM policy must not make a usable settings window fail.
         let _ = window_geometry::round_corners(window);
         return window_geometry::mica_backdrop(window, dark).is_ok();
@@ -85,7 +63,7 @@ pub(super) fn style_api(ui: &crate::ApiWindow) {
 }
 
 pub(super) fn center_api(ui: &crate::ApiWindow) {
-    if let Some(window) = window_hwnd(ui.window()) {
+    if let Some(window) = ui.window().hwnd() {
         let _ = window_geometry::center_on_cursor_monitor(window);
     }
 }
@@ -106,7 +84,7 @@ impl Geometry {
         let Some(window) = hwnd(ui) else {
             return Ok(None);
         };
-        window_geometry::snapshot(window)
+        window_geometry::snapshot_client(window)
     }
     fn apply(&self, ui: &crate::MainWindow, desired: &geometry::Restored) -> io::Result<()> {
         #[cfg(test)]
@@ -116,14 +94,14 @@ impl Geometry {
                 return Err(io::Error::other("controlled native placement failure"));
             }
             fixture.physical = desired.physical;
-            ui.window().set_size(slint::LogicalSize::new(
+            ui.window().set_size(
                 desired.logical.bounds.width as f32,
                 desired.logical.bounds.height as f32,
-            ));
+            );
             return Ok(());
         }
         if let Some(window) = hwnd(ui) {
-            window_geometry::apply(window, desired.physical)?;
+            window_geometry::apply_client(window, desired.physical, desired.scale)?;
         }
         Ok(())
     }
@@ -142,31 +120,17 @@ impl Controller {
         });
         let state = owner.borrow().geometry.state.clone();
         let weak = Rc::downgrade(owner);
-        ui.window().on_winit_window_event(move |_, event| {
-            let resized =
-                matches!(event, WindowEvent::Resized(size) if size.width > 0 && size.height > 0);
-            let changed = resized
-                || matches!(
-                    event,
-                    WindowEvent::Moved(_) | WindowEvent::ScaleFactorChanged { .. }
-                );
-            if changed {
-                let mut state = state.borrow_mut();
-                if state.active {
-                    state.resized |= resized;
-                    let weak = weak.clone();
-                    state.timer.start(
-                        slint::TimerMode::SingleShot,
-                        Duration::from_millis(150),
-                        move || {
-                            if let Some(owner) = weak.upgrade() {
-                                owner.borrow_mut().main_geometry_changed();
-                            }
-                        },
-                    );
-                }
+        ui.window().on_bounds_changed(move |resized| {
+            let mut state = state.borrow_mut();
+            if state.active {
+                state.resized |= resized;
+                let weak = weak.clone();
+                state.timer.start(Duration::from_millis(150), move || {
+                    if let Some(owner) = weak.upgrade() {
+                        owner.borrow_mut().main_geometry_changed();
+                    }
+                });
             }
-            EventResult::Propagate
         });
     }
 
@@ -306,9 +270,8 @@ impl Controller {
         let mut state = self.geometry.state.borrow_mut();
         state.active = false;
         state.timer.stop();
-        // Slint can destroy the HWND when hidden and recreate it with old
-        // physical attributes. Reopen must restore saved logical bounds, even
-        // within the same controller after a monitor/DPI change.
+        // Reopen always uses the saved logical bounds, including after a
+        // monitor or DPI change while the window was hidden.
         state.restored = false;
         state.expected = None;
         state.resized = false;
@@ -390,10 +353,7 @@ impl Controller {
             .upgrade()
             .unwrap()
             .window()
-            .set_size(slint::LogicalSize::new(
-                bounds.width as f32,
-                bounds.height as f32,
-            ));
+            .set_size(bounds.width as f32, bounds.height as f32);
         if flush {
             self.main_geometry_changed();
         }

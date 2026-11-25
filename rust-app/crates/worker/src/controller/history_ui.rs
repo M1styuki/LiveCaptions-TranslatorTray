@@ -2,7 +2,6 @@
 //! most one database query in flight and one latest desired view, never a queue
 //! of clicks. The text editor is a draft until Search/Enter is submitted.
 use super::Controller;
-use slint::ComponentHandle;
 use storage::{
     actor::{Command, Event, Operation},
     history::Save,
@@ -163,7 +162,7 @@ impl Controller {
             ui.set_history_page(1);
             ui.set_history_pages(1);
             ui.set_history_total("0".into());
-            ui.set_history_rows(slint::ModelRc::default());
+            ui.set_history_rows(crate::ui::Rows::default());
         }
         self.submit_history();
     }
@@ -231,7 +230,7 @@ impl Controller {
                                 language: row.target_language.as_str().into(),
                             })
                             .collect();
-                        ui.set_history_rows(slint::ModelRc::new(slint::VecModel::from(rows)));
+                        ui.set_history_rows(crate::ui::Rows::new(rows));
                     }
                 }
                 true

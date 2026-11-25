@@ -42,7 +42,7 @@ impl Bridge {
     }
     pub fn new(
         file: windows_platform::pipe_stream::PipeStream,
-        ui: slint::Weak<MainWindow>,
+        ui: crate::ui::Weak<MainWindow>,
     ) -> io::Result<Self> {
         let mut reader = file.try_clone()?;
         let mut writer = file;
@@ -89,7 +89,7 @@ impl Bridge {
                         }
                     }
                     let weak = ui.clone();
-                    if slint::invoke_from_event_loop(move || {
+                    if crate::ui::invoke_from_event_loop(move || {
                         if let Some(ui) = weak.upgrade() {
                             ui.invoke_host_wakeup();
                         }

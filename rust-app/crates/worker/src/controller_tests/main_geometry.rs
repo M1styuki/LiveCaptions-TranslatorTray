@@ -1,12 +1,7 @@
 use super::*;
 use captions_core::settings::{Bounds, WindowKind};
 
-pub(super) fn run(
-    root: &std::path::Path,
-    screen: Screen,
-    ui: &MainWindow,
-    jobs: &mpsc::Receiver<Job>,
-) {
+pub(super) fn run(root: &std::path::Path, screen: Screen, ui: &MainWindow, jobs: &TestAppContext) {
     let directory = root.join("main-geometry-data");
     fs::create_dir(&directory).unwrap();
     for pass in 0..2 {
@@ -35,11 +30,11 @@ pub(super) fn run(
                 .setting_edited("CaptionLogEnabled", "true");
             owner.borrow_mut().setting_edited("DisplaySentences", "3");
             assert_eq!(owner.borrow().test_main_geometry().bounds.height, 440.0);
-            assert_eq!(ui.window().size().height, 440);
+            assert_eq!(ui.window().size().height, px(440.));
             owner.borrow_mut().setting_edited("DisplaySentences", "6");
             owner.borrow_mut().test_main_work_height(540.0);
             assert_eq!(owner.borrow().test_main_geometry().bounds.height, 540.0);
-            assert_eq!(ui.window().size().height, 540);
+            assert_eq!(ui.window().size().height, px(540.));
             owner.borrow_mut().test_main_work_height(1040.0);
             owner
                 .borrow_mut()
@@ -172,6 +167,6 @@ pub(super) fn run(
         ui.hide().unwrap();
     }
     println!(
-        "Main geometry: injected native placement + actual virtual Slint and isolated settings; initial restore, card growth/shrink, manual preservation, necessary growth, close-before-debounce and reopened placement PASS; not visible desktop/Winit/DPI acceptance"
+        "Main geometry: injected native placement + headless GPUI and isolated settings; initial restore, card growth/shrink, manual preservation, necessary growth, close-before-debounce and reopened placement PASS; not visible desktop/DPI acceptance"
     );
 }

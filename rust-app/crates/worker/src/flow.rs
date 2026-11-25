@@ -1,4 +1,4 @@
-//! Subtitle business state, called only by the Slint-thread controller. No UIA,
+//! Subtitle business state, called only by the UI-thread controller. No UIA,
 //! HTTP or SQLite calls occur here; effects cross the existing bounded owners.
 use crate::engine::{Completion, Request};
 use captions_core::{

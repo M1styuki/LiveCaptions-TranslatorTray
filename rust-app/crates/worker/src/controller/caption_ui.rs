@@ -1,17 +1,10 @@
 use super::Controller;
-use slint::{
-    ComponentHandle,
-    winit_030::{
-        WinitWindowAccessor,
-        winit::raw_window_handle::{HasWindowHandle, RawWindowHandle},
-    },
-};
 use std::{cell::RefCell, io, rc::Rc, time::Duration};
 #[cfg(test)]
 type Writer = Rc<dyn Fn(&str) -> io::Result<()>>;
 #[derive(Default)]
 pub(super) struct Interaction {
-    timer: slint::Timer,
+    timer: crate::ui::Timer,
     #[cfg(test)]
     writer: Option<Writer>,
 }
@@ -38,15 +31,11 @@ impl Controller {
         if let Some(writer) = &self.caption.writer {
             return writer(text);
         }
-        let mut result = Err(io::Error::other("字幕窗口尚未就绪。"));
-        ui.window().with_winit_window(|window| {
-            if let Ok(handle) = window.window_handle()
-                && let RawWindowHandle::Win32(handle) = handle.as_raw()
-            {
-                result = windows_platform::clipboard::write_text(handle.hwnd.get() as usize, text);
-            }
-        });
-        result
+        let hwnd = ui
+            .window()
+            .hwnd()
+            .ok_or_else(|| io::Error::other("字幕窗口尚未就绪。"))?;
+        windows_platform::clipboard::write_text(hwnd, text)
     }
     pub fn copy_caption(&mut self, text: &str) {
         if self.exiting || text.is_empty() {
@@ -62,15 +51,11 @@ impl Controller {
         };
         ui.set_copy_message(message.into());
         let weak = self.ui.clone();
-        self.caption.timer.start(
-            slint::TimerMode::SingleShot,
-            Duration::from_secs(2),
-            move || {
-                if let Some(ui) = weak.upgrade() {
-                    ui.set_copy_message("".into());
-                }
-            },
-        );
+        self.caption.timer.start(Duration::from_secs(2), move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_copy_message("".into());
+            }
+        });
     }
     pub fn adjust_caption_font(&mut self, role: i32, delta: i32) {
         if self.exiting || delta == 0 {

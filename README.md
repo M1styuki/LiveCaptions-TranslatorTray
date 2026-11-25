@@ -43,4 +43,4 @@ cargo build --release --locked
 
 本仓库原有 C# 版本及历史提交保留在 Git 历史中。Rust 重构以 [7c0dfa3](https://github.com/M1styuki/LiveCaptions-TranslatorTray/tree/7c0dfa3e8b37db9c941d884f8de7642f915b9a0a) 为行为基线；上游项目为 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator)。
 
-Rust 应用及组合程序采用 [GPL-3.0-only](LICENSE)，Slint 使用 GPLv3 许可分支。原版材料及第三方资源保留各自许可，详见 [NOTICE](NOTICE) 和 [licenses](licenses/)。
+Rust 应用及组合程序采用 [GPL-3.0-only](LICENSE)。原版材料及第三方资源保留各自许可，详见 [NOTICE](NOTICE) 和 [licenses](licenses/)。

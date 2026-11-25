@@ -8,7 +8,6 @@ use crate::{
 };
 use captions_core::settings::{Screen, Settings, WindowKind};
 use protocol::{Empty, EngineState, Envelope, Message};
-use slint::ComponentHandle;
 use std::{
     collections::VecDeque,
     io,
@@ -25,7 +24,7 @@ mod settings_ui;
 
 pub struct Controller {
     pub bridge: Bridge,
-    ui: slint::Weak<MainWindow>,
+    ui: crate::ui::Weak<MainWindow>,
     engine: EngineState,
     pub(super) autostart: Option<windows_platform::autostart::Registration>,
     hidden: bool,
@@ -71,7 +70,7 @@ pub struct Controller {
 impl Controller {
     #[cfg(test)]
     pub fn test_api(&self) -> crate::ApiWindow {
-        self.api_window.as_ref().unwrap().clone_strong()
+        self.api_window.as_ref().unwrap().clone()
     }
     #[cfg(test)]
     pub fn test_close_api(&mut self) {
@@ -196,7 +195,12 @@ impl Controller {
     pub fn test_pending_start_and_engine(&self) -> (bool, EngineState) {
         (self.pending_start, self.engine)
     }
-    pub fn new(bridge: Bridge, ui: slint::Weak<MainWindow>, data: Data, screen: Screen) -> Self {
+    pub fn new(
+        bridge: Bridge,
+        ui: crate::ui::Weak<MainWindow>,
+        data: Data,
+        screen: Screen,
+    ) -> Self {
         if let Some(window) = ui.upgrade() {
             window.set_ui_font_family(windows_platform::desktop::ui_font_family().into());
         }
@@ -392,7 +396,7 @@ impl Controller {
             ui.set_source_caption("".into());
             ui.set_translated_caption("".into());
             ui.set_caption_notice("".into());
-            ui.set_caption_cards(slint::ModelRc::default());
+            ui.set_caption_cards(crate::ui::Rows::default());
             ui.set_latency_ms("".into());
         }
         self.shutdown.overlay_open = false;
@@ -526,7 +530,7 @@ impl Controller {
             pending.push_back((generation, event));
             drop(pending);
             let weak = ui.clone();
-            let _ = slint::invoke_from_event_loop(move || {
+            let _ = crate::ui::invoke_from_event_loop(move || {
                 if let Some(ui) = weak.upgrade() {
                     ui.invoke_host_wakeup();
                 }
@@ -804,7 +808,7 @@ impl Controller {
         if let Some(ui) = self.ui.upgrade() {
             let _ = ui.hide();
         }
-        let _ = slint::quit_event_loop();
+        let _ = crate::ui::quit_event_loop();
     }
 
     fn save_failed(&mut self, message: &str) {
@@ -1101,7 +1105,7 @@ impl Controller {
                     .into(),
                 );
                 ui.set_source_caption(view.source.into());
-                ui.set_caption_cards(slint::ModelRc::new(slint::VecModel::from(
+                ui.set_caption_cards(crate::ui::Rows::new(
                     view.cards
                         .into_iter()
                         .map(|card| crate::HistoryItem {
@@ -1111,7 +1115,7 @@ impl Controller {
                             ..Default::default()
                         })
                         .collect::<Vec<_>>(),
-                )));
+                ));
                 ui.set_translated_caption(view.translation.into());
             }
             self.overlay_content.source = view.overlay_source;

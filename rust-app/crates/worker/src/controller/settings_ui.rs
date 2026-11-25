@@ -1,11 +1,8 @@
 use super::Controller;
+use crate::ui::{Rows, WindowState};
 use crate::{ApiEditor, ApiWindow, models};
 use captions_core::settings::SERVICES;
 use serde_json::json;
-use slint::{
-    ComponentHandle, ModelRc, VecModel,
-    winit_030::{WinitWindowAccessor, winit::window::WindowLevel},
-};
 use std::{cell::RefCell, rc::Rc};
 
 const EDITORS: [&str; 9] = [
@@ -19,14 +16,8 @@ const EDITORS: [&str; 9] = [
     "Baidu",
     "LibreTranslate",
 ];
-fn level(window: &slint::Window, topmost: bool) {
-    window.with_winit_window(|window| {
-        window.set_window_level(if topmost {
-            WindowLevel::AlwaysOnTop
-        } else {
-            WindowLevel::Normal
-        })
-    });
+fn level(window: &WindowState, topmost: bool) {
+    window.set_topmost(topmost);
 }
 impl Controller {
     pub fn bind_caption_toggle(owner: &Rc<RefCell<Self>>) {
@@ -187,41 +178,15 @@ impl Controller {
                 super::main_geometry::style_api(&api);
             }
         });
-        let frame_window = api.as_weak();
-        let mut frame_applied = false;
-        api.window().on_winit_window_event(move |_, event| {
-            if matches!(
-                event,
-                slint::winit_030::winit::event::WindowEvent::RedrawRequested
-            ) && !frame_applied
-            {
-                frame_applied = true;
-                if let Some(api) = frame_window.upgrade() {
-                    super::main_geometry::style_api(&api);
-                    super::main_geometry::center_api(&api);
-                }
-            }
-            slint::winit_030::EventResult::Propagate
-        });
         let weak = Rc::downgrade(owner);
         let api_weak = api.as_weak();
         api.on_window_action(move |action| {
-            use slint::winit_030::winit::window::ResizeDirection;
             if action == 1 {
                 if let Some(owner) = weak.upgrade() {
                     owner.borrow_mut().api_closed();
                 }
             } else if let Some(api) = api_weak.upgrade() {
-                api.window().with_winit_window(|window| match action {
-                    0 => window.set_minimized(true),
-                    2 => {
-                        let _ = window.drag_window();
-                    }
-                    3 => {
-                        let _ = window.drag_resize_window(ResizeDirection::SouthEast);
-                    }
-                    _ => {}
-                });
+                api.window().action(action);
             }
         });
         let weak = Rc::downgrade(owner);
@@ -301,7 +266,6 @@ impl Controller {
             if let Some(owner) = weak.upgrade() {
                 owner.borrow_mut().api_closed();
             }
-            slint::CloseRequestResponse::HideWindow
         });
         let mut owner = owner.borrow_mut();
         owner.api_section = 0;
@@ -315,6 +279,7 @@ impl Controller {
         }
         level(api.window(), true);
         super::main_geometry::style_api(api);
+        super::main_geometry::center_api(api);
         owner.recount_windows();
         owner.retire_when_idle = false;
         owner.windows_changed();
@@ -389,7 +354,7 @@ impl Controller {
             // binding to editors[index] would be detached by the first edit.
             api.set_active_editor(editor.clone());
         }
-        api.set_editors(ModelRc::new(VecModel::from(editors)));
+        api.set_editors(Rows::new(editors));
         let Some(service) = self.editor_service() else {
             return;
         };
@@ -594,7 +559,7 @@ impl Controller {
         self.models.clear();
         if let Some(api) = &self.api_window {
             api.set_models_loading(false);
-            api.set_model_labels(ModelRc::default());
+            api.set_model_labels(Rows::default());
         }
     }
     fn request_models(&mut self) {
@@ -650,7 +615,7 @@ impl Controller {
                         .map(|model| model.display_name.clone().into())
                         .collect::<Vec<_>>();
                     self.models = models;
-                    api.set_model_labels(ModelRc::new(VecModel::from(labels)));
+                    api.set_model_labels(Rows::new(labels));
                     api.set_message(
                         if self.models.is_empty() {
                             "没有可选的语言模型，现有名称已保留。"

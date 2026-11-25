@@ -2,7 +2,7 @@ LiveCaptionsTray Rust rewrite
 
 The Rust application and its combined executable are provided under GNU GPL
 version 3, as confirmed by the user on 2026-10-28. See LICENSE.
-Slint 1.18.1 is used under its GPL-3.0-only licensing alternative.
+The desktop settings windows use GPUI and GPUI Component.
 
 This project reimplements LiveCaptions-TranslatorTray, fixed reference commit
 7c0dfa3e8b37db9c941d884f8de7642f915b9a0a:

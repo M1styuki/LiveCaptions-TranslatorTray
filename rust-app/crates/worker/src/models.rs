@@ -22,7 +22,7 @@ impl Job {
         generation: u64,
         url: String,
         slot: Slot,
-        ui: slint::Weak<MainWindow>,
+        ui: crate::ui::Weak<MainWindow>,
     ) -> io::Result<Self> {
         let (cancel, receiver) = tokio::sync::oneshot::channel();
         let thread=thread::Builder::new().name("model-list".into()).spawn(move || {
@@ -40,7 +40,7 @@ impl Job {
             })();
             let result=match result {Ok(Some(result))=>result,Ok(None)=>return,Err(error)=>Err(error)};
             *slot.lock().unwrap()=Some(ResultEvent {generation,result});
-            let _=slint::invoke_from_event_loop(move || { if let Some(ui)=ui.upgrade() {ui.invoke_host_wakeup();} });
+            let _=crate::ui::invoke_from_event_loop(move || { if let Some(ui)=ui.upgrade() {ui.invoke_host_wakeup();} });
         })?;
         Ok(Self {
             cancel: Some(cancel),

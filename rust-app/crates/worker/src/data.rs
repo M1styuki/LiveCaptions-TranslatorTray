@@ -28,7 +28,7 @@ impl Data {
     pub fn start(
         directory: PathBuf,
         screen: Screen,
-        ui: slint::Weak<MainWindow>,
+        ui: crate::ui::Weak<MainWindow>,
     ) -> io::Result<Self> {
         // Only load this version's data directory. Do not discover/import files
         // beside the EXE; existing interrupted recovery still uses its manifest.
@@ -48,7 +48,7 @@ impl Data {
                 }
                 if !wake.swap(true, Ordering::AcqRel) {
                     let ui = ui.clone();
-                    let _ = slint::invoke_from_event_loop(move || {
+                    let _ = crate::ui::invoke_from_event_loop(move || {
                         if let Some(ui) = ui.upgrade() {
                             ui.invoke_host_wakeup();
                         }

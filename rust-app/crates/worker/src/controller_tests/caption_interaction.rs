@@ -1,12 +1,12 @@
 use super::*;
-use slint::platform::{Key, WindowEvent};
+use gpui::{ScrollDelta, ScrollWheelEvent};
 
 pub(super) fn run(
     root: &std::path::Path,
     screen: Screen,
     ui: &MainWindow,
-    jobs: &mpsc::Receiver<Job>,
-    window: &MinimalSoftwareWindow,
+    jobs: &TestAppContext,
+    window: &mut VisualTestContext,
 ) {
     let directory = root.join("caption-interaction-data");
     fs::create_dir(&directory).unwrap();
@@ -35,72 +35,45 @@ pub(super) fn run(
     );
     ui.set_source_caption("Public original caption.".into());
     ui.set_translated_caption("公开译文。".into());
-    let evidence = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../evidence/functional")
-        .join(format!(
-            "caption-offscreen-{}",
-            windows_platform::desktop::instance_id().unwrap()
-        ));
-    fs::create_dir_all(&evidence).unwrap();
-    fs::write(evidence.join("scope.json"),br#"{"scope":"virtual Slint input and software renderer; injected clipboard writer; no real clipboard/desktop interaction","size":[900,240],"card_size":[900,360],"fonts":[[15,18],[40,40]],"history_card_fonts":[12,16]}"#).unwrap();
-    for (name, theme) in [
-        ("dark", slint::language::ColorScheme::Dark),
-        ("light", slint::language::ColorScheme::Light),
-    ] {
-        ui.global::<crate::Palette>().set_color_scheme(theme);
-        std::thread::sleep(Duration::from_millis(180));
-        slint::platform::update_timers_and_animations();
-        snapshot(
-            window,
-            &evidence.join(format!("caption-default-{name}.bmp")),
-            900,
-            240,
-        );
+    for dark in [false, true] {
+        ui.set_frame_dark(dark);
+        redraw(window, 900., 240.);
     }
-    let source = slint::LogicalPosition::new(210.0, 65.0);
-    let translation = slint::LogicalPosition::new(210.0, 111.0);
-    let scroll = |position, delta| {
-        ui.window().dispatch_event(WindowEvent::PointerScrolled {
+    let source = center(window, "source");
+    let translation = center(window, "translation");
+    let plain = Modifiers::none();
+    let ctrl = Modifiers {
+        control: true,
+        ..plain
+    };
+    let both = Modifiers {
+        shift: true,
+        ..ctrl
+    };
+    let scroll = |window: &mut VisualTestContext, position, delta, modifiers| {
+        window.simulate_mouse_move(position, None, modifiers);
+        window.simulate_event(ScrollWheelEvent {
             position,
-            delta_x: 0.0,
-            delta_y: delta,
+            delta: ScrollDelta::Pixels(point(px(0.), px(delta))),
+            modifiers,
+            ..Default::default()
         });
     };
-    // Actual Slint TouchArea input; do not duplicate its modifier predicate.
-    scroll(source, 120.0);
+    scroll(window, source, 120., plain);
     assert_eq!(ui.get_original_font_size(), 15);
-    ui.window().dispatch_event(WindowEvent::KeyPressed {
-        text: Key::Control.into(),
-    });
-    scroll(source, 120.0);
+    scroll(window, source, 120., ctrl);
     assert_eq!(
         (ui.get_original_font_size(), ui.get_translated_font_size()),
         (16, 18)
     );
-    ui.window().dispatch_event(WindowEvent::KeyPressed {
-        text: Key::Shift.into(),
-    });
-    scroll(source, 120.0);
+    scroll(window, source, 120., both);
     assert_eq!(ui.get_original_font_size(), 16);
-    ui.window().dispatch_event(WindowEvent::KeyReleased {
-        text: Key::Shift.into(),
-    });
-    scroll(translation, -120.0);
+    scroll(window, translation, -120., ctrl);
     assert_eq!(
         (ui.get_original_font_size(), ui.get_translated_font_size()),
         (16, 17)
     );
-    ui.window().dispatch_event(WindowEvent::KeyReleased {
-        text: Key::Control.into(),
-    });
-    ui.window().dispatch_event(WindowEvent::PointerPressed {
-        position: source,
-        button: slint::platform::PointerEventButton::Left,
-    });
-    ui.window().dispatch_event(WindowEvent::PointerReleased {
-        position: source,
-        button: slint::platform::PointerEventButton::Left,
-    });
+    window.simulate_click(source, plain);
     assert_eq!(copied.borrow().last().unwrap(), "Public original caption.");
     assert_eq!(ui.get_copy_message(), "已复制");
     let exact = "  中文 😀, \"quoted\"\nline two\r\n  ";
@@ -114,8 +87,8 @@ pub(super) fn run(
     ui.invoke_caption_copy_requested("".into());
     assert_eq!(copied.borrow().len(), before);
     assert!(owner.borrow().test_copy_timer_running());
-    std::thread::sleep(Duration::from_millis(2050));
-    slint::platform::update_timers_and_animations();
+    window.run_until_parked();
+    window.executor().advance_clock(Duration::from_millis(2050));
     assert_eq!(ui.get_copy_message(), "");
     assert!(!owner.borrow().test_copy_timer_running());
     failed.set(false);
@@ -138,36 +111,9 @@ pub(super) fn run(
         "四十号字号的译文。长句应按宽度换行，并能滚动查看最后一行，不能被旧的固定高度直接裁掉。"
             .into(),
     );
-    for (name, theme) in [
-        ("dark", slint::language::ColorScheme::Dark),
-        ("light", slint::language::ColorScheme::Light),
-    ] {
-        ui.global::<crate::Palette>().set_color_scheme(theme);
-        std::thread::sleep(Duration::from_millis(180));
-        slint::platform::update_timers_and_animations();
-        scroll(source, 10000.0);
-        snapshot(
-            window,
-            &evidence.join(format!("caption-forty-top-{name}.bmp")),
-            900,
-            240,
-        );
-        scroll(translation, -10000.0);
-        snapshot(
-            window,
-            &evidence.join(format!("caption-forty-bottom-{name}.bmp")),
-            900,
-            240,
-        );
-    }
-    ui.window().dispatch_event(WindowEvent::PointerPressed {
-        position: translation,
-        button: slint::platform::PointerEventButton::Left,
-    });
-    ui.window().dispatch_event(WindowEvent::PointerReleased {
-        position: translation,
-        button: slint::platform::PointerEventButton::Left,
-    });
+    redraw(window, 900., 240.);
+    let translation = center(window, "translation");
+    window.simulate_click(translation, plain);
     assert_eq!(
         copied.borrow().last().unwrap(),
         ui.get_translated_caption().as_str(),
@@ -182,42 +128,16 @@ pub(super) fn run(
     ui.set_copy_message("".into());
     ui.set_source_caption("当前原文".into());
     ui.set_translated_caption("当前译文".into());
-    ui.set_caption_cards(slint::ModelRc::new(slint::VecModel::from(vec![
-        crate::HistoryItem {
-            source: "历史原文 😀".into(),
-            translation: "历史译文 quoted".into(),
-            ..Default::default()
-        },
-    ])));
+    ui.set_caption_cards(crate::ui::Rows::new(vec![crate::HistoryItem {
+        source: "历史原文 😀".into(),
+        translation: "历史译文 quoted".into(),
+        ..Default::default()
+    }]));
     ui.set_caption_log_enabled(true);
-    for (name, theme) in [
-        ("dark", slint::language::ColorScheme::Dark),
-        ("light", slint::language::ColorScheme::Light),
-    ] {
-        ui.global::<crate::Palette>().set_color_scheme(theme);
-        std::thread::sleep(Duration::from_millis(180));
-        slint::platform::update_timers_and_animations();
-        scroll(source, 10000.0);
-        snapshot(
-            window,
-            &evidence.join(format!("caption-cards-{name}.bmp")),
-            900,
-            360,
-        );
-    }
-    // Sweep only this virtual column: every displayed text block must copy its
-    // own whole value, independently of the exact wrapping/layout coordinates.
+    redraw(window, 900., 360.);
     let before = copied.borrow().len();
-    for y in (46..330).step_by(8) {
-        let position = slint::LogicalPosition::new(210.0, y as f32);
-        ui.window().dispatch_event(WindowEvent::PointerPressed {
-            position,
-            button: slint::platform::PointerEventButton::Left,
-        });
-        ui.window().dispatch_event(WindowEvent::PointerReleased {
-            position,
-            button: slint::platform::PointerEventButton::Left,
-        });
+    for y in (38..330).step_by(8) {
+        window.simulate_click(point(px(210.), px(y as f32)), plain);
     }
     for expected in ["当前原文", "当前译文", "历史原文 😀", "历史译文 quoted"] {
         assert!(
@@ -228,7 +148,7 @@ pub(super) fn run(
         );
     }
     ui.set_caption_log_enabled(false);
-    ui.set_caption_cards(slint::ModelRc::default());
+    ui.set_caption_cards(crate::ui::Rows::default());
     for _ in 0..100 {
         ui.invoke_caption_font_adjusted(0, -1);
     }
@@ -265,8 +185,4 @@ pub(super) fn run(
     );
     controller.main_closed();
     until(&mut controller, jobs, |value| value.test_data_stopped());
-    println!(
-        "Caption interaction evidence: {}; virtual Ctrl/plain/Ctrl+Shift gestures, injected exact/failed clipboard, one-shot feedback, independent bounds, close-save/reload PASS; no real clipboard or desktop",
-        evidence.display()
-    );
 }

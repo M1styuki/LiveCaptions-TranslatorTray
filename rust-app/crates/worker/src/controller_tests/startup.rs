@@ -1,11 +1,6 @@
 use super::*;
 
-pub(super) fn run(
-    root: &std::path::Path,
-    screen: Screen,
-    ui: &MainWindow,
-    jobs: &mpsc::Receiver<Job>,
-) {
+pub(super) fn run(root: &std::path::Path, screen: Screen, ui: &MainWindow, jobs: &TestAppContext) {
     for mode in ["existing", "first-use", "recovery"] {
         let directory = root.join(format!("pending-start-{mode}"));
         fs::create_dir(&directory).unwrap();

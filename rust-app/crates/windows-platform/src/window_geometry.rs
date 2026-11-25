@@ -8,14 +8,14 @@ use std::io;
 use windows::Win32::{
     Foundation::{HWND, LPARAM, POINT, RECT},
     Graphics::Gdi::{
-        EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITOR_DEFAULTTONEAREST,
-        MONITORINFOEXW, MonitorFromPoint, MonitorFromWindow,
+        ClientToScreen, EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR,
+        MONITOR_DEFAULTTONEAREST, MONITORINFOEXW, MonitorFromPoint, MonitorFromWindow,
     },
     UI::{
         HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI},
         WindowsAndMessaging::{
-            GetCursorPos, GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindow, IsZoomed,
-            SWP_NOACTIVATE, SWP_NOZORDER, SetWindowPos,
+            GetClientRect, GetCursorPos, GetWindowRect, GetWindowThreadProcessId, IsIconic,
+            IsWindow, IsZoomed, SWP_NOACTIVATE, SWP_NOZORDER, SetWindowPos,
         },
     },
 };
@@ -130,7 +130,7 @@ pub fn mica_backdrop(window: usize, dark: bool) -> io::Result<()> {
     let window = HWND(window as *mut _);
     own_window(window)?;
     let dark = BOOL(i32::from(dark));
-    // SAFETY: own live HWND and exact attribute sizes. Winit already creates
+    // SAFETY: own live HWND and exact attribute sizes. The renderer creates
     // the transparent client surface; extending the full non-client frame
     // would also paint native caption buttons over the custom title bar.
     // This changes only this worker's main/API window, never OS preferences.
@@ -162,6 +162,14 @@ pub fn restore(
 }
 
 pub fn snapshot(window: usize) -> io::Result<Option<Placement>> {
+    snapshot_bounds(window, false)
+}
+
+pub fn snapshot_client(window: usize) -> io::Result<Option<Placement>> {
+    snapshot_bounds(window, true)
+}
+
+fn snapshot_bounds(window: usize, client: bool) -> io::Result<Option<Placement>> {
     let window = HWND(window as *mut _);
     own_window(window)?;
     // Never replace useful normal bounds with the taskbar's minimized position
@@ -171,7 +179,11 @@ pub fn snapshot(window: usize) -> io::Result<Option<Placement>> {
             return Ok(None);
         }
         let mut rect = RECT::default();
-        GetWindowRect(window, &mut rect).map_err(io::Error::other)?;
+        if client {
+            rect = client_rect(window)?;
+        } else {
+            GetWindowRect(window, &mut rect).map_err(io::Error::other)?;
+        }
         let mut display = monitor_info(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST))?;
         // An existing per-monitor-aware HWND is authoritative for its DPI.
         let dpi = windows::Win32::UI::HiDpi::GetDpiForWindow(window);
@@ -219,7 +231,7 @@ pub fn center_on_cursor_monitor(window: usize) -> io::Result<()> {
         return Err(io::Error::other("无法读取窗口 DPI。"));
     }
     // Preserve the logical size if the pointer is on a monitor with another
-    // scale. Winit receives the native move/size and DPI notifications as usual.
+    // scale. The application receives the native move, size and DPI notifications.
     let ratio = display.scale * 96.0 / f64::from(dpi);
     let width = f64::from(rect.right - rect.left) * ratio;
     let height = f64::from(rect.bottom - rect.top) * ratio;
@@ -230,6 +242,54 @@ pub fn center_on_cursor_monitor(window: usize) -> io::Result<()> {
             y: display.work_area.y + (display.work_area.height - height) / 2.0,
             width,
             height,
+        },
+    )
+}
+
+fn client_rect(window: HWND) -> io::Result<RECT> {
+    let mut rect = RECT::default();
+    let mut origin = POINT::default();
+    // SAFETY: the caller checks HWND ownership. Both output structs are live.
+    unsafe {
+        GetClientRect(window, &mut rect).map_err(io::Error::other)?;
+        if !ClientToScreen(window, &mut origin).as_bool() {
+            return Err(io::Error::last_os_error());
+        }
+    }
+    Ok(RECT {
+        left: origin.x,
+        top: origin.y,
+        right: origin.x + rect.right,
+        bottom: origin.y + rect.bottom,
+    })
+}
+
+/// Main window placement is saved in client coordinates. GPUI adds invisible
+/// native resize borders that are outside the area used by the previous UI.
+pub fn apply_client(window: usize, physical: Bounds, scale: f64) -> io::Result<()> {
+    let handle = HWND(window as *mut _);
+    own_window(handle)?;
+    let client = client_rect(handle)?;
+    let mut outer = RECT::default();
+    // SAFETY: validated window and initialized output.
+    let dpi = unsafe {
+        GetWindowRect(handle, &mut outer).map_err(io::Error::other)?;
+        windows::Win32::UI::HiDpi::GetDpiForWindow(handle)
+    };
+    let ratio = if dpi == 0 {
+        1.0
+    } else {
+        scale * 96.0 / f64::from(dpi)
+    };
+    apply(
+        window,
+        Bounds {
+            x: physical.x - f64::from(client.left - outer.left) * ratio,
+            y: physical.y - f64::from(client.top - outer.top) * ratio,
+            width: physical.width
+                + f64::from((outer.right - outer.left) - (client.right - client.left)) * ratio,
+            height: physical.height
+                + f64::from((outer.bottom - outer.top) - (client.bottom - client.top)) * ratio,
         },
     )
 }

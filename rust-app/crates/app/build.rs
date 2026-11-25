@@ -5,16 +5,16 @@ fn main() {
     println!("cargo:rerun-if-changed=resources/tray.ico");
     println!("cargo:rerun-if-changed=resources/tray-enabled.ico");
     println!("cargo:rerun-if-changed=resources/tray-disabled.ico");
-    println!("cargo:rerun-if-changed=resources/app.manifest");
     for path in [
         "../../../LICENSE",
         "../../../NOTICE",
         "../../../licenses/LiveCaptions-TranslatorTray-Apache-2.0.txt",
-        "../../../licenses/third-party/THIRD-PARTY-NOTICES.txt",
-        "../../../licenses/third-party/SKIA-NOTICES.txt",
+        "../../../licenses/third-party/GPUI-NOTICES.txt",
     ] {
         println!("cargo:rerun-if-changed={path}");
     }
+    // GPUI embeds the per-monitor DPI v2 manifest. Keep the application’s
+    // own icon and data resources without a second RT_MANIFEST entry.
     let output = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo OUT_DIR"));
     let resource = output.join("tray.res");
     let status = Command::new("rc.exe")
