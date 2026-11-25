@@ -112,8 +112,17 @@ pub(super) fn run(
             .into(),
     );
     redraw(window, 900., 240.);
-    let translation = center(window, "translation");
-    window.simulate_click(translation, plain);
+    // The large caption's center can be below the clipping edge. Scroll it
+    // into view and use the visible portion as a real pointer target.
+    scroll(window, point(px(210.), px(70.)), -10000., plain);
+    window.update(|window, cx| {
+        let _ = window.draw(cx);
+    });
+    let bounds = window.debug_bounds("translation").unwrap();
+    let top = bounds.top().max(px(31.));
+    let bottom = bounds.bottom().min(px(240.));
+    assert!(bottom > top, "translation is reachable by scrolling");
+    window.simulate_click(point(bounds.left() + px(20.), (top + bottom) / 2.), plain);
     assert_eq!(
         copied.borrow().last().unwrap(),
         ui.get_translated_caption().as_str(),
@@ -135,6 +144,10 @@ pub(super) fn run(
     }]));
     ui.set_caption_log_enabled(true);
     redraw(window, 900., 360.);
+    scroll(window, point(px(210.), px(70.)), 10000., plain);
+    window.update(|window, cx| {
+        let _ = window.draw(cx);
+    });
     let before = copied.borrow().len();
     for y in (38..330).step_by(8) {
         window.simulate_click(point(px(210.), px(y as f32)), plain);
