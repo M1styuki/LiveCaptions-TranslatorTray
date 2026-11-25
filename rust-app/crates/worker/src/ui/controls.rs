@@ -556,32 +556,41 @@ pub fn titlebar(
                 .child(title),
         )
         .children(child)
-        .child(icon_button(
+        .child(titlebar_button(
+            p,
             "minimize",
             "icons/minimize.svg",
             "最小化",
-            p,
-            false,
-            false,
-            true,
-            38.,
-            30.,
-            14.,
             move || minimize(0),
         ))
-        .child(icon_button(
+        .child(titlebar_button(
+            p,
             "close",
             "icons/close.svg",
             close_title,
-            p,
-            false,
-            false,
-            true,
-            38.,
-            30.,
-            14.,
             move || close(1),
         ))
+}
+
+fn titlebar_button(
+    p: Palette,
+    id: &'static str,
+    path: &'static str,
+    title: &'static str,
+    callback: impl Fn() + 'static,
+) -> Stateful<Div> {
+    tip(
+        button(id, p, false, false, true, false, 0., callback)
+            .w(px(38.))
+            .h(px(30.))
+            .flex_shrink_0()
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(icon(path, 14., p.foreground)),
+        title,
+        p,
+    )
 }
 
 pub fn grip() -> Div {

@@ -25,11 +25,12 @@ fn path(bounds: Bounds<Pixels>, radius: f32, mut path: PathBuilder) -> PathBuild
 }
 
 pub fn paint_fill(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &mut Window) {
-    if color.a > 0.
-        && bounds.size.width > px(0.)
-        && bounds.size.height > px(0.)
-        && let Ok(shape) = path(bounds, radius, PathBuilder::fill()).build()
-    {
+    if color.a == 0. || bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+        return;
+    }
+    if radius == 0. {
+        window.paint_quad(gpui::fill(bounds, color));
+    } else if let Ok(shape) = path(bounds, radius, PathBuilder::fill()).build() {
         window.paint_path(shape, color);
     }
 }

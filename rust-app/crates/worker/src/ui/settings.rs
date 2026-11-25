@@ -251,15 +251,18 @@ impl MainView {
             .child(
                 row()
                     .gap(px(14.))
-                    .child(label("API 调用间隔").flex_shrink_0())
-                    .child(slider)
                     .child(
-                        label(s.max_sync_interval.to_string())
-                            .w(px(26.))
-                            .text_right()
-                            .text_size(px(13.))
-                            .text_color(p.foreground.opacity(0.8)),
-                    ),
+                        row()
+                            .gap(px(8.))
+                            .flex_shrink_0()
+                            .child(label("API 调用间隔"))
+                            .child(
+                                label(format!("{} 次", s.max_sync_interval))
+                                    .min_w(px(32.))
+                                    .text_color(p.foreground.opacity(0.75)),
+                            ),
+                    )
+                    .child(slider),
             )
             .child(note("按字幕内容变化次数控制调用频率，数值越小越频繁。"));
 
