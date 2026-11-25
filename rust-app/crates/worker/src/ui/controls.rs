@@ -234,17 +234,17 @@ impl Palette {
         let alpha = |light, shade| rgba(if dark { shade } else { light }).into();
         Self {
             dark,
-            window_background: theme(0xfafafa, 0x272727),
-            titlebar: theme(0xf0f0f0, 0x202020),
-            pane_divider: theme(0xc6c6c6, 0x505050),
-            background: theme(0xfafafa, 0x1c1c1c),
+            window_background: theme(0xeeeeee, 0x202020),
+            titlebar: theme(0xe3e3e3, 0x191919),
+            pane_divider: theme(0xb8b8b8, 0x4a4a4a),
+            background: theme(0xf2f2f2, 0x181818),
             foreground: alpha(0x000000e6, 0xffffffff),
-            control: alpha(0xffffffb3, 0xffffff0f),
-            border: alpha(0x00000073, 0xffffff14),
-            accent: theme(0x005fb8, 0x60cdff),
+            control: alpha(0xffffff66, 0xffffff0e),
+            border: alpha(0x00000073, 0xffffff1e),
+            accent: theme(0x0057a8, 0x54bff3),
             accent_text: theme(0xffffff, 0x000000),
-            surface: alpha(0xffffffc4, 0xffffff09),
-            surface_border: alpha(0x00000010, 0xffffff12),
+            surface: alpha(0xffffff80, 0xffffff08),
+            surface_border: alpha(0x00000018, 0xffffff18),
         }
     }
 }
