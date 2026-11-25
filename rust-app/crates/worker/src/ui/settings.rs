@@ -257,7 +257,8 @@ impl MainView {
                         label(s.max_sync_interval.to_string())
                             .w(px(26.))
                             .text_right()
-                            .font_weight(FontWeight::SEMIBOLD),
+                            .text_size(px(13.))
+                            .text_color(p.foreground.opacity(0.8)),
                     ),
             )
             .child(note("按字幕内容变化次数控制调用频率，数值越小越频繁。"));
