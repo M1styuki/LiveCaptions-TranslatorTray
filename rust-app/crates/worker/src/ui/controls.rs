@@ -440,7 +440,6 @@ pub fn nav(
         .items_center()
         .gap(px(10.))
         .pl(px(if path.is_some() { 14. } else { 16. }))
-        .when(selected, |d| d.font_weight(gpui::FontWeight::SEMIBOLD))
         .child(
             canvas(
                 move |_, window, cx| {
