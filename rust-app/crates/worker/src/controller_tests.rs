@@ -1,4 +1,5 @@
 //! Real controller and isolated data with GPUI’s headless platform.
+#![cfg_attr(not(debug_assertions), allow(dead_code, unused_imports))]
 use crate::{MainWindow, controller::Controller, data::Data, ui_bridge::Bridge};
 use captions_core::settings::Screen;
 use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, point, px, size};
@@ -131,6 +132,8 @@ fn center(
         .center()
 }
 
+// gpui-pre 0.3.14 only records debug_selector / debug_bounds when debug_assertions is enabled.
+#[cfg(debug_assertions)]
 #[test]
 fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure() {
     let jobs = TestAppContext::single();
@@ -699,6 +702,8 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
     fs::remove_dir_all(actual).unwrap();
 }
 
+// gpui-pre 0.3.14 only records debug_selector / debug_bounds when debug_assertions is enabled.
+#[cfg(debug_assertions)]
 #[test]
 fn settings_layout_across_window_sizes() {
     let jobs = TestAppContext::single();
@@ -1309,6 +1314,8 @@ fn interval_slider(ui: &MainWindow, window: &mut VisualTestContext) {
     assert_eq!(ui.get_max_sync_interval(), 7);
 }
 
+// gpui-pre 0.3.14 only records debug_selector / debug_bounds when debug_assertions is enabled.
+#[cfg(debug_assertions)]
 #[test]
 fn redesigned_ui_controls_and_delete_dialog_work() {
     let jobs = TestAppContext::single();
