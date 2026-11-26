@@ -62,6 +62,26 @@ pub fn paint_outline(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &
     }
 }
 
+pub fn paint_top_highlight(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &mut Window) {
+    if color.a <= 0. || bounds.size.width <= px(2.) || bounds.size.height <= px(2.) {
+        return;
+    }
+    if let Ok(shape) = path(
+        bounds.dilate(px(-0.5)),
+        (radius - 0.5).max(0.),
+        PathBuilder::stroke(px(1.)),
+    )
+    .build()
+    {
+        let sheen = gpui_kit::linear_gradient(
+            180.,
+            gpui_kit::linear_color_stop(color, 0.0),
+            gpui_kit::linear_color_stop(color.opacity(0.0), 0.20),
+        );
+        window.paint_path(shape, sheen);
+    }
+}
+
 pub fn layer(fill: Option<Hsla>, stroke: Option<Hsla>, radius: f32) -> AnyElement {
     canvas(
         |_, _, _| (),
@@ -81,9 +101,32 @@ pub fn layer(fill: Option<Hsla>, stroke: Option<Hsla>, radius: f32) -> AnyElemen
     .into_any_element()
 }
 
+pub fn highlight_layer(fill: Option<Hsla>, highlight: Option<Hsla>, radius: f32) -> AnyElement {
+    canvas(
+        |_, _, _| (),
+        move |bounds, _, window, _| {
+            if let Some(fill) = fill {
+                paint_fill(bounds, fill, radius, window);
+            }
+            if let Some(highlight) = highlight {
+                paint_top_highlight(bounds, highlight, radius, window);
+            }
+        },
+    )
+    .absolute()
+    .top_0()
+    .left_0()
+    .size_full()
+    .into_any_element()
+}
+
 pub trait ContinuousCorners: Styled + ParentElement + Sized {
     fn contour(self, fill: Option<Hsla>, stroke: Option<Hsla>, radius: f32) -> Self {
         self.child(layer(fill, stroke, radius))
+    }
+
+    fn contour_highlight(self, fill: Option<Hsla>, highlight: Option<Hsla>, radius: f32) -> Self {
+        self.child(highlight_layer(fill, highlight, radius))
     }
 }
 

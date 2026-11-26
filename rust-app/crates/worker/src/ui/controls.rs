@@ -364,6 +364,14 @@ pub fn navigation_row(
     }))
 }
 
+pub fn control_highlight(cx: &App) -> Hsla {
+    if cx.theme().is_dark() {
+        cx.theme().switch_thumb.opacity(0.14)
+    } else {
+        cx.theme().switch_thumb.opacity(0.85)
+    }
+}
+
 pub fn flat_button_variant(cx: &App) -> ButtonCustomVariant {
     ButtonCustomVariant::new(cx)
         .color(cx.theme().button)
@@ -544,7 +552,7 @@ pub fn contour_button(
         .justify_center()
         .items_center()
         .rounded(cx.theme().radius)
-        .contour(Some(cx.theme().button), None, radius)
+        .contour_highlight(Some(cx.theme().button), Some(control_highlight(cx)), radius)
         .focusable()
         .tab_stop(true)
         .role(Role::Button)
@@ -727,8 +735,8 @@ pub fn win11_switch(
     let outside = slot.clone();
 
     let transparent = cx.theme().transparent;
-    let off_border = cx.theme().muted_foreground.opacity(0.75);
-    let off_border_hover = cx.theme().foreground.opacity(0.65);
+    let off_border = cx.theme().foreground.opacity(0.62);
+    let off_border_hover = cx.theme().foreground.opacity(0.80);
     let off_fill_hover = cx.theme().accent;
     let off_fill_press = cx.theme().secondary_active;
     let on_fill = cx.theme().primary;
@@ -813,7 +821,7 @@ pub fn win11_switch(
                         bounds,
                         px(radius),
                         track_bg,
-                        px(1.15),
+                        px(1.0),
                         track_border,
                         BorderStyle::Solid,
                     ));
@@ -1147,7 +1155,7 @@ impl Dropdowns {
             .h_8()
             .flex_shrink_0()
             .rounded(cx.theme().radius)
-            .contour(Some(cx.theme().button), None, radius)
+            .contour_highlight(Some(cx.theme().button), Some(control_highlight(cx)), radius)
             .child(
                 canvas(
                     move |_, window, cx| {
@@ -1473,7 +1481,7 @@ pub fn number_stepper<T: 'static>(
         .pr_0p5()
         .flex_shrink_0()
         .rounded(cx.theme().radius)
-        .contour(Some(cx.theme().button), None, radius)
+        .contour_highlight(Some(cx.theme().button), Some(control_highlight(cx)), radius)
         .child(
             canvas(
                 move |_, window, cx| {
