@@ -5,7 +5,7 @@ use super::{
     Weak,
     controls::*,
     model::{HistoryItem, MainState, MainWindow},
-    motion::{entrance, pointer_feedback, smooth_spring},
+    motion::{SmoothScroll, entrance, pointer_feedback, smooth_spring},
     runtime,
     shape::{ContinuousCorners as _, paint_fill},
     theme::sync_theme,
@@ -34,6 +34,7 @@ pub(super) struct MainView {
     fields: Fields,
     dropdowns: Dropdowns,
     scroll: ScrollHandle,
+    smooth_scroll: SmoothScroll,
     last_page: Option<i32>,
     applied_theme: Option<(bool, bool)>,
     delete_focus: Option<(FocusHandle, FocusHandle)>,
@@ -109,6 +110,7 @@ impl Render for MainView {
             self.fields.clear();
             self.dropdowns.close();
             self.scroll.set_offset(point(px(0.), px(0.)));
+            self.smooth_scroll.reset();
         }
 
         let content = match s.page {
@@ -195,7 +197,6 @@ impl Render for MainView {
         let mut layout = v_flex()
             .size_full()
             .relative()
-            .bg(cx.theme().background)
             .text_sm()
             .text_color(cx.theme().foreground)
             .child(titlebar(
@@ -205,7 +206,6 @@ impl Render for MainView {
                 move |action| title_ui.invoke_window_action(action),
                 cx,
             ))
-            .child(hairline(cx))
             .child(
                 h_flex()
                     .items_stretch()
@@ -250,8 +250,6 @@ fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
         .h_full()
         .flex_shrink_0()
         .bg(cx.theme().sidebar)
-        .border_r_1()
-        .border_color(cx.theme().sidebar_border)
         .p_1p5()
         .gap_1()
         .child(
@@ -503,7 +501,12 @@ impl MainView {
             );
         }
 
-        scroller("captions-scroll", &self.scroll, content)
+        scroller(
+            "captions-scroll",
+            &self.scroll,
+            &self.smooth_scroll,
+            content,
+        )
     }
 
     fn history(
@@ -747,6 +750,7 @@ impl MainView {
                         scroller(
                             "history-scroll",
                             &self.scroll,
+                            &self.smooth_scroll,
                             v_flex().children(s.history_rows.iter().enumerate().map(
                                 |(i, line)| {
                                     v_flex()

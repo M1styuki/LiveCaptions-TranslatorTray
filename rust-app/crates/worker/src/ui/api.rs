@@ -2,7 +2,7 @@ use super::{
     Weak,
     controls::*,
     model::{ApiState, ApiWindow},
-    motion::entrance,
+    motion::{SmoothScroll, entrance},
     runtime,
     theme::sync_theme,
 };
@@ -25,6 +25,8 @@ pub(super) struct ApiView {
     dropdowns: Dropdowns,
     scroll: ScrollHandle,
     nav_scroll: ScrollHandle,
+    smooth_scroll: SmoothScroll,
+    nav_smooth_scroll: SmoothScroll,
     last_editor: Option<(i32, i32)>,
     applied_theme: Option<(bool, bool)>,
 }
@@ -102,6 +104,7 @@ impl Render for ApiView {
             self.dropdowns.close();
             if previous.map(|previous| previous.0) != Some(editor.0) {
                 self.scroll.set_offset(point(px(0.), px(0.)));
+                self.smooth_scroll.reset();
             }
         }
 
@@ -142,11 +145,10 @@ impl Render for ApiView {
             .h_full()
             .flex_shrink_0()
             .bg(cx.theme().sidebar)
-            .border_r_1()
-            .border_color(cx.theme().sidebar_border)
             .child(scroller(
                 "api-navigation",
                 &self.nav_scroll,
+                &self.nav_smooth_scroll,
                 v_flex()
                     .p_2p5()
                     .gap_1()
@@ -233,7 +235,6 @@ impl Render for ApiView {
         v_flex()
             .size_full()
             .relative()
-            .bg(cx.theme().background)
             .text_sm()
             .text_color(cx.theme().foreground)
             .child(titlebar(
@@ -243,7 +244,6 @@ impl Render for ApiView {
                 move |action| title_ui.invoke_window_action(action),
                 cx,
             ))
-            .child(hairline(cx))
             .child(
                 h_flex()
                     .items_stretch()
@@ -256,7 +256,7 @@ impl Render for ApiView {
                             "api-section-{}-{}",
                             s.section, s.active_editor.config_index
                         )),
-                        scroller("api-scroll", &self.scroll, content),
+                        scroller("api-scroll", &self.scroll, &self.smooth_scroll, content),
                     ))),
             )
             .child(grip())

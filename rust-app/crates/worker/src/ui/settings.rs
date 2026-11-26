@@ -4,7 +4,6 @@ use gpui_kit::component::{
     alert::Alert,
     h_flex,
     slider::{Slider, SliderEvent, SliderState},
-    switch::Switch,
     v_flex,
 };
 use gpui_kit::{
@@ -249,19 +248,21 @@ impl MainView {
                     .child(setting_row(
                         "上下文翻译",
                         "向翻译服务提供前文；模型服务会使用更多 token。",
-                        Switch::new("context-aware")
-                            .checked(aware)
-                            .accessibility_label("上下文翻译")
-                            .tooltip(if aware {
+                        win11_switch(
+                            "context-aware",
+                            aware,
+                            if aware {
                                 "上下文翻译：已开启"
                             } else {
                                 "上下文翻译：已关闭"
-                            })
-                            .on_change(move |next, _, _| {
-                                let next = *next;
+                            },
+                            "上下文翻译",
+                            cx,
+                            move |next| {
                                 let config = config.clone();
                                 runtime::dispatch(move || set(&config, "ContextAware", next));
-                            }),
+                            },
+                        ),
                         cx,
                     ))
                     .when_some(contexts_stepper, |card, stepper| {
@@ -289,58 +290,65 @@ impl MainView {
                     .child(setting_row(
                         "显示系统字幕",
                         "在系统字幕中修改源语言；隐藏窗口后仍可识别。",
-                        Switch::new("system-captions")
-                            .checked(!hidden)
-                            .accessibility_label("显示系统字幕")
-                            .tooltip(if !hidden {
+                        win11_switch(
+                            "system-captions",
+                            !hidden,
+                            if !hidden {
                                 "显示系统字幕：已开启"
                             } else {
                                 "显示系统字幕：已关闭"
-                            })
-                            .on_change(move |_, _, _| {
+                            },
+                            "显示系统字幕",
+                            cx,
+                            move |_| {
                                 let visibility = visibility.clone();
                                 runtime::dispatch(move || {
                                     visibility.invoke_captions_visibility_changed(!hidden)
                                 });
-                            }),
+                            },
+                        ),
                         cx,
                     ))
                     .child(hairline(cx))
                     .child(setting_row(
                         "显示翻译延迟",
                         "在字幕页显示最近一次翻译请求的耗时（毫秒）。",
-                        Switch::new("latency")
-                            .checked(latency_checked)
-                            .accessibility_label("显示翻译延迟")
-                            .tooltip(if latency_checked {
+                        win11_switch(
+                            "latency",
+                            latency_checked,
+                            if latency_checked {
                                 "显示翻译延迟：已开启"
                             } else {
                                 "显示翻译延迟：已关闭"
-                            })
-                            .on_change(move |next, _, _| {
-                                let next = *next;
+                            },
+                            "显示翻译延迟",
+                            cx,
+                            move |next| {
                                 let latency = latency.clone();
                                 runtime::dispatch(move || set(&latency, "LatencyShow", next));
-                            }),
+                            },
+                        ),
                         cx,
                     ))
                     .child(hairline(cx))
                     .child(setting_row(
                         "开机自启动",
                         "登录 Windows 后驻留托盘；字幕需手动开启。",
-                        Switch::new("autostart")
-                            .checked(checked)
-                            .accessibility_label("开机自启动")
-                            .tooltip(if checked {
+                        win11_switch(
+                            "autostart",
+                            checked,
+                            if checked {
                                 "开机自启动：已开启"
                             } else {
                                 "开机自启动：已关闭"
-                            })
-                            .on_change(move |next, _, _| {
-                                let next = *next;
+                            },
+                            "开机自启动",
+                            cx,
+                            move |next| {
                                 let autostart = autostart.clone();
                                 runtime::dispatch(move || autostart.invoke_autostart_changed(next));
-                            }),
+                            },
+                        ),
                         cx,
                     )),
             )
@@ -351,6 +359,7 @@ impl MainView {
         scroller(
             "settings-scroll",
             &self.scroll,
+            &self.smooth_scroll,
             v_flex()
                 .w_full()
                 .max_w(rems(52.))

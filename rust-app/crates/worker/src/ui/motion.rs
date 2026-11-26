@@ -2,10 +2,14 @@ use gpui_kit::base::{Transition, TransitionId, spring, transition};
 use gpui_kit::component::{ActiveTheme as _, v_flex};
 use gpui_kit::{
     Animation, AnimationExt as _, App, Div, ElementId, Entity, Hsla, InteractiveElement as _,
-    IntoElement, MouseButton, ParentElement as _, Pixels, Stateful,
-    StatefulInteractiveElement as _, Styled as _, Window, canvas, div, ease_out_quint, px,
+    IntoElement, MouseButton, ParentElement as _, Pixels, ScrollEvent, ScrollHandle, Stateful,
+    StatefulInteractiveElement as _, Styled as _, Window, canvas, div, ease_out_quint, point, px,
 };
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 pub fn smooth_value(
     id: impl Into<TransitionId>,
@@ -130,4 +134,139 @@ pub fn entrance(id: impl Into<ElementId>, content: impl IntoElement) -> impl Int
                 |div, t| div.opacity(t).top(px(6. * (1. - t))),
             ),
     )
+}
+
+#[derive(Default)]
+struct SmoothScrollState {
+    target_y: f32,
+    animating: bool,
+    last_frame: Option<Instant>,
+}
+
+/// Smooth exponential ease-out mouse-wheel scroll controller that preserves
+/// 1:1 native scrolling for precision touchpads and scrollbar thumb drags.
+#[derive(Clone, Default)]
+pub struct SmoothScroll {
+    state: Rc<RefCell<SmoothScrollState>>,
+}
+
+impl SmoothScroll {
+    pub fn reset(&self) {
+        let mut state = self.state.borrow_mut();
+        state.target_y = 0.;
+        state.animating = false;
+        state.last_frame = None;
+    }
+
+    pub fn wrap(&self, scroll: ScrollHandle, content: Div) -> Div {
+        let state = self.state.clone();
+        v_flex()
+            .w_full()
+            .flex_shrink_0()
+            .on_scroll(move |event: &ScrollEvent, window, cx| {
+                if event.delta.precise() {
+                    return;
+                }
+                let max_y = f32::from(scroll.max_offset().y).max(0.);
+                if max_y <= 0. {
+                    return;
+                }
+                let line_height = (window.line_height() * 1.4).max(px(28.));
+                let delta_y = f32::from(event.delta.pixel_delta(line_height).y);
+                if delta_y.abs() < f32::EPSILON {
+                    return;
+                }
+                cx.stop_propagation();
+
+                let current_y = f32::from(scroll.offset().y);
+                let should_start = {
+                    let mut s = state.borrow_mut();
+                    if !s.animating {
+                        s.target_y = current_y;
+                    }
+                    s.target_y = (s.target_y + delta_y).clamp(-max_y, 0.);
+                    if s.animating {
+                        false
+                    } else {
+                        s.animating = true;
+                        s.last_frame = Some(Instant::now());
+                        true
+                    }
+                };
+                if should_start {
+                    schedule_smooth_scroll_frame(state.clone(), scroll.clone(), window);
+                }
+            })
+            .child(content)
+    }
+}
+
+fn schedule_smooth_scroll_frame(
+    state: Rc<RefCell<SmoothScrollState>>,
+    scroll: ScrollHandle,
+    window: &Window,
+) {
+    window.on_next_frame(move |window, _| {
+        let now = Instant::now();
+        let max_y = f32::from(scroll.max_offset().y).max(0.);
+        let current_x = scroll.offset().x;
+        let current_y = f32::from(scroll.offset().y);
+
+        let (next_y, keep_going) = {
+            let mut s = state.borrow_mut();
+            if !s.animating {
+                return;
+            }
+            s.target_y = s.target_y.clamp(-max_y, 0.);
+            let dt = s
+                .last_frame
+                .replace(now)
+                .map_or(1. / 60., |prev| now.duration_since(prev).as_secs_f32())
+                .clamp(0.001, 0.05);
+            let (next_y, settled) = smooth_scroll_step(current_y, s.target_y, dt);
+            if settled {
+                s.animating = false;
+                s.last_frame = None;
+            }
+            (next_y, !settled)
+        };
+
+        scroll.set_offset(point(current_x, px(next_y)));
+        window.refresh();
+        if keep_going {
+            schedule_smooth_scroll_frame(state, scroll, window);
+        }
+    });
+}
+
+fn smooth_scroll_step(current: f32, target: f32, dt: f32) -> (f32, bool) {
+    let diff = target - current;
+    if diff.abs() < 0.5 {
+        return (target, true);
+    }
+    let alpha = 1. - (-18. * dt).exp();
+    (current + diff * alpha, false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::smooth_scroll_step;
+
+    #[test]
+    fn smooth_scroll_step_eases_toward_target_and_settles() {
+        let mut y = 0.;
+        let target = -180.;
+        let mut settled = false;
+        for _ in 0..60 {
+            let (next, done) = smooth_scroll_step(y, target, 1. / 60.);
+            assert!(next <= y && next >= target);
+            y = next;
+            if done {
+                settled = true;
+                break;
+            }
+        }
+        assert!(settled);
+        assert_eq!(y, target);
+    }
 }

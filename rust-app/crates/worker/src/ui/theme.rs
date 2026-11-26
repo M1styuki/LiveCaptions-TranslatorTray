@@ -36,14 +36,15 @@ pub fn sync_theme(
     }
 
     Theme::update(cx, |theme| {
+        theme.font_family = "Microsoft YaHei UI".into();
         theme.font_size = px(16.);
         theme.radius = px(6.);
         theme.radius_lg = px(10.);
         theme.shadow = true;
-        theme.focus_ring = true;
+        theme.focus_ring = false;
 
         if dark {
-            theme.colors.background = if has_mica { a(0x202020c8) } else { c(0x202020) };
+            theme.colors.background = if has_mica { a(0x00000000) } else { c(0x202020) };
             theme.colors.foreground = c(0xf5f5f5);
             theme.colors.muted = c(0x2d2d2d);
             theme.colors.muted_foreground = c(0xa3a3a3);
@@ -54,14 +55,14 @@ pub fn sync_theme(
             theme.colors.popover = c(0x2c2c2c);
             theme.colors.popover_foreground = c(0xf5f5f5);
 
-            theme.colors.sidebar = if has_mica { a(0x20202040) } else { c(0x1c1c1c) };
+            theme.colors.sidebar = if has_mica { a(0x00000000) } else { c(0x1c1c1c) };
             theme.colors.sidebar_foreground = c(0xf5f5f5);
             theme.colors.sidebar_accent = a(0xffffff12);
             theme.colors.sidebar_accent_foreground = c(0xffffff);
             theme.colors.sidebar_border = a(0xffffff14);
 
-            theme.colors.title_bar = if has_mica { a(0x20202028) } else { c(0x1c1c1c) };
-            theme.colors.title_bar_border = a(0xffffff12);
+            theme.colors.title_bar = if has_mica { a(0x00000000) } else { c(0x1c1c1c) };
+            theme.colors.title_bar_border = a(0x00000000);
 
             theme.colors.border = a(0xffffff16);
             theme.colors.input = a(0xffffff26);
@@ -120,25 +121,25 @@ pub fn sync_theme(
             theme.colors.scrollbar_thumb = a(0xffffff38);
             theme.colors.scrollbar_thumb_hover = a(0xffffff58);
         } else {
-            theme.colors.background = if has_mica { a(0xf3f3f3c8) } else { c(0xf3f3f3) };
+            theme.colors.background = if has_mica { a(0x00000000) } else { c(0xf3f3f3) };
             theme.colors.foreground = c(0x1a1a1a);
             theme.colors.muted = c(0xeaeaea);
             theme.colors.muted_foreground = c(0x5c5c5c);
 
-            theme.colors.group_box = if has_mica { a(0xffffffdc) } else { c(0xffffff) };
+            theme.colors.group_box = if has_mica { a(0xffffffb8) } else { c(0xffffff) };
             theme.colors.group_box_foreground = c(0x1a1a1a);
 
             theme.colors.popover = c(0xf9f9f9);
             theme.colors.popover_foreground = c(0x1a1a1a);
 
-            theme.colors.sidebar = if has_mica { a(0xf3f3f348) } else { c(0xeeeeee) };
+            theme.colors.sidebar = if has_mica { a(0x00000000) } else { c(0xeeeeee) };
             theme.colors.sidebar_foreground = c(0x1a1a1a);
             theme.colors.sidebar_accent = a(0x0000000e);
             theme.colors.sidebar_accent_foreground = c(0x1a1a1a);
             theme.colors.sidebar_border = a(0x00000014);
 
-            theme.colors.title_bar = if has_mica { a(0xf3f3f328) } else { c(0xeeeeee) };
-            theme.colors.title_bar_border = a(0x00000012);
+            theme.colors.title_bar = if has_mica { a(0x00000000) } else { c(0xeeeeee) };
+            theme.colors.title_bar_border = a(0x00000000);
 
             theme.colors.border = a(0x00000016);
             theme.colors.input = a(0x00000024);
