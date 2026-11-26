@@ -43,11 +43,11 @@ pub fn run(
     let pipe = windows_platform::pipe_client::connect(&pipe, host_pid)?;
     let result = Rc::new(RefCell::new(None));
     let outcome = result.clone();
-    gpui::Application::new()
+    gpui_kit::application()
         .with_assets(ui::controls::Assets)
         .run(move |cx| {
-            gpui_component::init(cx);
-            ui::controls::sync_theme(None, cx);
+            gpui_kit::init(cx);
+            ui::theme::sync_theme(None, None, false, cx);
             ui::runtime::start(cx);
             ui::runtime::dispatch(move || {
                 let setup = setup(pipe, data_dir);

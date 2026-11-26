@@ -1,5 +1,5 @@
 use super::runtime;
-use gpui::{
+use gpui_kit::{
     AnyWindowHandle, AppContext, Bounds, Pixels, Render, Size, TitlebarOptions, Window,
     WindowAppearance, WindowBackgroundAppearance, WindowBounds, WindowDecorations, WindowOptions,
     point, px, size,
@@ -73,7 +73,7 @@ impl WindowState {
         if self.visible.get()
             && let Some(app) = runtime::app()
         {
-            let _ = app.refresh();
+            app.refresh();
         }
     }
     #[cfg(test)]
@@ -99,8 +99,8 @@ impl WindowState {
         &self,
         title: &'static str,
         initial: (f32, f32),
-        create: impl FnOnce(&mut Window, &mut gpui::Context<V>) -> V + 'static,
-    ) -> gpui::Result<()> {
+        create: impl FnOnce(&mut Window, &mut gpui_kit::Context<V>) -> V + 'static,
+    ) -> gpui_kit::Result<()> {
         let Some(app) = runtime::app() else {
             self.visible.set(true);
             return Ok(());
@@ -117,7 +117,7 @@ impl WindowState {
                         appears_transparent: true,
                         ..Default::default()
                     }),
-                    window_background: WindowBackgroundAppearance::Opaque,
+                    window_background: WindowBackgroundAppearance::MicaBackdrop,
                     window_decorations: Some(WindowDecorations::Client),
                     show: false,
                     focus: false,
@@ -125,7 +125,7 @@ impl WindowState {
                 },
                 |window, cx| {
                     let view = cx.new(|cx| create(window, cx));
-                    cx.new(|cx| gpui_component::Root::new(view, window, cx))
+                    cx.new(|cx| gpui_kit::component::Root::new(view, window, cx))
                 },
             )?;
             #[cfg(test)]

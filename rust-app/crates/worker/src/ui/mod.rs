@@ -2,10 +2,11 @@ mod api;
 pub(crate) mod controls;
 mod main;
 mod model;
-mod motion;
+pub(crate) mod motion;
 mod native;
 pub(crate) mod runtime;
-mod shape;
+pub(crate) mod shape;
+pub(crate) mod theme;
 
 pub(crate) use model::{ApiEditor, ApiWindow, HistoryItem, MainWindow};
 pub(crate) use native::WindowState;

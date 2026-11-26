@@ -1,7 +1,7 @@
 //! Real controller and isolated data with GPUI’s headless platform.
 use crate::{MainWindow, controller::Controller, data::Data, ui_bridge::Bridge};
 use captions_core::settings::Screen;
-use gpui::{Modifiers, MouseButton, TestAppContext, VisualTestContext, point, px, size};
+use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, point, px, size};
 use std::{
     fs,
     rc::Rc,
@@ -117,11 +117,11 @@ fn redraw(window: &mut VisualTestContext, width: f32, height: f32) {
     window.simulate_resize(size(px(width), px(height)));
     window.run_until_parked();
     window.update(|window, cx| {
-        let _ = window.draw(cx);
+        window.draw(cx).clear(cx);
     });
 }
 
-fn center(window: &mut VisualTestContext, selector: &'static str) -> gpui::Point<gpui::Pixels> {
+fn center(window: &mut VisualTestContext, selector: &'static str) -> gpui_kit::Point<gpui_kit::Pixels> {
     window
         .debug_bounds(selector)
         .unwrap_or_else(|| panic!("missing UI element {selector}"))
@@ -132,7 +132,7 @@ fn center(window: &mut VisualTestContext, selector: &'static str) -> gpui::Point
 fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure() {
     let jobs = TestAppContext::single();
     jobs.update(|cx| {
-        gpui_component::init(cx);
+        gpui_kit::init(cx);
         crate::ui::runtime::start(cx);
     });
     let ui = MainWindow::new().unwrap();
@@ -700,8 +700,8 @@ fn actual_controller_saves_last_edit_and_keeps_recovery_open_after_write_failure
 fn settings_layout_across_window_sizes() {
     let jobs = TestAppContext::single();
     jobs.update(|cx| {
-        gpui_component::init(cx);
-        crate::ui::runtime::start(cx);
+        gpui_kit::init(cx);
+        crate::ui::runtime::start_ui_only(cx);
     });
     let ui = MainWindow::new().unwrap();
     ui.set_data_state(2);
@@ -731,9 +731,9 @@ fn settings_layout_across_window_sizes() {
     let service = window.debug_bounds("service").unwrap();
     let position = point(field.left() - px(30.), service.center().y);
     window.simulate_mouse_move(position, None, Modifiers::none());
-    window.simulate_event(gpui::ScrollWheelEvent {
+    window.simulate_event(gpui_kit::ScrollEvent {
         position,
-        delta: gpui::ScrollDelta::Pixels(point(px(0.), px(-120.))),
+        delta: gpui_kit::ScrollDelta::Pixels(point(px(0.), px(-120.))),
         ..Default::default()
     });
     redraw(&mut window, 900., 360.);
@@ -744,9 +744,9 @@ fn settings_layout_across_window_sizes() {
     );
     assert!(visible.center().y < px(360.) && visible.center().y > px(30.));
     window.simulate_mouse_move(visible.center(), None, Modifiers::none());
-    window.simulate_event(gpui::ScrollWheelEvent {
+    window.simulate_event(gpui_kit::ScrollEvent {
         position: visible.center(),
-        delta: gpui::ScrollDelta::Pixels(point(px(0.), px(60.))),
+        delta: gpui_kit::ScrollDelta::Pixels(point(px(0.), px(60.))),
         ..Default::default()
     });
     redraw(&mut window, 900., 360.);
@@ -1304,4 +1304,61 @@ fn interval_slider(ui: &MainWindow, window: &mut VisualTestContext) {
     );
     window.simulate_click(position, Modifiers::none());
     assert_eq!(ui.get_max_sync_interval(), 7);
+}
+
+#[test]
+fn redesigned_ui_controls_and_delete_dialog_work() {
+    let jobs = TestAppContext::single();
+    jobs.update(|cx| {
+        gpui_kit::init(cx);
+        crate::ui::runtime::start_ui_only(cx);
+    });
+    let ui = MainWindow::new().unwrap();
+    ui.set_data_state(2);
+    ui.set_page(1);
+    ui.show().unwrap();
+    let mut window = VisualTestContext::from_window(ui.window().test_handle(), &jobs);
+
+    original_number_input(&ui, &mut window);
+    translation_dropdown(&ui, &mut window);
+    interval_slider(&ui, &mut window);
+    assert!(
+        window.debug_bounds("configure-api").is_some(),
+        "Settings drill-in navigation row for API config must be visible"
+    );
+
+    let actions = Rc::new(std::cell::RefCell::new(Vec::<i32>::new()));
+    let recorded = actions.clone();
+    let ui_for_cb = ui.clone();
+    ui.on_delete_action(move |action| {
+        recorded.borrow_mut().push(action);
+        if action == 1 || action == 2 {
+            ui_for_cb.set_delete_confirm(false);
+        }
+    });
+
+    ui.set_page(2);
+    redraw(&mut window, 900., 600.);
+    let history_size = window.debug_bounds("history-size").unwrap();
+    assert!(
+        history_size.size.width >= px(100.),
+        "100/页 dropdown must be wide enough: {history_size:?}"
+    );
+    ui.set_delete_confirm(true);
+    redraw(&mut window, 800., 420.);
+    window.simulate_keystrokes("enter");
+    assert_eq!(actions.borrow().last().copied(), Some(1));
+    assert!(!ui.get_delete_confirm());
+
+    ui.set_delete_confirm(true);
+    redraw(&mut window, 800., 420.);
+    window.simulate_keystrokes("escape");
+    assert_eq!(actions.borrow().last().copied(), Some(1));
+    assert!(!ui.get_delete_confirm());
+
+    ui.set_delete_confirm(true);
+    redraw(&mut window, 800., 420.);
+    window.simulate_keystrokes("tab enter");
+    assert_eq!(actions.borrow().last().copied(), Some(2));
+    assert!(!ui.get_delete_confirm());
 }

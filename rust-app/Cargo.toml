@@ -21,9 +21,8 @@ storage = { path = "crates/storage" }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "net", "macros"] }
 reqwest = { version = "0.12", default-features = false, features = ["native-tls", "json", "system-proxy"] }
 
-gpui = "=0.2.2"
+gpui-kit = { version = "0.11", default-features = false, features = ["component", "assets"] }
 paste = "1"
-gpui-component = "=0.5.1"
 futures = "0.3"
 raw-window-handle = "0.6"
 

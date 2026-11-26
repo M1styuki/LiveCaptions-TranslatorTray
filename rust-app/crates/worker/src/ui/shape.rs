@@ -1,6 +1,6 @@
-use gpui::{
+use gpui_kit::{
     AnyElement, Bounds, Hsla, IntoElement, ParentElement, PathBuilder, Pixels, Styled, Window,
-    canvas, point, px,
+    canvas, fill, point, px,
 };
 
 fn path(bounds: Bounds<Pixels>, radius: f32, mut path: PathBuilder) -> PathBuilder {
@@ -28,8 +28,8 @@ pub fn paint_fill(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &mut
     if color.a == 0. || bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
         return;
     }
-    if radius == 0. {
-        window.paint_quad(gpui::fill(bounds, color));
+    if radius <= 0. {
+        window.paint_quad(fill(bounds, color));
     } else if let Ok(shape) = path(bounds, radius, PathBuilder::fill()).build() {
         window.paint_path(shape, color);
     }
@@ -41,7 +41,7 @@ pub fn paint_outline(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &
         && bounds.size.height > px(1.)
         && let Ok(shape) = path(
             bounds.dilate(px(-0.5)),
-            radius - 0.5,
+            (radius - 0.5).max(0.),
             PathBuilder::stroke(px(1.)),
         )
         .build()
@@ -74,4 +74,5 @@ pub trait ContinuousCorners: Styled + ParentElement + Sized {
         self.child(layer(fill, stroke, radius))
     }
 }
+
 impl<T: Styled + ParentElement> ContinuousCorners for T {}

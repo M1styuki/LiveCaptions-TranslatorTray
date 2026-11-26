@@ -1,5 +1,5 @@
 use super::*;
-use gpui::{ScrollDelta, ScrollWheelEvent};
+use gpui_kit::{ScrollDelta, ScrollEvent};
 
 pub(super) fn run(
     root: &std::path::Path,
@@ -52,7 +52,7 @@ pub(super) fn run(
     };
     let scroll = |window: &mut VisualTestContext, position, delta, modifiers| {
         window.simulate_mouse_move(position, None, modifiers);
-        window.simulate_event(ScrollWheelEvent {
+        window.simulate_event(ScrollEvent {
             position,
             delta: ScrollDelta::Pixels(point(px(0.), px(delta))),
             modifiers,
@@ -116,7 +116,7 @@ pub(super) fn run(
     // into view and use the visible portion as a real pointer target.
     scroll(window, point(px(210.), px(70.)), -10000., plain);
     window.update(|window, cx| {
-        let _ = window.draw(cx);
+        window.draw(cx).clear(cx);
     });
     let bounds = window.debug_bounds("translation").unwrap();
     let top = bounds.top().max(px(31.));
@@ -146,7 +146,7 @@ pub(super) fn run(
     redraw(window, 900., 360.);
     scroll(window, point(px(210.), px(70.)), 10000., plain);
     window.update(|window, cx| {
-        let _ = window.draw(cx);
+        window.draw(cx).clear(cx);
     });
     let before = copied.borrow().len();
     for y in (38..330).step_by(8) {

@@ -2,9 +2,21 @@ use super::{
     Weak,
     controls::*,
     model::{ApiState, ApiWindow},
+    motion::entrance,
     runtime,
+    theme::sync_theme,
 };
-use gpui::{Context, Div, FontWeight, Render, ScrollHandle, Window, div, point, prelude::*, px};
+use gpui_kit::component::{
+    ActiveTheme as _, Disableable as _, Sizable as _,
+    alert::Alert,
+    button::{Button, ButtonVariants as _},
+    h_flex, v_flex,
+};
+use gpui_kit::{
+    Context, Div, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, Render,
+    ScrollHandle, SharedString, Styled as _, Window, div, point, prelude::FluentBuilder as _, px,
+    rems,
+};
 
 #[derive(Default)]
 pub(super) struct ApiView {
@@ -14,17 +26,21 @@ pub(super) struct ApiView {
     scroll: ScrollHandle,
     nav_scroll: ScrollHandle,
     last_editor: Option<(i32, i32)>,
+    applied_theme: Option<(bool, bool)>,
 }
 
 impl ApiWindow {
     pub(crate) const INITIAL_SIZE: (f32, f32) = (950., 600.);
 
-    pub fn show(&self) -> gpui::Result<()> {
+    pub fn show(&self) -> gpui_kit::Result<()> {
         let ui = self.clone();
         self.window()
             .show("API 设置", Self::INITIAL_SIZE, move |window, cx| {
                 let weak = ui.as_weak();
-                ui.set_frame_dark(super::native::is_dark(window.appearance()));
+                let dark = super::native::is_dark(window.appearance());
+                ui.set_frame_dark(dark);
+                sync_theme(Some(window), Some(dark), ui.window().has_mica(), cx);
+
                 window.on_window_should_close(cx, move |_, _| {
                     let weak = weak.clone();
                     runtime::dispatch(move || {
@@ -35,8 +51,13 @@ impl ApiWindow {
                     false
                 });
                 cx.observe_window_appearance(window, |this: &mut ApiView, window, cx| {
-                    sync_theme(Some(window), cx);
                     let dark = super::native::is_dark(window.appearance());
+                    let has_mica = this
+                        .ui
+                        .upgrade()
+                        .is_some_and(|ui| ui.window().has_mica());
+                    sync_theme(Some(window), Some(dark), has_mica, cx);
+                    this.applied_theme = Some((dark, has_mica));
                     let weak = this.ui.clone();
                     runtime::dispatch(move || {
                         if let Some(ui) = weak.upgrade() {
@@ -48,12 +69,13 @@ impl ApiWindow {
                 .detach();
                 ApiView {
                     ui: ui.as_weak(),
+                    applied_theme: Some((dark, ui.window().has_mica())),
                     ..Default::default()
                 }
             })
     }
 
-    pub fn hide(&self) -> gpui::Result<()> {
+    pub fn hide(&self) -> gpui_kit::Result<()> {
         self.window().hide(true);
         Ok(())
     }
@@ -70,7 +92,12 @@ impl Render for ApiView {
             return div();
         };
         let s = ui.state();
-        let p = Palette::for_window(s.frame_dark, ui.window().has_mica());
+        let theme_key = (s.frame_dark, ui.window().has_mica());
+        if self.applied_theme != Some(theme_key) {
+            self.applied_theme = Some(theme_key);
+            sync_theme(Some(window), Some(s.frame_dark), ui.window().has_mica(), cx);
+        }
+
         let editor = (s.section, s.active_editor.config_index);
         let previous = self.last_editor.replace(editor);
         if previous != Some(editor) {
@@ -80,6 +107,7 @@ impl Render for ApiView {
                 self.scroll.set_offset(point(px(0.), px(0.)));
             }
         }
+
         let navs = [
             "提示词",
             "Ollama",
@@ -93,28 +121,67 @@ impl Render for ApiView {
             "LibreTranslate",
         ];
         let sidebar_width = if window.viewport_size().width < px(640.) {
-            128.
+            rems(7.75)
         } else {
-            190.
+            rems(9.5)
         };
-        let sidebar = col()
-            .w(px(sidebar_width))
+
+        let nav_item = |index: i32, name: &'static str| {
+            let ui = ui.clone();
+            nav_item(
+                name,
+                name,
+                None,
+                false,
+                index == s.section,
+                true,
+                cx,
+                move || ui.invoke_section_changed(index),
+            )
+        };
+
+        let sidebar = v_flex()
+            .w(sidebar_width)
             .h_full()
             .flex_shrink_0()
+            .bg(cx.theme().sidebar)
+            .border_r_1()
+            .border_color(cx.theme().sidebar_border)
             .child(scroller(
                 "api-navigation",
                 &self.nav_scroll,
-                col()
-                    .p(px(12.))
-                    .gap(px(5.))
-                    .children(navs.into_iter().enumerate().map(|(index, name)| {
-                        let ui = ui.clone();
-                        let index = index as i32;
-                        nav(name, name, None, index == s.section, p, move || {
-                            ui.invoke_section_changed(index)
-                        })
-                    })),
+                v_flex()
+                    .p_2p5()
+                    .gap_1()
+                    .child(
+                        div()
+                            .px_2p5()
+                            .pt_1()
+                            .pb_0p5()
+                            .text_xs()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(cx.theme().muted_foreground)
+                            .child("通用"),
+                    )
+                    .child(nav_item(0, navs[0]))
+                    .child(
+                        div()
+                            .px_2p5()
+                            .pt_3()
+                            .pb_0p5()
+                            .text_xs()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(cx.theme().muted_foreground)
+                            .child("翻译服务"),
+                    )
+                    .children(
+                        navs[1..]
+                            .iter()
+                            .enumerate()
+                            .map(|(i, name)| nav_item((i + 1) as i32, name)),
+                    ),
             ));
+
         let title = if s.section == 0 {
             "提示词"
         } else if s.service == "OpenAI" {
@@ -122,49 +189,79 @@ impl Render for ApiView {
         } else {
             &s.service
         };
-        let mut content = col()
-            .p(px(24.))
-            .gap(px(16.))
-            .child(heading(title.to_owned()))
-            .child(note(if s.section == 0 {
-                "自定义翻译要求，适用于模型翻译服务。"
-            } else {
-                "修改后自动保存；配置此服务不会切换当前翻译服务。"
-            }))
-            .children((!s.message.is_empty()).then(|| label(s.message.clone())));
+
+        let mut content = v_flex()
+            .w_full()
+            .max_w(rems(42.))
+            .p_6()
+            .gap_4()
+            .child(
+                v_flex()
+                    .gap_1()
+                    .child(div().text_xl().font_weight(FontWeight::SEMIBOLD).child(title.to_owned()))
+                    .child(
+                        div()
+                            .text_sm()
+                            .text_color(cx.theme().muted_foreground)
+                            .child(if s.section == 0 {
+                                "自定义翻译要求，适用于模型翻译服务。"
+                            } else {
+                                "修改后自动保存；配置此服务不会切换当前翻译服务。"
+                            }),
+                    ),
+            )
+            .when(!s.message.is_empty(), |d| {
+                let err = s.message.contains("失败")
+                    || s.message.contains("无效")
+                    || s.message.contains("仍保留");
+                d.child(if err {
+                    Alert::warning("api-message", s.message.clone()).small()
+                } else {
+                    Alert::info("api-message", s.message.clone()).small()
+                })
+            });
+
         if s.section == 0 {
-            content = content.child(self.prompt(&s, &ui, p, window, cx));
+            content = content.child(self.prompt(&s, &ui, window, cx));
         } else if (s.section as usize) <= s.editors.row_count() {
-            content = content.child(self.editor(&s, &ui, p, window, cx));
+            content = content.child(self.editor(&s, &ui, window, cx));
         }
+
         let title_ui = ui.clone();
-        col()
+        v_flex()
             .size_full()
             .relative()
-            .font_family(s.ui_font_family)
-            .text_size(px(14.))
-            .line_height(px(20.))
-            .text_color(p.foreground)
+            .bg(cx.theme().background)
+            .text_sm()
+            .text_color(cx.theme().foreground)
             .child(titlebar(
-                p,
                 "翻译服务设置",
                 None,
                 "关闭 API 设置",
                 move |action| title_ui.invoke_window_action(action),
+                cx,
             ))
+            .child(hairline(cx))
             .child(
-                row()
-                    .items_start()
-                    .bg(p.window_background)
+                h_flex()
+                    .items_stretch()
                     .flex_1()
                     .min_h_0()
                     .w_full()
                     .child(sidebar)
-                    .child(div().w(px(1.)).h_full().flex_shrink_0().bg(p.pane_divider))
-                    .child(col().flex_1().h_full().min_w_0().child(entrance(
-                        ("api-page", s.section as usize),
-                        scroller("api-scroll", &self.scroll, content),
-                    ))),
+                    .child(
+                        v_flex()
+                            .flex_1()
+                            .h_full()
+                            .min_w_0()
+                            .child(entrance(
+                                SharedString::from(format!(
+                                    "api-section-{}-{}",
+                                    s.section, s.active_editor.config_index
+                                )),
+                                scroller("api-scroll", &self.scroll, content),
+                            )),
+                    ),
             )
             .child(grip())
     }
@@ -175,18 +272,14 @@ impl ApiView {
         &mut self,
         s: &ApiState,
         ui: &ApiWindow,
-        p: Palette,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Div {
         let ui = ui.clone();
-        let (editor, focus) = self.fields.input(
+        let (editor, _) = self.fields.textarea(
             "prompt",
             &s.prompt,
-            "",
-            true,
-            false,
-            true,
+            "翻译提示词；保留目标语言占位符 {0}",
             window,
             cx,
             move |event| {
@@ -195,39 +288,22 @@ impl ApiView {
                 }
             },
         );
-        let chars_per_line =
-            ((f32::from(window.viewport_size().width) - 302.) / 9.).max(20.) as usize;
-        let lines = s
-            .prompt
-            .lines()
-            .map(|line| line.chars().count().div_ceil(chars_per_line).max(1))
-            .sum::<usize>();
-        surface(p)
-            .p(px(20.))
-            .gap(px(12.))
-            .child(label(
-                "{0} 代表目标语言，需保留在提示词中。源文本用 🔤 标记包围。",
-            ))
-            .child(tip(
-                field_shell(
-                    "prompt-field",
-                    p,
-                    &focus,
-                    window,
-                    (20. * lines as f32 + 24.).max(210.),
-                )
-                .p(px(10.))
-                .child(editor),
-                "翻译提示词；保留目标语言占位符 {0}",
-                p,
-            ))
+        section_card(cx)
+            .p_5()
+            .gap_3()
+            .child(
+                div()
+                    .text_xs()
+                    .text_color(cx.theme().muted_foreground)
+                    .child("{0} 代表目标语言，需保留在提示词中。源文本用 🔤 标记包围。"),
+            )
+            .child(editor)
     }
 
     fn editor(
         &mut self,
         s: &ApiState,
         ui: &ApiWindow,
-        p: Palette,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Div {
@@ -239,77 +315,95 @@ impl ApiView {
             let ui = ui.clone();
             move || ui.invoke_editor_action(section, kind, value)
         };
-        let mut form = surface(p)
-            .p(px(20.))
-            .gap(px(18.))
+
+        let prev_cb = action_ui(0, 0);
+        let next_cb = action_ui(0, 1);
+        let new_cb = action_ui(0, 2);
+        let del_cb = action_ui(0, 3);
+
+        let mut form = section_card(cx)
+            .p_5()
+            .gap_4()
             .child(
-                row()
-                    .gap(px(8.))
-                    .child(label("配置").font_weight(FontWeight::SEMIBOLD))
-                    .child(icon_button(
-                        "previous-config",
-                        "original-icons/previous.svg",
-                        "上一个配置",
-                        p,
-                        false,
-                        false,
-                        entry.config_index > 0,
-                        32.,
-                        30.,
-                        16.,
-                        action_ui(0, 0),
-                    ))
-                    .child(label(format!(
-                        "{} / {}",
-                        entry.config_index + 1,
-                        entry.config_count
-                    )))
-                    .child(icon_button(
-                        "next-config",
-                        "original-icons/next.svg",
-                        "下一个配置",
-                        p,
-                        false,
-                        false,
-                        entry.config_index + 1 < entry.config_count,
-                        32.,
-                        30.,
-                        16.,
-                        action_ui(0, 1),
-                    ))
+                h_flex()
+                    .gap_2()
+                    .items_center()
+                    .child(div().text_sm().font_weight(FontWeight::SEMIBOLD).child("配置"))
+                    .child(
+                        Button::new("previous-config")
+                            .ghost()
+                            .small()
+                            .disabled(entry.config_index <= 0)
+                            .icon(app_icon("original-icons/previous.svg").small())
+                            .accessibility_label("上一个配置")
+                            .tooltip("上一个配置")
+                            .on_click(move |_, _, _| {
+                                let prev_cb = prev_cb.clone();
+                                runtime::dispatch(move || prev_cb());
+                            }),
+                    )
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(cx.theme().muted_foreground)
+                            .child(format!(
+                                "{} / {}",
+                                entry.config_index + 1,
+                                entry.config_count
+                            )),
+                    )
+                    .child(
+                        Button::new("next-config")
+                            .ghost()
+                            .small()
+                            .disabled(entry.config_index + 1 >= entry.config_count)
+                            .icon(app_icon("original-icons/next.svg").small())
+                            .accessibility_label("下一个配置")
+                            .tooltip("下一个配置")
+                            .on_click(move |_, _, _| {
+                                let next_cb = next_cb.clone();
+                                runtime::dispatch(move || next_cb());
+                            }),
+                    )
                     .child(div().flex_1())
-                    .child(action(
-                        "new-config",
-                        "新建",
-                        "新增此服务的配置",
-                        p,
-                        false,
-                        true,
-                        action_ui(0, 2),
-                    ))
-                    .child(action(
-                        "delete-config",
-                        "删除",
-                        "删除当前配置；每项服务至少保留一项",
-                        p,
-                        false,
-                        true,
-                        action_ui(0, 3),
-                    )),
+                    .child(
+                        Button::new("new-config")
+                            .outline()
+                            .small()
+                            .label("新建")
+                            .tooltip("新增此服务的配置")
+                            .on_click(move |_, _, _| {
+                                let new_cb = new_cb.clone();
+                                runtime::dispatch(move || new_cb());
+                            }),
+                    )
+                    .child(
+                        Button::new("delete-config")
+                            .ghost()
+                            .danger()
+                            .small()
+                            .disabled(entry.config_count <= 1)
+                            .label("删除")
+                            .tooltip("删除当前配置；每项服务至少保留一项")
+                            .on_click(move |_, _, _| {
+                                let del_cb = del_cb.clone();
+                                runtime::dispatch(move || del_cb());
+                            }),
+                    ),
             )
-            .child(divider(p));
+            .child(hairline(cx));
 
         let edit = |field: &'static str| {
             let ui = ui.clone();
             move |value| ui.invoke_editor_field_edited(section, field.into(), value)
         };
+
         if service == "LMStudio" {
             let update = edit("ModelName");
             let (field, _) = self.fields.input(
                 "lm-model",
                 &entry.model_name,
                 "",
-                false,
                 false,
                 true,
                 window,
@@ -328,34 +422,41 @@ impl ApiView {
             let models_ui = ui.clone();
             let menu = self.dropdowns.show(
                 "lm-model-select",
-                p,
                 &entry.model_name,
                 models,
                 Some(field),
                 "选择或输入 LMStudio 模型标识",
-                30.,
                 window,
+                cx,
                 move |index, _| models_ui.invoke_editor_action(section, 3, index as i32),
             );
+            let load_cb = action_ui(2, 0);
             form = form.child(
-                col().gap(px(7.)).child(label("模型名称")).child(
-                    row()
-                        .gap(px(12.))
-                        .child(div().flex_1().min_w_0().child(menu))
-                        .child(action(
-                            "load-models",
-                            if s.models_loading {
-                                "加载中…"
-                            } else {
-                                "加载模型"
-                            },
-                            "从 LMStudio 获取可用模型",
-                            p,
-                            false,
-                            !s.models_loading,
-                            action_ui(2, 0),
-                        )),
-                ),
+                v_flex()
+                    .gap_1p5()
+                    .child(div().text_sm().font_weight(FontWeight::MEDIUM).child("模型名称"))
+                    .child(
+                        h_flex()
+                            .gap_2()
+                            .child(div().flex_1().min_w_0().child(menu))
+                            .child(
+                                Button::new("load-models")
+                                    .outline()
+                                    .small()
+                                    .loading(s.models_loading)
+                                    .disabled(s.models_loading)
+                                    .label(if s.models_loading {
+                                        "加载中…"
+                                    } else {
+                                        "加载模型"
+                                    })
+                                    .tooltip("从 LMStudio 获取可用模型")
+                                    .on_click(move |_, _, _| {
+                                        let load_cb = load_cb.clone();
+                                        runtime::dispatch(move || load_cb());
+                                    }),
+                            ),
+                    ),
             );
         } else if llm {
             form = form.child(field(
@@ -366,7 +467,6 @@ impl ApiView {
                 &entry.model_name,
                 false,
                 None,
-                p,
                 window,
                 cx,
                 edit("ModelName"),
@@ -391,16 +491,18 @@ impl ApiView {
                 &entry.api_url,
                 false,
                 None,
-                p,
                 window,
                 cx,
                 edit("ApiUrl"),
             ));
         }
         if service == "OpenAI" {
-            form = form.child(note(
-                "使用完整聊天接口地址，例如 https://api.deepseek.com/chat/completions",
-            ));
+            form = form.child(
+                div()
+                    .text_xs()
+                    .text_color(cx.theme().muted_foreground)
+                    .child("使用完整聊天接口地址，例如 https://api.deepseek.com/chat/completions"),
+            );
         }
         if service == "Youdao" {
             form = form.child(field(
@@ -411,7 +513,6 @@ impl ApiView {
                 &entry.app_key,
                 false,
                 None,
-                p,
                 window,
                 cx,
                 edit("AppKey"),
@@ -426,7 +527,6 @@ impl ApiView {
                 &entry.app_id,
                 false,
                 None,
-                p,
                 window,
                 cx,
                 edit("AppId"),
@@ -441,7 +541,6 @@ impl ApiView {
                 &entry.app_secret,
                 true,
                 None,
-                p,
                 window,
                 cx,
                 edit("AppSecret"),
@@ -455,7 +554,6 @@ impl ApiView {
                 &entry.api_key,
                 true,
                 None,
-                p,
                 window,
                 cx,
                 edit("ApiKey"),
@@ -465,17 +563,16 @@ impl ApiView {
             let update = edit("Temperature");
             let ui = ui.clone();
             form = form.child(
-                row()
+                h_flex()
                     .justify_between()
-                    .gap(px(12.))
-                    .child(label("温度"))
-                    .child(number(
+                    .gap_3()
+                    .child(div().text_sm().font_weight(FontWeight::MEDIUM).child("温度"))
+                    .child(number_stepper(
                         &mut self.fields,
                         "Temperature",
                         "温度",
                         "控制译文随机性；数值越低越稳定",
                         &entry.temperature_text,
-                        p,
                         None,
                         window,
                         cx,
@@ -492,8 +589,7 @@ impl ApiView {
                 "待翻译文本的语言代码",
                 &entry.source_language,
                 false,
-                Some(160.),
-                p,
+                Some(10.),
                 window,
                 cx,
                 edit("SourceLanguage"),
@@ -503,6 +599,7 @@ impl ApiView {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn field<T: 'static>(
     fields: &mut Fields,
     name: &'static str,
@@ -510,17 +607,15 @@ fn field<T: 'static>(
     hint: &'static str,
     value: &str,
     secret: bool,
-    width: Option<f32>,
-    p: Palette,
+    width_rems: Option<f32>,
     window: &mut Window,
     cx: &mut Context<T>,
     callback: impl Fn(String) + 'static,
 ) -> Div {
-    let (input, focus) = fields.input(
+    let (input, _) = fields.input(
         name,
         value,
-        "",
-        false,
+        hint,
         secret,
         true,
         window,
@@ -531,25 +626,21 @@ fn field<T: 'static>(
             }
         },
     );
-    let input = tip(
-        field_shell(title, p, &focus, window, 30.)
-            .px(px(10.))
-            .child(input),
-        hint,
-        p,
-    );
-    if let Some(width) = width {
-        row()
+    let wrapped = div()
+        .debug_selector(|| title.to_owned())
+        .child(input);
+
+    if let Some(width) = width_rems {
+        h_flex()
             .justify_between()
-            .gap(px(12.))
-            .child(label(title))
-            .child(input.w(px(width)))
+            .gap_3()
+            .child(div().text_sm().font_weight(FontWeight::MEDIUM).child(title))
+            .child(wrapped.w(rems(width)))
     } else {
-        col()
+        v_flex()
             .w_full()
-            .h(px(54.))
-            .gap(px(5.))
-            .child(label(title))
-            .child(input)
+            .gap_1p5()
+            .child(div().text_sm().font_weight(FontWeight::MEDIUM).child(title))
+            .child(wrapped)
     }
 }

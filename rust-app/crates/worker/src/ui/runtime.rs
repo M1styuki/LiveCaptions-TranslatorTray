@@ -1,6 +1,6 @@
 use futures::{StreamExt, channel::mpsc};
-use gpui::{App, AsyncApp, Task};
-use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::OnceLock, time::Duration};
+use gpui_kit::{App, AsyncApp, Task};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::RwLock, time::Duration};
 
 type Job = Box<dyn FnOnce() + Send>;
 
@@ -9,7 +9,7 @@ struct UiJobs {
     scheduled: bool,
     pending: VecDeque<Box<dyn FnOnce()>>,
 }
-static WORKER_JOBS: OnceLock<mpsc::UnboundedSender<Job>> = OnceLock::new();
+static WORKER_JOBS: RwLock<Option<mpsc::UnboundedSender<Job>>> = RwLock::new(None);
 
 thread_local! {
     static UI_JOBS: RefCell<UiJobs> = RefCell::default();
@@ -18,7 +18,7 @@ thread_local! {
 
 pub fn start(cx: &App) {
     let (sender, mut receiver) = mpsc::unbounded::<Job>();
-    assert!(WORKER_JOBS.set(sender).is_ok());
+    *WORKER_JOBS.write().unwrap() = Some(sender);
     APP.with_borrow_mut(|app| *app = Some(cx.to_async()));
     cx.spawn(async move |_| {
         while let Some(job) = receiver.next().await {
@@ -26,6 +26,11 @@ pub fn start(cx: &App) {
         }
     })
     .detach();
+}
+
+#[cfg(test)]
+pub fn start_ui_only(cx: &App) {
+    APP.with_borrow_mut(|app| *app = Some(cx.to_async()));
 }
 
 pub fn app() -> Option<AsyncApp> {
@@ -66,7 +71,9 @@ pub fn dispatch(job: impl FnOnce() + 'static) {
 
 pub fn invoke_from_event_loop(job: impl FnOnce() + Send + 'static) -> Result<(), ()> {
     WORKER_JOBS
-        .get()
+        .read()
+        .map_err(|_| ())?
+        .as_ref()
         .ok_or(())?
         .unbounded_send(Box::new(job))
         .map_err(|_| ())
@@ -75,7 +82,7 @@ pub fn invoke_from_event_loop(job: impl FnOnce() + Send + 'static) -> Result<(),
 pub fn quit_event_loop() -> Result<(), ()> {
     #[cfg(not(test))]
     if let Some(app) = app() {
-        app.update(|cx| cx.quit()).map_err(|_| ())?;
+        app.update(|cx| cx.quit());
     }
     Ok(())
 }

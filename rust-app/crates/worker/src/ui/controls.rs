@@ -1,15 +1,22 @@
-use super::motion::{animate, pointer_feedback};
-use super::{
-    runtime,
-    shape::{ContinuousCorners, layer},
+use super::motion::{pointer_feedback, smooth_value};
+use super::runtime;
+use super::shape::{ContinuousCorners as _, paint_fill, paint_outline};
+use gpui_kit::component::{
+    ActiveTheme as _, Icon, IconName, Sizable as _,
+    button::{Button, ButtonCustomVariant, ButtonRounded, ButtonVariants as _},
+    h_flex,
+    input::{Input, InputEvent, InputState, Textarea, TextareaState},
+    scroll::Scrollbar,
+    v_flex,
 };
-use gpui::{
-    Animation, AnimationExt, AnyElement, AssetSource, Bounds, Context, Div, Entity, FocusHandle,
-    Focusable, Hsla, KeyDownEvent, MouseButton, PathBuilder, Pixels, Render, ScrollHandle,
-    SharedString, Stateful, Subscription, Window, anchored, canvas, deferred, div, point,
-    prelude::*, px, rgb, rgba, svg,
+use gpui_kit::{
+    Animation, AnimationExt as _, AnyElement, App, AppContext as _, AssetSource, Bounds, Context,
+    CursorStyle, Div, ElementId, Entity, FocusHandle, Focusable as _, FontWeight, Hsla,
+    InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ParentElement as _,
+    PathBuilder, Pixels, Role, ScrollHandle, SharedString, StatefulInteractiveElement as _,
+    Styled as _, Subscription, Window, WindowControlArea, anchored, canvas, deferred, div,
+    ease_out_quint, point, prelude::FluentBuilder as _, px, rems,
 };
-use gpui_component::input::{Input, InputEvent, InputState};
 use std::{
     borrow::Cow,
     cell::{Cell, RefCell},
@@ -19,9 +26,10 @@ use std::{
 };
 
 pub struct Assets;
+
 impl AssetSource for Assets {
-    fn load(&self, path: &str) -> gpui::Result<Option<Cow<'static, [u8]>>> {
-        Ok(match path {
+    fn load(&self, path: &str) -> gpui_kit::Result<Option<Cow<'static, [u8]>>> {
+        let local = match path {
             "icons/bold.svg" => {
                 Some(include_bytes!("../../../../assets/icons/bold.svg").as_slice())
             }
@@ -204,432 +212,315 @@ impl AssetSource for Assets {
                 Some(include_bytes!("../../../../assets/original-icons/swap.svg").as_slice())
             }
             _ => None,
+        };
+        if let Some(bytes) = local {
+            return Ok(Some(Cow::Borrowed(bytes)));
         }
-        .map(Cow::Borrowed))
-    }
-    fn list(&self, _: &str) -> gpui::Result<Vec<SharedString>> {
-        Ok(Vec::new())
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Palette {
-    pub dark: bool,
-    pub window_background: Hsla,
-    pub titlebar: Hsla,
-    pub pane_divider: Hsla,
-    pub background: Hsla,
-    pub foreground: Hsla,
-    pub control: Hsla,
-    pub border: Hsla,
-    pub accent: Hsla,
-    pub accent_text: Hsla,
-    pub surface: Hsla,
-    pub surface_border: Hsla,
-}
-
-impl Palette {
-    pub fn for_window(dark: bool, mica: bool) -> Self {
-        let mut palette = Self::new(dark);
-        if mica {
-            palette.titlebar = palette.titlebar.opacity(0.20);
-            palette.window_background = palette.window_background.opacity(0.55);
-        }
-        palette
+        gpui_kit::assets::Assets.load(path)
     }
 
-    pub fn new(dark: bool) -> Self {
-        let theme = |light, shade| rgb(if dark { shade } else { light }).into();
-        let alpha = |light, shade| rgba(if dark { shade } else { light }).into();
-        Self {
-            dark,
-            window_background: theme(0xf4f4f4, 0x262626),
-            titlebar: theme(0xeeeeee, 0x202020),
-            pane_divider: theme(0xc9c9c9, 0x454545),
-            background: theme(0xf9f9f9, 0x2c2c2c),
-            foreground: alpha(0x000000e6, 0xffffffff),
-            control: alpha(0xffffff66, 0xffffff0e),
-            border: alpha(0x00000073, 0xffffff1e),
-            accent: theme(0x0057a8, 0x54bff3),
-            accent_text: theme(0xffffff, 0x000000),
-            surface: alpha(0xffffff80, 0xffffff08),
-            surface_border: alpha(0x00000018, 0xffffff18),
-        }
+    fn list(&self, path: &str) -> gpui_kit::Result<Vec<SharedString>> {
+        gpui_kit::assets::Assets.list(path)
     }
 }
 
-pub fn col() -> Div {
-    div().flex().flex_col()
-}
-pub fn row() -> Div {
-    div().flex().items_center()
-}
-pub fn label(text: impl Into<SharedString>) -> Div {
-    div().text_size(px(14.)).child(text.into())
-}
-pub fn note(text: impl Into<SharedString>) -> Div {
-    label(text)
-        .text_size(px(11.))
-        .line_height(px(15.))
-        .opacity(0.65)
-}
-pub fn heading(text: impl Into<SharedString>) -> Div {
-    label(text)
-        .text_size(px(24.))
-        .line_height(px(32.))
-        .font_weight(gpui::FontWeight::BOLD)
-}
-pub fn surface(p: Palette) -> Div {
-    col().contour(Some(p.surface), Some(p.surface_border), 10.)
-}
-pub fn divider(p: Palette) -> Div {
-    div().w_full().h(px(1.)).flex_shrink_0().bg(p.border)
+pub fn app_icon(path: &'static str) -> Icon {
+    Icon::empty().path(path)
 }
 
-pub fn icon(path: &'static str, size: f32, color: Hsla) -> impl IntoElement {
-    svg()
-        .path(path)
-        .size(px(size))
-        .text_color(color)
-        .flex_shrink_0()
+pub fn hairline(cx: &App) -> Div {
+    div().w_full().h(px(1.)).flex_shrink_0().bg(cx.theme().border)
 }
 
-struct Tip(SharedString, Palette);
-impl Render for Tip {
-    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        div()
-            .text_size(px(12.))
-            .text_color(self.1.foreground)
-            .contour(Some(self.1.background), Some(self.1.border), 5.)
-            .px(px(8.))
-            .py(px(5.))
-            .child(self.0.clone())
-    }
-}
-
-pub fn tip(div: Stateful<Div>, text: impl Into<SharedString>, p: Palette) -> Stateful<Div> {
-    let text = text.into();
-    div.tooltip(move |_, cx| cx.new(|_| Tip(text.clone(), p)).into())
-}
-
-pub fn button(
-    id: impl Into<gpui::ElementId>,
-    p: Palette,
-    active: bool,
-    outlined: bool,
-    enabled: bool,
-    primary: bool,
-    radius: f32,
-    callback: impl Fn() + 'static,
-) -> Stateful<Div> {
-    div()
-        .id(id)
+pub fn section_card(cx: &App) -> Div {
+    let radius = f32::from(cx.theme().radius_lg);
+    v_flex()
         .relative()
-        .child(layer(
-            if active || outlined {
-                Some(if primary { p.accent } else { p.control })
-            } else {
-                None
-            },
-            if outlined && !primary {
-                Some(p.border)
-            } else {
-                None
-            },
-            radius,
-        ))
-        .when(enabled, |d| {
-            let (hover, press) = if primary {
-                (p.accent_text.opacity(0.08), p.accent_text.opacity(0.16))
-            } else {
-                (
-                    if active || outlined {
-                        p.foreground.opacity(0.055)
-                    } else {
-                        p.control
-                    },
-                    p.foreground.opacity(0.09),
+        .w_full()
+        .rounded(cx.theme().radius_lg)
+        .contour(Some(cx.theme().group_box), Some(cx.theme().border), radius)
+}
+
+pub fn animated_chevron(id: impl Into<ElementId>, color: Hsla, up: bool) -> impl IntoElement {
+    let id: ElementId = id.into();
+    canvas(
+        move |_, window, cx| {
+            let duration = cx.theme().motion_tokens().duration_normal;
+            smooth_value(
+                (id.clone(), "chevron"),
+                if up { 1. } else { 0. },
+                duration,
+                window,
+                cx,
+            )
+        },
+        move |bounds, phase, window, _| {
+            let center = bounds.center();
+            let (sin, cos) = (phase * std::f32::consts::PI).sin_cos();
+            let rotate = |x: f32, y: f32| {
+                point(
+                    center.x + px(x * cos - y * sin),
+                    center.y + px(x * sin + y * cos),
                 )
             };
-            pointer_feedback(d, hover, press, radius)
-        })
-        .when(enabled, |d| activate(d, p, callback))
-        .when(!enabled, |d| d.opacity(0.4))
+            let mut path = PathBuilder::stroke(px(1.35));
+            path.move_to(rotate(-3.75, -1.6));
+            path.line_to(rotate(0., 1.8));
+            path.line_to(rotate(3.75, -1.6));
+            if let Ok(path) = path.build() {
+                window.paint_path(path, color);
+            }
+        },
+    )
+    .size(px(14.))
 }
 
-fn activate(control: Stateful<Div>, p: Palette, callback: impl Fn() + 'static) -> Stateful<Div> {
-    let callback = Rc::new(callback);
-    let click = callback.clone();
-    control
+#[allow(clippy::too_many_arguments)]
+pub fn nav_item(
+    id: impl Into<ElementId>,
+    label: &'static str,
+    icon: Option<&'static str>,
+    compact: bool,
+    selected: bool,
+    draw_selection_bg: bool,
+    cx: &App,
+    on_click: impl Fn() + 'static,
+) -> impl IntoElement {
+    let id: ElementId = id.into();
+    let radius = f32::from(cx.theme().radius);
+    let selection_bg = cx.theme().sidebar_accent;
+    let hover_fill = cx.theme().sidebar_accent.opacity(0.65);
+    let press_fill = cx.theme().sidebar_accent;
+    let text_color = if selected {
+        cx.theme().sidebar_accent_foreground
+    } else {
+        cx.theme().sidebar_foreground
+    };
+    let icon_color = if selected {
+        cx.theme().primary
+    } else {
+        cx.theme().muted_foreground
+    };
+
+    let callback = Rc::new(on_click);
+    let click_cb = callback.clone();
+    let key_cb = callback;
+
+    let sel_id = id.clone();
+    let base = h_flex()
+        .id(id.clone())
+        .relative()
+        .w_full()
+        .h_9()
+        .flex_shrink_0()
+        .items_center()
+        .when(compact, |d| d.justify_center())
+        .when(!compact, |d| d.justify_start().px_2p5().gap_2())
         .focusable()
         .tab_stop(true)
-        .cursor_pointer()
-        .focus(|s| s.text_color(p.accent))
-        .on_click(move |_, _, _| {
-            let click = click.clone();
-            runtime::dispatch(move || click());
-        })
-        .on_key_down(move |e: &KeyDownEvent, _, cx| {
-            if e.keystroke.key == "enter" || e.keystroke.key == "space" {
-                cx.stop_propagation();
-                let callback = callback.clone();
-                runtime::dispatch(move || callback());
-            }
-        })
-}
-
-pub fn icon_button(
-    id: &'static str,
-    path: &'static str,
-    title: &str,
-    p: Palette,
-    active: bool,
-    outlined: bool,
-    enabled: bool,
-    w: f32,
-    h: f32,
-    image_size: f32,
-    callback: impl Fn() + 'static,
-) -> Stateful<Div> {
-    tip(
-        button(id, p, active, outlined, enabled, false, 6., callback)
-            .w(px(w))
-            .h(px(h))
-            .flex_shrink_0()
-            .flex()
-            .items_center()
-            .justify_center()
-            .child(icon(
-                path,
-                image_size,
-                if active { p.accent } else { p.foreground },
-            )),
-        title.to_owned(),
-        p,
-    )
-}
-
-pub fn action(
-    id: &'static str,
-    title: &str,
-    hint: &str,
-    p: Palette,
-    primary: bool,
-    enabled: bool,
-    callback: impl Fn() + 'static,
-) -> Stateful<Div> {
-    tip(
-        button(id, p, true, true, enabled, primary, 6., callback)
-            .h(px(34.))
-            .px(px(16.))
-            .flex()
-            .items_center()
-            .justify_center()
-            .flex_shrink_0()
-            .text_color(if primary { p.accent_text } else { p.foreground })
-            .child(title.to_owned()),
-        hint.to_owned(),
-        p,
-    )
-}
-
-pub fn nav(
-    id: impl Into<gpui::ElementId>,
-    title: &'static str,
-    path: Option<&'static str>,
-    selected: bool,
-    p: Palette,
-    callback: impl Fn() + 'static,
-) -> Stateful<Div> {
-    button(id, p, false, false, true, false, 7., callback)
-        .w_full()
-        .h(px(42.))
-        .flex_shrink_0()
-        .flex()
-        .items_center()
-        .gap(px(10.))
-        .pl(px(if path.is_some() { 14. } else { 16. }))
-        .child(
-            canvas(
-                move |_, window, cx| {
-                    animate(
-                        "nav-selection",
-                        if selected { 1. } else { 0. },
-                        Duration::from_millis(160),
-                        window,
-                        cx,
-                    )
-                },
-                move |bounds, amount, window, _| {
-                    super::shape::paint_fill(bounds, p.control.opacity(amount), 7., window);
-                    let marker = Bounds::new(
-                        point(bounds.left(), bounds.center().y - px(9.)),
-                        gpui::size(px(3.), px(18.)),
-                    );
-                    super::shape::paint_fill(marker, p.accent.opacity(amount), 2., window);
-                },
-            )
-            .absolute()
-            .top_0()
-            .left_0()
-            .size_full(),
-        )
-        .children(path.map(|path| icon(path, 16., p.foreground)))
-        .child(title)
-}
-
-pub fn toggle(
-    id: &'static str,
-    title: &'static str,
-    checked: bool,
-    p: Palette,
-    callback: impl Fn() + 'static,
-) -> Stateful<Div> {
-    tip(
-        activate(div().id(id), p, callback)
-            .h(px(32.))
-            .flex_shrink_0()
-            .flex()
-            .items_center()
-            .child(
+        .role(Role::Button)
+        .aria_label(label)
+        .aria_selected(selected)
+        .when(draw_selection_bg, |d| {
+            d.child(
                 canvas(
                     move |_, window, cx| {
-                        animate(
-                            "switch-slide",
-                            if checked { 1. } else { 0. },
-                            Duration::from_millis(180),
+                        smooth_value(
+                            (sel_id.clone(), "nav-select"),
+                            if selected { 1. } else { 0. },
+                            Duration::from_millis(160),
                             window,
                             cx,
                         )
                     },
-                    move |bounds, phase, window, _| {
-                        window.paint_quad(gpui::quad(
-                            bounds,
-                            px(11.),
-                            p.control.opacity(1. - phase),
-                            px(0.),
-                            p.border,
-                            gpui::BorderStyle::Solid,
-                        ));
-                        window.paint_quad(gpui::quad(
-                            bounds,
-                            px(11.),
-                            p.accent.opacity(phase),
-                            px(1.),
-                            p.border,
-                            gpui::BorderStyle::Solid,
-                        ));
-                        let radius = (bounds.size.height * 0.5 - px(4.)).max(px(0.));
-                        let cx = bounds.left()
-                            + bounds.size.height * 0.5
-                            + (bounds.size.width - bounds.size.height) * phase;
-                        let cy = bounds.center().y;
-                        let left = point(cx - radius, cy);
-                        let right = point(cx + radius, cy);
-                        let radii = point(radius, radius);
-                        let mut path = gpui::PathBuilder::fill();
-                        path.move_to(left);
-                        path.arc_to(radii, px(0.), false, true, right);
-                        path.arc_to(radii, px(0.), false, true, left);
-                        path.close();
-                        if let Ok(disc) = path.build() {
-                            window.paint_path(
-                                disc,
-                                if checked { p.accent_text } else { p.foreground },
-                            );
-                        }
+                    move |bounds, amount, window, _| {
+                        paint_fill(bounds, selection_bg.opacity(amount), radius, window);
                     },
                 )
-                .w(px(42.))
-                .h(px(22.))
-                .flex_shrink_0(),
-            ),
-        format!("{title}：{}", if checked { "已开启" } else { "已关闭" }),
-        p,
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full(),
+            )
+        });
+
+    pointer_feedback((id, "nav-fb"), base, hover_fill, press_fill, radius)
+        .when_some(icon, |d, path| {
+            d.child(app_icon(path).small().text_color(icon_color))
+        })
+        .when(!compact, |d| {
+            d.child(
+                div()
+                    .min_w_0()
+                    .truncate()
+                    .text_sm()
+                    .font_weight(if selected {
+                        FontWeight::MEDIUM
+                    } else {
+                        FontWeight::NORMAL
+                    })
+                    .text_color(text_color)
+                    .child(label),
+            )
+        })
+        .when(compact, |d| {
+            d.tooltip(move |window, cx| {
+                gpui_kit::component::tooltip::Tooltip::new(label).build(window, cx)
+            })
+        })
+        .on_click(move |_, _, _| {
+            let click_cb = click_cb.clone();
+            runtime::dispatch(move || click_cb());
+        })
+        .on_key_down(move |e: &KeyDownEvent, _, cx| {
+            if e.keystroke.key == "enter" || e.keystroke.key == "space" {
+                cx.stop_propagation();
+                let key_cb = key_cb.clone();
+                runtime::dispatch(move || key_cb());
+            }
+        })
+}
+
+pub fn contour_button(
+    id: &'static str,
+    label: &'static str,
+    tooltip: &'static str,
+    cx: &App,
+    on_click: impl Fn() + 'static,
+) -> impl IntoElement {
+    let radius = f32::from(cx.theme().radius);
+    let callback = Rc::new(on_click);
+    let click_cb = callback.clone();
+    let key_cb = callback;
+
+    let base = h_flex()
+        .id(id)
+        .debug_selector(|| id.to_owned())
+        .relative()
+        .h_8()
+        .min_w(rems(4.5))
+        .px_3p5()
+        .flex_shrink_0()
+        .justify_center()
+        .items_center()
+        .rounded(cx.theme().radius)
+        .contour(Some(cx.theme().button), Some(cx.theme().input), radius)
+        .focusable()
+        .tab_stop(true)
+        .role(Role::Button)
+        .aria_label(label);
+
+    pointer_feedback(
+        (ElementId::from(id), "btn-fb"),
+        base,
+        cx.theme().button_hover,
+        cx.theme().button_active,
+        radius,
     )
+    .tooltip(move |window, cx| {
+        gpui_kit::component::tooltip::Tooltip::new(tooltip).build(window, cx)
+    })
+    .child(
+        div()
+            .text_sm()
+            .font_weight(FontWeight::MEDIUM)
+            .text_color(cx.theme().button_foreground)
+            .child(label),
+    )
+    .on_click(move |_, _, _| {
+        let click_cb = click_cb.clone();
+        runtime::dispatch(move || click_cb());
+    })
+    .on_key_down(move |e: &KeyDownEvent, _, cx| {
+        if e.keystroke.key == "enter" || e.keystroke.key == "space" {
+            cx.stop_propagation();
+            let key_cb = key_cb.clone();
+            runtime::dispatch(move || key_cb());
+        }
+    })
 }
 
 pub fn titlebar(
-    p: Palette,
     title: &'static str,
-    child: Option<AnyElement>,
+    trailing: Option<AnyElement>,
     close_title: &'static str,
     callback: impl Fn(i32) + Clone + 'static,
+    cx: &App,
 ) -> Div {
     let minimize = callback.clone();
     let close = callback;
-    row()
-        .h(px(30.))
+    let has_trailing = trailing.is_some();
+
+    h_flex()
+        .h_9()
         .w_full()
         .flex_shrink_0()
-        .bg(p.titlebar)
+        .bg(cx.theme().title_bar)
         .child(
-            row()
+            h_flex()
                 .flex_1()
                 .h_full()
-                .pl(px(14.))
-                .text_size(px(12.))
-                .opacity(0.8)
-                .window_control_area(gpui::WindowControlArea::Drag)
-                .child(title),
+                .px_3p5()
+                .gap_2()
+                .window_control_area(WindowControlArea::Drag)
+                .child(
+                    div()
+                        .text_xs()
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(cx.theme().muted_foreground)
+                        .child(title),
+                ),
         )
-        .children(child)
-        .child(titlebar_button(
-            p,
-            "minimize",
-            Some(gpui::WindowControlArea::Min),
-            "icons/minimize.svg",
-            "最小化",
-            false,
-            move || minimize(0),
-        ))
-        .child(titlebar_button(
-            p,
-            "close",
-            Some(gpui::WindowControlArea::Close),
-            "icons/close.svg",
-            close_title,
-            false,
-            move || close(1),
-        ))
-}
-
-pub fn titlebar_button(
-    p: Palette,
-    id: &'static str,
-    area: Option<gpui::WindowControlArea>,
-    path: &'static str,
-    title: &'static str,
-    selected: bool,
-    callback: impl Fn() + 'static,
-) -> Stateful<Div> {
-    tip(
-        activate(
-            pointer_feedback(
-                row()
-                    .id(id)
-                    .relative()
-                    .w(px(38.))
-                    .h_full()
-                    .flex_shrink_0()
-                    .justify_center()
-                    .when_some(area, |d, area| d.window_control_area(area))
-                    .when(selected, |d| d.bg(p.control)),
-                p.foreground.opacity(0.10),
-                p.foreground.opacity(0.14),
-                0.,
-            ),
-            p,
-            callback,
+        .when_some(trailing, |d, item| d.child(h_flex().px_1().child(item)))
+        .when(has_trailing, |d| {
+            d.child(div().w(px(1.)).h_4().bg(cx.theme().border).mx_1())
+        })
+        .child(
+            div()
+                .h_full()
+                .window_control_area(WindowControlArea::Min)
+                .child(
+                    Button::new("minimize")
+                        .ghost()
+                        .compact()
+                        .h_full()
+                        .w_11()
+                        .rounded(ButtonRounded::None)
+                        .icon(app_icon("icons/minimize.svg").small())
+                        .accessibility_label("最小化")
+                        .tooltip("最小化")
+                        .on_click(move |_, _, _| {
+                            let minimize = minimize.clone();
+                            runtime::dispatch(move || minimize(0));
+                        }),
+                ),
         )
-        .child(icon(
-            path,
-            if area.is_some() { 14. } else { 16. },
-            if selected { p.accent } else { p.foreground },
-        )),
-        title,
-        p,
-    )
+        .child(
+            div()
+                .h_full()
+                .window_control_area(WindowControlArea::Close)
+                .child(
+                    Button::new("close")
+                        .custom(
+                            ButtonCustomVariant::new(cx)
+                                .color(cx.theme().transparent)
+                                .foreground(cx.theme().foreground)
+                                .hover(cx.theme().danger.opacity(0.22))
+                                .active(cx.theme().danger.opacity(0.35)),
+                        )
+                        .compact()
+                        .h_full()
+                        .w_11()
+                        .rounded(ButtonRounded::None)
+                        .icon(app_icon("icons/close.svg").small())
+                        .accessibility_label(close_title)
+                        .tooltip(close_title)
+                        .on_click(move |_, _, _| {
+                            let close = close.clone();
+                            runtime::dispatch(move || close(1));
+                        }),
+                ),
+        )
 }
 
 pub fn grip() -> Div {
@@ -637,11 +528,29 @@ pub fn grip() -> Div {
         .absolute()
         .right_0()
         .bottom_0()
-        .size(px(12.))
-        .cursor(gpui::CursorStyle::ResizeUpLeftDownRight)
+        .size_3()
+        .cursor(CursorStyle::ResizeUpLeftDownRight)
         .on_mouse_down(MouseButton::Left, |_, window, _| {
-            window.start_window_resize(gpui::ResizeEdge::BottomRight);
+            window.start_window_resize(gpui_kit::ResizeEdge::BottomRight);
         })
+}
+
+pub fn scroller(id: &'static str, scroll: &ScrollHandle, content: Div) -> impl IntoElement {
+    v_flex()
+        .relative()
+        .flex_1()
+        .h_full()
+        .min_h_0()
+        .child(
+            v_flex()
+                .id(id)
+                .flex_1()
+                .min_h_0()
+                .overflow_y_scroll()
+                .track_scroll(scroll)
+                .child(content.flex_shrink_0()),
+        )
+        .child(Scrollbar::vertical(scroll))
 }
 
 #[derive(Clone)]
@@ -651,8 +560,29 @@ pub enum Edit {
     Blur,
 }
 
+enum FieldKind {
+    Single(Entity<InputState>),
+    Multi(Entity<TextareaState>),
+}
+
+impl FieldKind {
+    fn focus_handle(&self, cx: &App) -> FocusHandle {
+        match self {
+            FieldKind::Single(state) => state.focus_handle(cx),
+            FieldKind::Multi(state) => state.focus_handle(cx),
+        }
+    }
+
+    fn set_value(&self, value: String, window: &mut Window, cx: &mut App) {
+        match self {
+            FieldKind::Single(state) => state.update(cx, |s, cx| s.set_value(value, window, cx)),
+            FieldKind::Multi(state) => state.update(cx, |s, cx| s.set_value(value, window, cx)),
+        }
+    }
+}
+
 struct Field {
-    state: Entity<InputState>,
+    state: FieldKind,
     observed: Rc<RefCell<String>>,
     applied: RefCell<String>,
     pending: Rc<Cell<usize>>,
@@ -675,136 +605,197 @@ impl Fields {
         self.0.clear();
     }
 
+    fn sync_existing(entry: &Field, value: &str, window: &mut Window, cx: &mut App) -> FocusHandle {
+        let focus = entry.state.focus_handle(cx);
+        let focused = focus.is_focused(window);
+        if entry.pending.get() == 0 {
+            let reset = entry.reset.replace(false);
+            let model_changed = *entry.applied.borrow() != value;
+            // A re-render with the previous model must not overwrite a draft
+            // the editor just emitted. Only apply new model values or a reset.
+            if reset || !focused || model_changed {
+                *entry.applied.borrow_mut() = value.to_owned();
+                if *entry.observed.borrow() != value {
+                    *entry.observed.borrow_mut() = value.to_owned();
+                    entry.state.set_value(value.to_owned(), window, cx);
+                }
+            }
+        }
+        focus
+    }
+
     pub fn input<T: 'static>(
         &mut self,
         id: &'static str,
         value: &str,
         placeholder: &'static str,
-        multiline: bool,
         secret: bool,
         force_value: bool,
         window: &mut Window,
         cx: &mut Context<T>,
         callback: impl Fn(Edit) + 'static,
     ) -> (Input, FocusHandle) {
-        let (entry, existed) = if let Some(entry) = self.0.get(id) {
-            (entry, true)
+        let existed = self.0.contains_key(id);
+        let state = if let Some(entry) = self.0.get(id) {
+            let focus = Self::sync_existing_with_force(entry, value, force_value, window, cx);
+            let FieldKind::Single(state) = &entry.state else {
+                unreachable!("field {id} kind mismatch");
+            };
+            let _ = existed;
+            let input = Input::new(state)
+                .small()
+                .when(secret, |d| d.mask_toggle());
+            return (input, focus);
         } else {
-            let state = cx.new(|cx| {
+            cx.new(|cx| {
                 InputState::new(window, cx)
-                    .multi_line(multiline)
-                    .rows(if multiline { 8 } else { 1 })
                     .placeholder(placeholder)
                     .masked(secret)
                     .default_value(value.to_owned())
-            });
-            let observed = Rc::new(RefCell::new(value.to_owned()));
-            let observed_in = observed.clone();
-            let pending = Rc::new(Cell::new(0));
-            let pending_event = pending.clone();
-            let callback = Rc::new(callback);
-            let reset = Rc::new(Cell::new(false));
-            let reset_for_event = reset.clone();
-            let events = cx.subscribe(&state, move |_, input, event, cx| {
-                let edit = match event {
-                    InputEvent::Change => {
-                        let value = input.read(cx).value().to_string();
-                        if *observed_in.borrow() == value {
-                            return;
-                        }
-                        *observed_in.borrow_mut() = value.clone();
-                        Edit::Change(value)
+            })
+        };
+
+        let observed = Rc::new(RefCell::new(value.to_owned()));
+        let observed_in = observed.clone();
+        let pending = Rc::new(Cell::new(0));
+        let pending_event = pending.clone();
+        let callback = Rc::new(callback);
+        let reset = Rc::new(Cell::new(false));
+        let reset_for_event = reset.clone();
+        let events = cx.subscribe(&state, move |_, input, event, cx| {
+            let edit = match event {
+                InputEvent::Change => {
+                    let value = input.read(cx).value().to_string();
+                    if *observed_in.borrow() == value {
+                        return;
                     }
-                    InputEvent::PressEnter { .. } if !multiline => Edit::Submit,
-                    InputEvent::Blur => Edit::Blur,
-                    _ => return,
-                };
-                if !force_value && matches!(edit, Edit::Blur | Edit::Submit) {
-                    reset_for_event.set(true);
+                    *observed_in.borrow_mut() = value.clone();
+                    Edit::Change(value)
                 }
-                let callback = callback.clone();
-                let pending = pending_event.clone();
-                pending.set(pending.get() + 1);
-                runtime::dispatch(move || {
-                    callback(edit);
-                    pending.set(pending.get() - 1);
-                });
+                InputEvent::PressEnter { .. } => Edit::Submit,
+                InputEvent::Blur => Edit::Blur,
+                _ => return,
+            };
+            if !force_value && matches!(edit, Edit::Blur | Edit::Submit) {
+                reset_for_event.set(true);
+            }
+            let callback = callback.clone();
+            let pending = pending_event.clone();
+            pending.set(pending.get() + 1);
+            runtime::dispatch(move || {
+                callback(edit);
+                pending.set(pending.get() - 1);
             });
-            let entry = self.0.entry(id).or_insert(Field {
-                state,
+        });
+
+        let focus = state.focus_handle(cx);
+        let input = Input::new(&state)
+            .small()
+            .when(secret, |d| d.mask_toggle());
+        self.0.insert(
+            id,
+            Field {
+                state: FieldKind::Single(state),
                 observed,
                 applied: RefCell::new(value.to_owned()),
                 pending,
                 held: Rc::default(),
                 reset,
                 _events: events,
-            });
-            (entry as &Field, false)
-        };
+            },
+        );
+        (input, focus)
+    }
 
+    fn sync_existing_with_force(
+        entry: &Field,
+        value: &str,
+        force_value: bool,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> FocusHandle {
         let focus = entry.state.focus_handle(cx);
         let focused = focus.is_focused(window);
-        if existed && entry.pending.get() == 0 {
+        if entry.pending.get() == 0 {
             let reset = entry.reset.replace(false);
             let model_changed = *entry.applied.borrow() != value;
-            // A re-render with the previous model must not overwrite a draft
-            // the editor just emitted. Only apply new model values or a reset.
             if reset || !focused || (force_value && model_changed) {
                 *entry.applied.borrow_mut() = value.to_owned();
                 if *entry.observed.borrow() != value {
                     *entry.observed.borrow_mut() = value.to_owned();
-                    entry.state.update(cx, |state, cx| {
-                        state.set_value(value.to_owned(), window, cx)
-                    });
+                    entry.state.set_value(value.to_owned(), window, cx);
                 }
             }
         }
-        let input = Input::new(&entry.state)
-            .appearance(false)
-            .p_0()
-            .text_size(px(13.3));
-        (if multiline { input.h_full() } else { input }, focus)
+        focus
     }
-}
 
-pub fn field_shell(
-    id: &'static str,
-    p: Palette,
-    focus: &FocusHandle,
-    window: &Window,
-    h: f32,
-) -> Stateful<Div> {
-    div()
-        .id(id)
-        .debug_selector(|| id.to_owned())
-        .h(px(h))
-        .w_full()
-        .flex_shrink_0()
-        .flex()
-        .items_center()
-        .contour(Some(p.control), None, 4.)
-        .child({
-            let focused = focus.is_focused(window);
-            canvas(
-                move |_, window, cx| {
-                    animate(
-                        "input-focus",
-                        if focused { 1. } else { 0. },
-                        Duration::from_millis(130),
-                        window,
-                        cx,
-                    )
-                },
-                move |bounds, amount, window, _| {
-                    super::shape::paint_outline(bounds, p.border.opacity(1. - amount), 4., window);
-                    super::shape::paint_outline(bounds, p.accent.opacity(amount), 4., window);
-                },
-            )
-            .absolute()
-            .top_0()
-            .left_0()
-            .size_full()
-        })
+    pub fn textarea<T: 'static>(
+        &mut self,
+        id: &'static str,
+        value: &str,
+        placeholder: &'static str,
+        window: &mut Window,
+        cx: &mut Context<T>,
+        callback: impl Fn(Edit) + 'static,
+    ) -> (Textarea, FocusHandle) {
+        if let Some(entry) = self.0.get(id) {
+            let focus = Self::sync_existing(entry, value, window, cx);
+            let FieldKind::Multi(state) = &entry.state else {
+                unreachable!("field {id} kind mismatch");
+            };
+            return (Textarea::new(state).small(), focus);
+        }
+
+        let state = cx.new(|cx| {
+            TextareaState::new(window, cx)
+                .auto_grow(8, 18)
+                .placeholder(placeholder)
+                .default_value(value.to_owned())
+        });
+        let observed = Rc::new(RefCell::new(value.to_owned()));
+        let observed_in = observed.clone();
+        let pending = Rc::new(Cell::new(0));
+        let pending_event = pending.clone();
+        let callback = Rc::new(callback);
+        let events = cx.subscribe(&state, move |_, input, event, cx| {
+            let edit = match event {
+                InputEvent::Change => {
+                    let value = input.read(cx).value().to_string();
+                    if *observed_in.borrow() == value {
+                        return;
+                    }
+                    *observed_in.borrow_mut() = value.clone();
+                    Edit::Change(value)
+                }
+                InputEvent::Blur => Edit::Blur,
+                _ => return,
+            };
+            let callback = callback.clone();
+            let pending = pending_event.clone();
+            pending.set(pending.get() + 1);
+            runtime::dispatch(move || {
+                callback(edit);
+                pending.set(pending.get() - 1);
+            });
+        });
+
+        let focus = state.focus_handle(cx);
+        let textarea = Textarea::new(&state).small();
+        self.0.insert(
+            id,
+            Field {
+                state: FieldKind::Multi(state),
+                observed,
+                applied: RefCell::new(value.to_owned()),
+                pending,
+                held: Rc::default(),
+                reset: Rc::new(Cell::new(false)),
+                _events: events,
+            },
+        );
+        (textarea, focus)
+    }
 }
 
 #[derive(Default, Clone)]
@@ -819,18 +810,18 @@ impl Dropdowns {
         self.opened.set(None);
         self.menu_scroll.set_offset(point(px(0.), px(0.)));
     }
+
     pub fn show(
         &self,
         id: &'static str,
-        p: Palette,
         value: &str,
         values: Vec<String>,
         edit: Option<Input>,
         hint: &str,
-        height: f32,
         window: &Window,
+        cx: &App,
         select: impl Fn(usize, String) + 'static,
-    ) -> Stateful<Div> {
+    ) -> AnyElement {
         let selected = values.iter().position(|item| item == value);
         let open = self.opened.get().filter(|(key, _)| *key == id);
         let bounds = self.bounds.clone();
@@ -841,91 +832,121 @@ impl Dropdowns {
         let can_open = !values.is_empty();
         let editable = edit.is_some();
         let uses_arrow = editable && can_open;
-        let mut control = pointer_feedback(
-            div()
-                .id(id)
-                .debug_selector(|| id.to_owned())
-                .h(px(height))
-                .relative()
-                .w_full()
-                .flex_shrink_0()
-                .flex()
-                .items_center()
-                .contour(
-                    Some(p.control),
-                    Some(if open.is_some() { p.accent } else { p.border }),
-                    6.,
-                ),
-            p.foreground.opacity(0.05),
-            p.foreground.opacity(0.09),
-            6.,
-        )
-        .child(
-            canvas(
-                move |bounds_now, _, _| {
-                    bounds.borrow_mut().insert(id, bounds_now);
-                },
-                |_, _, _, _| {},
+
+        let is_open = open.is_some();
+        let radius = f32::from(cx.theme().radius);
+        let popup_radius = f32::from(cx.theme().radius_lg);
+        let rest_border = cx.theme().input;
+        let open_border = cx.theme().ring;
+
+        let mut control = h_flex()
+            .id(id)
+            .debug_selector(|| id.to_owned())
+            .relative()
+            .w_full()
+            .h_8()
+            .flex_shrink_0()
+            .rounded(cx.theme().radius)
+            .contour(Some(cx.theme().input_background()), None, radius)
+            .child(
+                canvas(
+                    move |_, window, cx| {
+                        smooth_value(
+                            (id, "dropdown-open"),
+                            if is_open { 1. } else { 0. },
+                            Duration::from_millis(150),
+                            window,
+                            cx,
+                        )
+                    },
+                    move |bounds, amount, window, _| {
+                        paint_outline(bounds, rest_border.opacity(1. - amount), radius, window);
+                        paint_outline(bounds, open_border.opacity(amount), radius, window);
+                    },
+                )
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full(),
+            );
+        if !is_open {
+            control = pointer_feedback(
+                (ElementId::from(id), "dropdown-fb"),
+                control,
+                cx.theme().secondary_hover,
+                cx.theme().secondary_active,
+                radius,
+            );
+        }
+        let mut control = control
+            .child(
+                canvas(
+                    move |bounds_now, _, _| {
+                        bounds.borrow_mut().insert(id, bounds_now);
+                    },
+                    |_, _, _, _| {},
+                )
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full(),
             )
-            .absolute()
-            .top_0()
-            .left_0()
-            .size_full(),
-        )
-        .when(!editable, |d| d.focusable().tab_stop(true).cursor_pointer())
-        .when(!editable && can_open, |d| {
-            d.on_click(move |_, window, _| {
-                toggle_scroll.set_offset(point(px(0.), px(0.)));
-                toggle.set(if toggle.get().is_some_and(|(key, _)| key == id) {
-                    None
-                } else {
-                    Some((id, current))
-                });
-                window.refresh();
+            .when(!editable, |d| d.focusable().tab_stop(true))
+            .when(!editable && can_open, |d| {
+                d.on_click(move |_, window, _| {
+                    toggle_scroll.set_offset(point(px(0.), px(0.)));
+                    toggle.set(if toggle.get().is_some_and(|(key, _)| key == id) {
+                        None
+                    } else {
+                        Some((id, current))
+                    });
+                    window.refresh();
+                })
             })
-        })
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .pl(px(10.))
-                .overflow_hidden()
-                .flex()
-                .items_center()
-                .child(match edit {
-                    Some(edit) => edit.into_any_element(),
-                    None => div().truncate().child(value.to_owned()).into_any_element(),
-                }),
-        );
-        let arrow = chevron(p.foreground, open.is_some());
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .pl_2p5()
+                    .overflow_hidden()
+                    .flex()
+                    .items_center()
+                    .child(match edit {
+                        Some(edit) => edit.appearance(false).p_0().into_any_element(),
+                        None => div()
+                            .text_sm()
+                            .truncate()
+                            .child(value.to_owned())
+                            .into_any_element(),
+                    }),
+            );
+
         let arrow_state = self.opened.clone();
         let arrow_scroll = self.menu_scroll.clone();
         control = control.child(
-            row()
+            h_flex()
                 .id(SharedString::from(format!("{id}-arrow")))
-                .w(px(30.))
+                .w_7()
                 .h_full()
                 .justify_center()
                 .flex_shrink_0()
                 .when(!can_open, |d| d.opacity(0.4))
                 .when(uses_arrow, |d| {
-                    d.focusable()
-                        .tab_stop(true)
-                        .cursor_pointer()
-                        .on_click(move |_, window, _| {
-                            arrow_scroll.set_offset(point(px(0.), px(0.)));
-                            arrow_state.set(
-                                if arrow_state.get().is_some_and(|(key, _)| key == id) {
-                                    None
-                                } else {
-                                    Some((id, current))
-                                },
-                            );
-                            window.refresh();
-                        })
+                    d.focusable().tab_stop(true).on_click(move |_, window, _| {
+                        arrow_scroll.set_offset(point(px(0.), px(0.)));
+                        arrow_state.set(
+                            if arrow_state.get().is_some_and(|(key, _)| key == id) {
+                                None
+                            } else {
+                                Some((id, current))
+                            },
+                        );
+                        window.refresh();
+                    })
                 })
-                .child(arrow),
+                .child(animated_chevron(id, cx.theme().muted_foreground, is_open)),
         );
+
         let state = self.opened.clone();
         let keyboard_values = values.clone();
         let keyboard_select = select.clone();
@@ -963,34 +984,48 @@ impl Dropdowns {
             && let Some(bounds) = self.bounds.borrow().get(id).copied()
         {
             let state = self.opened.clone();
+            let accent = cx.theme().accent;
             let items = values.into_iter().enumerate().map(|(index, value)| {
                 let select = select.clone();
                 let state = state.clone();
                 let clicked_value = value.clone();
+                let active = index == highlight || Some(index) == selected;
+                let row = h_flex()
+                    .id(("option", index))
+                    .debug_selector(|| format!("{id}-option-{index}"))
+                    .relative()
+                    .h_7()
+                    .px_2()
+                    .w_full()
+                    .gap_1p5()
+                    .flex_shrink_0()
+                    .when(active, |d| d.contour(Some(accent), None, 4.));
                 pointer_feedback(
-                    row()
-                        .id(("option", index))
-                        .debug_selector(|| format!("{id}-option-{index}"))
-                        .h(px(29.))
-                        .px(px(8.))
-                        .w_full()
-                        .cursor_pointer()
-                        .gap(px(6.))
-                        .flex_shrink_0()
-                        .when(index == highlight || Some(index) == selected, |d| {
-                            d.contour(Some(p.control), None, 4.)
-                        }),
-                    p.foreground.opacity(0.07),
-                    p.foreground.opacity(0.12),
+                    (SharedString::from(format!("{id}-opt-fb")), index),
+                    row,
+                    accent.opacity(0.65),
+                    accent,
                     4.,
                 )
                 .child(
-                    div()
-                        .w(px(13.))
-                        .text_color(p.accent)
-                        .child(if Some(index) == selected { "✓" } else { "" }),
+                    h_flex()
+                        .w_3p5()
+                        .justify_center()
+                        .when(Some(index) == selected, |d| {
+                            d.child(
+                                Icon::new(IconName::Check)
+                                    .xsmall()
+                                    .text_color(cx.theme().primary),
+                            )
+                        }),
                 )
-                .child(div().truncate().child(value))
+                .child(
+                    div()
+                        .text_sm()
+                        .text_color(cx.theme().popover_foreground)
+                        .truncate()
+                        .child(value),
+                )
                 .on_click(move |_, window, cx| {
                     cx.stop_propagation();
                     state.set(None);
@@ -1002,9 +1037,10 @@ impl Dropdowns {
             });
             let state = self.opened.clone();
             let available = window.viewport_size().height;
-            let max_height = px(340.).min(available - px(16.));
-            let desired = (px(10.) + px(29.) * items.len() as f32).min(max_height);
-            let y = if bounds.bottom() + px(4.) + desired > available && bounds.origin.y > desired {
+            let max_height = rems(21.).to_pixels(window.rem_size()).min(available - px(16.));
+            let desired = (px(10.) + px(28.) * items.len() as f32).min(max_height);
+            let y = if bounds.bottom() + px(4.) + desired > available && bounds.origin.y > desired
+            {
                 bounds.origin.y - px(4.) - desired
             } else {
                 bounds.bottom() + px(4.)
@@ -1015,14 +1051,21 @@ impl Dropdowns {
                         .position(point(bounds.origin.x, y))
                         .snap_to_window_with_margin(px(4.))
                         .child(
-                            col()
+                            v_flex()
                                 .id(SharedString::from(format!("{id}-popup")))
                                 .debug_selector(|| format!("{id}-popup"))
                                 .relative()
                                 .w(bounds.size.width)
                                 .max_h(max_height)
-                                .p(px(5.))
-                                .contour(Some(p.background), Some(p.border), 6.)
+                                .p_1()
+                                .text_color(cx.theme().popover_foreground)
+                                .rounded(cx.theme().radius_lg)
+                                .contour(
+                                    Some(cx.theme().popover),
+                                    Some(cx.theme().border),
+                                    popup_radius,
+                                )
+                                .shadow_md()
                                 .occlude()
                                 .on_mouse_down_out(move |event, window, _| {
                                     if !bounds.contains(&event.position) {
@@ -1031,128 +1074,56 @@ impl Dropdowns {
                                     }
                                 })
                                 .child(
-                                    col()
+                                    v_flex()
                                         .id(SharedString::from(format!("{id}-options")))
                                         .overflow_y_scroll()
                                         .track_scroll(&self.menu_scroll)
                                         .min_h_0()
                                         .children(items),
                                 )
-                                .child(gpui_component::scroll::Scrollbar::vertical(
-                                    &self.menu_scroll,
-                                ))
+                                .child(Scrollbar::vertical(&self.menu_scroll))
                                 .with_animation(
                                     SharedString::from(format!("{id}-open")),
                                     Animation::new(Duration::from_millis(140))
-                                        .with_easing(gpui::ease_out_quint()),
-                                    |d, t| d.opacity(t),
+                                        .with_easing(ease_out_quint()),
+                                    |d, t| d.opacity(t).top(px(-4. * (1. - t))),
                                 ),
                         ),
                 )
                 .with_priority(2),
             );
         }
+
         if open.is_some() {
-            control
+            control.into_any_element()
         } else {
-            tip(control, hint.to_owned(), p)
+            let hint: SharedString = hint.to_owned().into();
+            control
+                .tooltip(move |window, cx| {
+                    gpui_kit::component::tooltip::Tooltip::new(hint.clone()).build(window, cx)
+                })
+                .into_any_element()
         }
     }
 }
 
-pub fn entrance(id: impl Into<gpui::ElementId>, content: impl IntoElement) -> impl IntoElement {
-    div().relative().size_full().overflow_hidden().child(
-        col()
-            .absolute()
-            .left_0()
-            .size_full()
-            .child(content)
-            .with_animation(
-                id,
-                Animation::new(Duration::from_millis(220)).with_easing(gpui::ease_out_quint()),
-                |div, t| div.opacity(t).top(px(8. * (1. - t))),
-            ),
-    )
-}
-
-pub fn sync_theme(window: Option<&mut Window>, cx: &mut gpui::App) {
-    gpui_component::Theme::sync_system_appearance(window, cx);
-    let theme = gpui_component::Theme::global_mut(cx);
-    let palette = Palette::new(theme.is_dark());
-    // Each window paints its own fallback or content layer over the DWM backdrop.
-    theme.background = gpui::transparent_black();
-    theme.foreground = palette.foreground;
-    theme.primary = palette.accent;
-}
-
-fn chevron(color: Hsla, up: bool) -> impl IntoElement {
-    canvas(
-        move |_, window, cx| {
-            animate(
-                "rotate-chevron",
-                if up { 1. } else { 0. },
-                Duration::from_millis(180),
-                window,
-                cx,
-            )
-        },
-        move |bounds, phase, window, _| {
-            let center = bounds.center();
-            let (sin, cos) = (phase * std::f32::consts::PI).sin_cos();
-            let rotate = |x: f32, y: f32| {
-                point(
-                    center.x + px(x * cos - y * sin),
-                    center.y + px(x * sin + y * cos),
-                )
-            };
-            let mut path = PathBuilder::stroke(px(1.2));
-            path.move_to(rotate(-4., -1.7));
-            path.line_to(rotate(0., 1.7));
-            path.line_to(rotate(4., -1.7));
-            if let Ok(path) = path.build() {
-                window.paint_path(path, color);
-            }
-        },
-    )
-    .size(px(14.))
-}
-
-pub fn scroller(id: &'static str, scroll: &ScrollHandle, content: Div) -> impl IntoElement {
-    col()
-        .relative()
-        .flex_1()
-        .min_h_0()
-        .child(
-            col()
-                .id(id)
-                .flex_1()
-                .min_h_0()
-                .overflow_y_scroll()
-                .track_scroll(scroll)
-                .child(content.flex_shrink_0()),
-        )
-        .child(gpui_component::scroll::Scrollbar::vertical(scroll))
-}
-
-pub fn number<T: 'static>(
+pub fn number_stepper<T: 'static>(
     fields: &mut Fields,
     id: &'static str,
     title: &'static str,
     hint: &'static str,
     value: &str,
-    p: Palette,
     int: Option<(i32, i32)>,
     window: &mut Window,
     cx: &mut Context<T>,
     callback: impl Fn(String) + 'static,
     step: impl Fn(i32) + 'static,
-) -> Stateful<Div> {
+) -> AnyElement {
     let typed = callback;
     let (input, focus) = fields.input(
         id,
         value,
         "",
-        false,
         false,
         false,
         window,
@@ -1173,12 +1144,13 @@ pub fn number<T: 'static>(
             }
             Edit::Blur | Edit::Submit if int.is_some() => {
                 if let Some(app) = runtime::app() {
-                    let _ = app.refresh();
+                    app.refresh();
                 }
             }
             _ => {}
         },
     );
+
     let held = fields.0[&id].held.clone();
     let reset = fields.0[&id].reset.clone();
     let step = Rc::new(move |delta| {
@@ -1188,82 +1160,134 @@ pub fn number<T: 'static>(
     let wheel = step.clone();
     let wheel_focus = focus.clone();
     let key = step.clone();
-    tip(
-        field_shell(title, p, &focus, window, 30.)
-            .w(px(130.))
-            .pr(px(3.))
-            .on_key_down(move |event, _, cx| {
-                if event.keystroke.key == "up" || event.keystroke.key == "down" {
-                    let key = key.clone();
-                    let delta = if event.keystroke.key == "up" { 1 } else { -1 };
-                    cx.stop_propagation();
-                    runtime::dispatch(move || key(delta));
-                }
-            })
-            .on_scroll_wheel(move |event, window, cx| {
-                let y = event.delta.pixel_delta(px(20.)).y;
-                if y != px(0.) && wheel_focus.is_focused(window) {
-                    let wheel = wheel.clone();
-                    cx.stop_propagation();
-                    runtime::dispatch(move || wheel(if y > px(0.) { 1 } else { -1 }));
-                }
-            })
-            .child(row().flex_1().min_w_0().pl(px(10.)).child(input))
-            .children([1, -1].map(|delta| {
-                let step = step.clone();
-                let focus = focus.clone();
-                let tooltip = format!("{}{title}", if delta > 0 { "增加" } else { "减少" });
-                let held = held.clone();
-                let pressed = held.clone();
-                let released = held.clone();
-                let leave = held;
-                tip(
-                    pointer_feedback(
-                        row()
-                            .id(("step", delta as i32 as usize))
-                            .debug_selector(|| format!("{id}-{delta}"))
-                            .relative()
-                            .h(px(24.))
-                            .w(px(26.))
-                            .flex_shrink_0()
-                            .justify_center(),
-                        p.foreground.opacity(0.07),
-                        p.foreground.opacity(0.12),
-                        4.,
+    let focused = focus.is_focused(window);
+    let hint_text: SharedString = hint.to_owned().into();
+    let radius = f32::from(cx.theme().radius);
+    let rest_border = cx.theme().input;
+    let focus_border = cx.theme().ring;
+
+    h_flex()
+        .id(ElementId::Name(title.into()))
+        .debug_selector(|| title.to_owned())
+        .relative()
+        .w(rems(8.125))
+        .h_8()
+        .pr_0p5()
+        .flex_shrink_0()
+        .rounded(cx.theme().radius)
+        .contour(Some(cx.theme().input_background()), None, radius)
+        .child(
+            canvas(
+                move |_, window, cx| {
+                    smooth_value(
+                        (id, "stepper-focus"),
+                        if focused { 1. } else { 0. },
+                        Duration::from_millis(130),
+                        window,
+                        cx,
                     )
-                    .child(chevron(p.foreground, delta > 0))
-                    .on_mouse_down(MouseButton::Left, move |_, window, _| {
-                        focus.focus(window);
-                        let step = step.clone();
-                        let held = pressed.clone();
-                        let press = (delta, held.get().1.wrapping_add(1));
-                        held.set(press);
-                        runtime::dispatch(move || {
-                            step(delta);
-                            if let Some(app) = runtime::app() {
-                                let clock = app.background_executor().clone();
-                                app.spawn(async move |_| {
-                                    clock.timer(Duration::from_millis(500)).await;
-                                    while held.get() == press {
-                                        step(delta);
-                                        clock.timer(Duration::from_millis(50)).await;
-                                    }
-                                })
-                                .detach();
+                },
+                move |bounds, amount, window, _| {
+                    paint_outline(bounds, rest_border.opacity(1. - amount), radius, window);
+                    paint_outline(bounds, focus_border.opacity(amount), radius, window);
+                },
+            )
+            .absolute()
+            .top_0()
+            .left_0()
+            .size_full(),
+        )
+        .tooltip(move |window, cx| {
+            gpui_kit::component::tooltip::Tooltip::new(hint_text.clone()).build(window, cx)
+        })
+        .on_key_down(move |event, _, cx| {
+            if event.keystroke.key == "up" || event.keystroke.key == "down" {
+                let key = key.clone();
+                let delta = if event.keystroke.key == "up" { 1 } else { -1 };
+                cx.stop_propagation();
+                runtime::dispatch(move || key(delta));
+            }
+        })
+        .on_scroll(move |event, window, cx| {
+            let y = event.delta.pixel_delta(px(20.)).y;
+            if y != px(0.) && wheel_focus.is_focused(window) {
+                let wheel = wheel.clone();
+                cx.stop_propagation();
+                runtime::dispatch(move || wheel(if y > px(0.) { 1 } else { -1 }));
+            }
+        })
+        .child(
+            h_flex()
+                .flex_1()
+                .min_w_0()
+                .pl_2p5()
+                .child(input.appearance(false).p_0()),
+        )
+        .children([1, -1].map(|delta| {
+            let step = step.clone();
+            let focus = focus.clone();
+            let tooltip_text: SharedString =
+                format!("{}{title}", if delta > 0 { "增加" } else { "减少" }).into();
+            let held = held.clone();
+            let pressed = held.clone();
+            let released = held.clone();
+            let leave = held;
+
+            let btn = h_flex()
+                .id(("step", delta as i32 as usize))
+                .debug_selector(|| format!("{id}-{delta}"))
+                .relative()
+                .h_6()
+                .w_6()
+                .flex_shrink_0()
+                .justify_center();
+
+            pointer_feedback(
+                (ElementId::from(id), if delta > 0 { "up" } else { "down" }),
+                btn,
+                cx.theme().accent,
+                cx.theme().secondary_active,
+                4.,
+            )
+            .tooltip(move |window, cx| {
+                gpui_kit::component::tooltip::Tooltip::new(tooltip_text.clone()).build(window, cx)
+            })
+            .child(
+                Icon::new(if delta > 0 {
+                    IconName::ChevronUp
+                } else {
+                    IconName::ChevronDown
+                })
+                .xsmall()
+                .text_color(cx.theme().muted_foreground),
+            )
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                focus.focus(window, cx);
+                let step = step.clone();
+                let held = pressed.clone();
+                let press = (delta, held.get().1.wrapping_add(1));
+                held.set(press);
+                runtime::dispatch(move || {
+                    step(delta);
+                    if let Some(app) = runtime::app() {
+                        let clock = app.background_executor().clone();
+                        app.spawn(async move |_| {
+                            clock.timer(Duration::from_millis(500)).await;
+                            while held.get() == press {
+                                step(delta);
+                                clock.timer(Duration::from_millis(65)).await;
                             }
-                        });
-                    })
-                    .on_mouse_up(MouseButton::Left, move |_, _, _| {
-                        released.set((0, released.get().1))
-                    })
-                    .on_mouse_up_out(MouseButton::Left, move |_, _, _| {
-                        leave.set((0, leave.get().1))
-                    }),
-                    tooltip,
-                    p,
-                )
-            })),
-        hint,
-        p,
-    )
+                        })
+                        .detach();
+                    }
+                });
+            })
+            .on_mouse_up(MouseButton::Left, move |_, _, _| {
+                released.set((0, released.get().1))
+            })
+            .on_mouse_up_out(MouseButton::Left, move |_, _, _| {
+                leave.set((0, leave.get().1))
+            })
+        }))
+        .into_any_element()
 }

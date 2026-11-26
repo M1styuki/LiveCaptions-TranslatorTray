@@ -8,9 +8,8 @@ license.workspace = true
 [dependencies]
 protocol.workspace = true
 windows-platform.workspace = true
-gpui.workspace = true
+gpui-kit.workspace = true
 paste.workspace = true
-gpui-component.workspace = true
 futures.workspace = true
 raw-window-handle.workspace = true
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse"] }
@@ -21,7 +20,7 @@ storage.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
-gpui = { workspace = true, features = ["test-support"] }
+gpui-kit = { workspace = true, features = ["test-support"] }
 windows-platform = { workspace = true, features = ["test-support"] }
 rusqlite = { version = "=0.40.1", features = ["bundled", "backup"] }
 providers = { workspace = true, features = ["test-support"] }

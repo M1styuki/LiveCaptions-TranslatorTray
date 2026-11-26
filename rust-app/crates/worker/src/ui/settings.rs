@@ -1,253 +1,17 @@
 use super::*;
-use gpui::{Bounds, Pixels, canvas, size};
-use std::time::Duration;
-use std::{cell::Cell, rc::Rc};
+use gpui_kit::component::{
+    ActiveTheme as _,
+    alert::Alert,
+    h_flex,
+    slider::{Slider, SliderEvent, SliderState},
+    switch::Switch,
+    v_flex,
+};
+use gpui_kit::{
+    App, AppContext as _, Context, Div, Entity, FontWeight, InteractiveElement as _, IntoElement,
+    ParentElement as _, Styled as _, Window, div, rems,
+};
 
-#[derive(Clone, Default)]
-pub(super) struct WheelMotion {
-    glide: Rc<Cell<Option<Glide>>>,
-    scheduled: Rc<Cell<bool>>,
-}
-
-#[derive(Clone, Copy)]
-struct Glide {
-    from: Pixels,
-    target: Pixels,
-    last: Pixels,
-    start: std::time::Instant,
-}
-
-impl WheelMotion {
-    pub(super) fn cancel(&self) {
-        self.glide.set(None);
-    }
-
-    fn advance(&self, scroll: &ScrollHandle, window: &mut Window) {
-        let Some(mut glide) = self.glide.get() else {
-            return;
-        };
-        let mut offset = scroll.offset();
-        if (offset.y - glide.last).abs() > px(1.) {
-            self.cancel();
-            return;
-        }
-        let t = (glide.start.elapsed().as_secs_f32() / 0.12).min(1.);
-        offset.y = glide.target + (glide.from - glide.target) * (1. - t).powi(3);
-        scroll.set_offset(offset);
-        window.refresh();
-        if t >= 1. {
-            self.cancel();
-        } else {
-            glide.last = offset.y;
-            self.glide.set(Some(glide));
-            if self.scheduled.replace(true) {
-                return;
-            }
-            let motion = self.clone();
-            let scroll = scroll.clone();
-            window.on_next_frame(move |window, _| {
-                motion.scheduled.set(false);
-                motion.advance(&scroll, window);
-            });
-        }
-    }
-
-    pub(super) fn handle(
-        &self,
-        event: &gpui::ScrollWheelEvent,
-        scroll: &ScrollHandle,
-        window: &mut Window,
-        cx: &mut gpui::App,
-    ) {
-        let gpui::ScrollDelta::Lines(lines) = event.delta else {
-            self.cancel();
-            return;
-        };
-        if lines.y == 0. || lines.y.abs() < 1. {
-            self.cancel();
-            return;
-        }
-        let y = scroll.offset().y;
-        let active = self.glide.get();
-        let base = active
-            .filter(|g| (g.last - y).abs() <= px(1.) && (g.target - y) * lines.y >= px(0.))
-            .map_or(y, |g| g.target);
-        let target = (base + px(lines.y * 24.)).clamp(-scroll.max_offset().height, px(0.));
-        cx.stop_propagation();
-        if y == target {
-            self.cancel();
-            return;
-        }
-        self.glide.set(Some(Glide {
-            from: y,
-            target,
-            last: y,
-            start: std::time::Instant::now(),
-        }));
-        if active.is_none() {
-            self.advance(scroll, window);
-        }
-    }
-}
-
-#[derive(Default)]
-pub(super) struct Interval {
-    bounds: Rc<Cell<Bounds<Pixels>>>,
-    dragging: Rc<Cell<bool>>,
-}
-
-impl Interval {
-    fn render(&self, ui: &MainWindow, value: i32, p: Palette) -> impl IntoElement {
-        let bounds = self.bounds.clone();
-        let drag = self.dragging.clone();
-        let click = self.dragging.clone();
-        let release = self.dragging.clone();
-        let release_out = self.dragging.clone();
-        let capture = self.bounds.clone();
-        let painting_drag = self.dragging.clone();
-        let view = ui.clone();
-        let set_position = Rc::new(move |x: Pixels| {
-            let rect = bounds.get();
-            let travel = (rect.size.width - px(20.)).max(px(1.));
-            let value = (((x - rect.left() - px(10.)) / travel) * 10.)
-                .round()
-                .clamp(0., 10.) as i32;
-            let ui = view.clone();
-            runtime::dispatch(move || {
-                if ui.get_max_sync_interval() != value {
-                    set(&ui, "MaxSyncInterval", value);
-                }
-            });
-        });
-        let move_position = set_position.clone();
-        let keyboard = ui.clone();
-        let percent = value as f32 / 10.;
-        let thumb_background = if p.dark {
-            gpui::rgb(0x454545)
-        } else {
-            gpui::rgb(0xffffff)
-        };
-        tip(
-            div()
-                .id("interval-slider")
-                .debug_selector(|| "interval-slider".to_owned())
-                .relative()
-                .flex_1()
-                .min_w_0()
-                .h(px(20.))
-                .focusable()
-                .tab_stop(true)
-                .child(
-                    canvas(
-                        move |bounds, window, cx| {
-                            capture.set(bounds);
-                            let hover = bounds.contains(&window.mouse_position())
-                                && window.is_window_active();
-                            let knob = if painting_drag.get() {
-                                5.5
-                            } else if hover {
-                                7.
-                            } else {
-                                6.
-                            };
-                            crate::ui::motion::animate(
-                                "interval-thumb",
-                                knob,
-                                Duration::from_millis(140),
-                                window,
-                                cx,
-                            )
-                        },
-                        move |bounds, knob, window, _| {
-                            let width = (bounds.size.width - px(20.)).max(px(0.));
-                            let center = bounds.center();
-                            let start = bounds.left() + px(10.);
-                            let active = width * percent;
-                            let track = Bounds::new(
-                                point(bounds.left(), center.y - px(2.)),
-                                size(bounds.size.width, px(4.)),
-                            );
-                            let fill_width = match value {
-                                0 => px(0.),
-                                10 => track.size.width,
-                                _ => active + px(10.),
-                            };
-                            super::super::shape::paint_fill(track, p.border, 2., window);
-                            super::super::shape::paint_fill(
-                                Bounds::new(track.origin, size(fill_width, track.size.height)),
-                                p.accent,
-                                2.,
-                                window,
-                            );
-                            let thumb = Bounds::new(
-                                point(start + active - px(10.), center.y - px(10.)),
-                                size(px(20.), px(20.)),
-                            );
-                            window.paint_quad(gpui::quad(
-                                thumb,
-                                px(10.),
-                                thumb_background,
-                                px(1.),
-                                p.border,
-                                gpui::BorderStyle::Solid,
-                            ));
-                            let dot = Bounds::new(
-                                point(start + active - px(knob), center.y - px(knob)),
-                                size(px(knob * 2.), px(knob * 2.)),
-                            );
-                            window.paint_quad(gpui::quad(
-                                dot,
-                                px(knob),
-                                p.accent,
-                                px(0.),
-                                p.border,
-                                gpui::BorderStyle::Solid,
-                            ));
-                        },
-                    )
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .size_full(),
-                )
-                .on_hover(|_, window, _| window.refresh())
-                .on_mouse_down(MouseButton::Left, move |event, window, _| {
-                    click.set(true);
-                    window.refresh();
-                    set_position(event.position.x);
-                })
-                .on_mouse_move(move |event, _, _| {
-                    if drag.get() && event.pressed_button == Some(MouseButton::Left) {
-                        move_position(event.position.x);
-                    }
-                })
-                .on_mouse_up(MouseButton::Left, move |_, window, _| {
-                    release.set(false);
-                    window.refresh();
-                })
-                .on_mouse_up_out(MouseButton::Left, move |_, window, _| {
-                    release_out.set(false);
-                    window.refresh();
-                })
-                .on_key_down(move |e: &KeyDownEvent, _, cx| {
-                    let value = match e.keystroke.key.as_str() {
-                        "left" | "down" => (value - 1).max(0),
-                        "right" | "up" => (value + 1).min(10),
-                        "home" => 0,
-                        "end" => 10,
-                        _ => return,
-                    };
-                    cx.stop_propagation();
-                    let ui = keyboard.clone();
-                    runtime::dispatch(move || set(&ui, "MaxSyncInterval", value));
-                }),
-            format!("调用间隔：{value}；按字幕变化次数计"),
-            p,
-        )
-    }
-}
-
-const DROPDOWN_WIDTH: f32 = 160.;
 const SERVICES: [&str; 11] = [
     "Google",
     "Google2",
@@ -267,32 +31,76 @@ const LANGUAGES: [&str; 13] = [
 ];
 
 impl MainView {
+    fn ensure_interval_slider(
+        &mut self,
+        ui: &MainWindow,
+        value: i32,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<SliderState> {
+        if let Some((state, applied, _)) = &mut self.interval_slider {
+            if *applied != value {
+                *applied = value;
+                state.update(cx, |slider, cx| {
+                    if slider.value().end().round() as i32 != value {
+                        slider.set_value(value as f32, window, cx);
+                    }
+                });
+            }
+            return state.clone();
+        }
+
+        let state = cx.new(|_| {
+            SliderState::new()
+                .min(0.)
+                .max(10.)
+                .step(1.)
+                .default_value(value as f32)
+        });
+        let view_ui = ui.clone();
+        let sub = cx.subscribe(&state, move |this, _, event: &SliderEvent, _| {
+            let SliderEvent::Change(val) = event else {
+                return;
+            };
+            let next = val.end().round().clamp(0., 10.) as i32;
+            if let Some((_, applied, _)) = &mut this.interval_slider {
+                *applied = next;
+            }
+            let view_ui = view_ui.clone();
+            runtime::dispatch(move || {
+                if view_ui.get_max_sync_interval() != next {
+                    set(&view_ui, "MaxSyncInterval", next);
+                }
+            });
+        });
+        self.interval_slider = Some((state.clone(), value, sub));
+        state
+    }
+
     pub(super) fn settings(
         &mut self,
         s: &MainState,
         ui: &MainWindow,
-        p: Palette,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let service_ui = ui.clone();
         let service = self.dropdowns.show(
             "service",
-            p,
             &s.selected_service,
             SERVICES.map(String::from).to_vec(),
             None,
             "当前翻译服务；DeepSeek 使用 OpenAI 兼容接口",
-            34.,
             window,
+            cx,
             move |_, value| set(&service_ui, "ApiName", value),
         );
+
         let lang = ui.clone();
-        let (language, _) = self.fields.input(
+        let (language_input, _) = self.fields.input(
             "language",
             &s.selected_language,
             "",
-            false,
             false,
             true,
             window,
@@ -306,82 +114,35 @@ impl MainView {
         let lang = ui.clone();
         let language = self.dropdowns.show(
             "target-language",
-            p,
             &s.selected_language,
             LANGUAGES.map(String::from).to_vec(),
-            Some(language),
+            Some(language_input),
             "译文语言代码，如 zh-CN",
-            34.,
             window,
+            cx,
             move |_, value| set(&lang, "TargetLanguage", value),
         );
 
-        let slider = self.interval.render(ui, s.max_sync_interval, p);
-        let api_ui = ui.clone();
-        let translate = col()
-            .child(setting_row(
-                "翻译服务",
-                "Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。",
-                row()
-                    .gap(px(8.))
-                    .child(action(
-                        "configure-api",
-                        "配置服务",
-                        "配置翻译服务",
-                        p,
-                        false,
-                        true,
-                        move || api_ui.invoke_api_requested(),
-                    ))
-                    .child(div().w(px(DROPDOWN_WIDTH)).child(service)),
-            ))
-            .child(setting_row(
-                "目标语言",
-                "译文的语言代码，例如 zh-CN。",
-                div().w(px(DROPDOWN_WIDTH)).child(language),
-            ))
-            .child(setting_row(
-                "调用间隔",
-                "按字幕内容变化次数控制调用频率，数值越小越频繁。",
-                row()
-                    .gap(px(12.))
-                    .child(note(format!("{} 次", s.max_sync_interval)).text_size(px(12.)))
-                    .child(row().w(px(180.)).child(slider)),
-            ));
+        let slider_state = self.ensure_interval_slider(ui, s.max_sync_interval, window, cx);
+        let slider = div()
+            .id("interval-slider-wrap")
+            .debug_selector(|| "interval-slider".to_owned())
+            .w(rems(11.25))
+            .flex_shrink_0()
+            .child(
+                Slider::new(&slider_state)
+                    .horizontal()
+                    .accessibility_label("调用间隔"),
+            );
 
         let config = ui.clone();
-        let count = s.num_contexts;
-        let context = number(
-            &mut self.fields,
-            "contexts",
-            "上下文句数",
-            "翻译上下文句数：1–10",
-            &count.to_string(),
-            p,
-            Some((1, 10)),
-            window,
-            cx,
-            {
-                let config = config.clone();
-                move |value| set(&config, "NumContexts", value)
-            },
-            move |delta| {
-                set(
-                    &config,
-                    "NumContexts",
-                    (config.get_num_contexts() + delta).clamp(1, 10),
-                )
-            },
-        );
-        let config = ui.clone();
-        let count = s.display_sentences;
-        let sentences = number(
+        let sentences_text = s.display_sentences.to_string();
+        let sentences_stepper = number_stepper(
             &mut self.fields,
             "sentences",
             "悬浮字幕前文句数",
             "保留显示的前文句数：0–6",
-            &count.to_string(),
-            p,
+            &sentences_text,
             Some((0, 6)),
             window,
             cx,
@@ -397,28 +158,124 @@ impl MainView {
                 )
             },
         );
-        let config = ui.clone();
+
         let aware = s.context_aware;
-        let context = col()
-            .child(setting_row(
-                "前文句数",
-                "悬浮字幕中保留的前文句数，可设为 0–6。",
-                sentences,
-            ))
-            .child(setting_row(
-                "上下文翻译",
-                "向翻译服务提供前文；模型服务会使用更多 token。",
-                toggle("context-aware", "上下文翻译", aware, p, move || {
-                    set(&config, "ContextAware", !aware)
-                }),
-            ))
-            .when(aware, |group| {
-                group.child(setting_row(
-                    "上下文句数",
-                    "翻译时提供给服务的前文句数，可设为 1–10。",
-                    context,
-                ))
-            });
+        let contexts_text = s.num_contexts.to_string();
+        let contexts_stepper = aware.then(|| {
+            let config = ui.clone();
+            number_stepper(
+                &mut self.fields,
+                "contexts",
+                "上下文句数",
+                "翻译上下文句数：1–10",
+                &contexts_text,
+                Some((1, 10)),
+                window,
+                cx,
+                {
+                    let config = config.clone();
+                    move |value| set(&config, "NumContexts", value)
+                },
+                move |delta| {
+                    set(
+                        &config,
+                        "NumContexts",
+                        (config.get_num_contexts() + delta).clamp(1, 10),
+                    )
+                },
+            )
+        });
+
+        let api_ui = ui.clone();
+        let translation_card = v_flex()
+            .gap_1p5()
+            .child(section_heading("翻译", cx))
+            .child(
+                section_card(cx)
+                    .child(setting_row(
+                        "翻译服务",
+                        "Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。",
+                        div().w(rems(10.)).flex_shrink_0().child(service),
+                        cx,
+                    ))
+                    .child(hairline(cx))
+                    .child(setting_row(
+                        "翻译服务与提示词配置",
+                        "管理各翻译服务的接口地址、密钥与模型提示词",
+                        contour_button(
+                            "configure-api",
+                            "配置",
+                            "打开翻译服务与提示词设置",
+                            cx,
+                            move || api_ui.invoke_api_requested(),
+                        ),
+                        cx,
+                    ))
+                    .child(hairline(cx))
+                    .child(setting_row(
+                        "目标语言",
+                        "译文的语言代码，例如 zh-CN。",
+                        div().w(rems(10.)).flex_shrink_0().child(language),
+                        cx,
+                    ))
+                    .child(hairline(cx))
+                    .child(setting_row(
+                        "调用间隔",
+                        "按字幕变化次数控制调用频率，数值越小越频繁。",
+                        h_flex()
+                            .gap_3()
+                            .flex_shrink_0()
+                            .child(
+                                div()
+                                    .text_xs()
+                                    .text_color(cx.theme().muted_foreground)
+                                    .child(format!("{} 次", s.max_sync_interval)),
+                            )
+                            .child(slider),
+                        cx,
+                    )),
+            );
+
+        let config = ui.clone();
+        let context_card = v_flex()
+            .gap_1p5()
+            .child(section_heading("字幕与上下文", cx))
+            .child(
+                section_card(cx)
+                    .child(setting_row(
+                        "前文句数",
+                        "悬浮字幕中保留的前文句数，可设为 0–6。",
+                        sentences_stepper,
+                        cx,
+                    ))
+                    .child(hairline(cx))
+                    .child(setting_row(
+                        "上下文翻译",
+                        "向翻译服务提供前文；模型服务会使用更多 token。",
+                        Switch::new("context-aware")
+                            .checked(aware)
+                            .accessibility_label("上下文翻译")
+                            .tooltip(if aware {
+                                "上下文翻译：已开启"
+                            } else {
+                                "上下文翻译：已关闭"
+                            })
+                            .on_change(move |next, _, _| {
+                                let next = *next;
+                                let config = config.clone();
+                                runtime::dispatch(move || set(&config, "ContextAware", next));
+                            }),
+                        cx,
+                    ))
+                    .when_some(contexts_stepper, |card, stepper| {
+                        card.child(hairline(cx)).child(setting_row(
+                            "上下文句数",
+                            "翻译时提供给服务的前文句数，可设为 1–10。",
+                            stepper,
+                            cx,
+                        ))
+                    }),
+            );
 
         let visibility = ui.clone();
         let hidden = s.live_captions_hidden;
@@ -426,54 +283,87 @@ impl MainView {
         let latency_checked = s.latency_show;
         let autostart = ui.clone();
         let checked = s.autostart_enabled;
-        let display = col()
-            .child(setting_row(
-                "显示系统字幕",
-                "在系统字幕中修改源语言；隐藏窗口后仍可识别。",
-                toggle(
-                    "system-captions",
-                    "显示系统字幕",
-                    !hidden,
-                    p,
-                    move || visibility.invoke_captions_visibility_changed(!hidden),
-                ),
-            ))
-            .child(setting_row(
-                "显示翻译延迟",
-                "在字幕页显示最近一次翻译请求的耗时，单位为毫秒。",
-                toggle(
-                    "latency",
-                    "显示翻译延迟",
-                    latency_checked,
-                    p,
-                    move || set(&latency, "LatencyShow", !latency_checked),
-                ),
-            ))
-            .child(setting_row(
-                "自启动",
-                "登录 Windows 后驻留托盘；字幕需手动开启。",
-                toggle("autostart", "开机自启动", checked, p, move || {
-                    autostart.invoke_autostart_changed(!checked)
-                }),
-            ))
-            .children((!s.autostart_message.is_empty()).then(|| note(s.autostart_message.clone())));
-        let wheel = self.wheel.clone();
-        let scroll = self.scroll.clone();
+
+        let system_card = v_flex()
+            .gap_1p5()
+            .child(section_heading("窗口与系统", cx))
+            .child(
+                section_card(cx)
+                    .child(setting_row(
+                        "显示系统字幕",
+                        "在系统字幕中修改源语言；隐藏窗口后仍可识别。",
+                        Switch::new("system-captions")
+                            .checked(!hidden)
+                            .accessibility_label("显示系统字幕")
+                            .tooltip(if !hidden {
+                                "显示系统字幕：已开启"
+                            } else {
+                                "显示系统字幕：已关闭"
+                            })
+                            .on_change(move |_, _, _| {
+                                let visibility = visibility.clone();
+                                runtime::dispatch(move || {
+                                    visibility.invoke_captions_visibility_changed(!hidden)
+                                });
+                            }),
+                        cx,
+                    ))
+                    .child(hairline(cx))
+                    .child(setting_row(
+                        "显示翻译延迟",
+                        "在字幕页显示最近一次翻译请求的耗时（毫秒）。",
+                        Switch::new("latency")
+                            .checked(latency_checked)
+                            .accessibility_label("显示翻译延迟")
+                            .tooltip(if latency_checked {
+                                "显示翻译延迟：已开启"
+                            } else {
+                                "显示翻译延迟：已关闭"
+                            })
+                            .on_change(move |next, _, _| {
+                                let next = *next;
+                                let latency = latency.clone();
+                                runtime::dispatch(move || set(&latency, "LatencyShow", next));
+                            }),
+                        cx,
+                    ))
+                    .child(hairline(cx))
+                    .child(setting_row(
+                        "开机自启动",
+                        "登录 Windows 后驻留托盘；字幕需手动开启。",
+                        Switch::new("autostart")
+                            .checked(checked)
+                            .accessibility_label("开机自启动")
+                            .tooltip(if checked {
+                                "开机自启动：已开启"
+                            } else {
+                                "开机自启动：已关闭"
+                            })
+                            .on_change(move |next, _, _| {
+                                let next = *next;
+                                let autostart = autostart.clone();
+                                runtime::dispatch(move || autostart.invoke_autostart_changed(next));
+                            }),
+                        cx,
+                    )),
+            )
+            .when(!s.autostart_message.is_empty(), |d| {
+                d.child(Alert::warning("autostart-msg", s.autostart_message.clone()).small())
+            });
+
         scroller(
             "settings-scroll",
             &self.scroll,
-            col()
-                .on_scroll_wheel(move |event, window, cx| wheel.handle(event, &scroll, window, cx))
+            v_flex()
                 .w_full()
-                .max_w(px(880.))
+                .max_w(rems(52.))
                 .mx_auto()
-                .p(px(22.))
-                .gap(px(16.))
-                .child(translate)
-                .child(divider(p))
-                .child(context)
-                .child(divider(p))
-                .child(display),
+                .px_6()
+                .py_3p5()
+                .gap_3p5()
+                .child(translation_card)
+                .child(context_card)
+                .child(system_card),
         )
     }
 }
@@ -493,21 +383,45 @@ fn set(ui: &MainWindow, field: &'static str, value: impl ToString) {
     ui.invoke_setting_edited(field.into(), value);
 }
 
-fn setting_row(title: &'static str, description: &'static str, control: impl IntoElement) -> Div {
-    row()
-        .flex_wrap()
-        .justify_end()
-        .min_h(px(46.))
-        .py(px(6.))
-        .gap(px(16.))
+fn section_heading(title: &'static str, cx: &App) -> Div {
+    div()
+        .px_1()
+        .text_xs()
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_color(cx.theme().muted_foreground)
+        .child(title)
+}
+
+fn setting_row(
+    title: &'static str,
+    description: &'static str,
+    control: impl IntoElement,
+    cx: &App,
+) -> Div {
+    h_flex()
+        .justify_between()
+        .items_center()
+        .gap_4()
+        .px_4()
+        .py_2()
         .child(
-            col()
+            v_flex()
                 .flex_1()
-                .flex_basis(px(126.))
                 .min_w_0()
-                .gap(px(3.))
-                .child(label(title))
-                .child(note(description)),
+                .gap_0p5()
+                .child(
+                    div()
+                        .text_sm()
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(cx.theme().foreground)
+                        .child(title),
+                )
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(cx.theme().muted_foreground)
+                        .child(description),
+                ),
         )
         .child(control)
 }

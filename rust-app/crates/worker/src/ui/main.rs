@@ -5,13 +5,28 @@ use super::{
     Weak,
     controls::*,
     model::{HistoryItem, MainState, MainWindow},
+    motion::{entrance, pointer_feedback, smooth_spring},
     runtime,
-    shape::ContinuousCorners,
+    shape::{ContinuousCorners as _, paint_fill},
+    theme::sync_theme,
 };
-use gpui::{
-    AnimationExt, Context, Div, FocusHandle, FontWeight, KeyDownEvent, MouseButton, Render,
-    ScrollHandle, Window, div, point, prelude::*, px, relative, rgba,
+use gpui_kit::component::{
+    ActiveTheme as _, Disableable as _, Icon, IconName, Selectable as _, Sizable as _,
+    alert::Alert,
+    button::{Button, ButtonVariants as _},
+    empty::{Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle},
+    h_flex,
+    slider::SliderState,
+    v_flex,
 };
+use gpui_kit::{
+    Animation, AnimationExt as _, App, Bounds, Context, Div, ElementId, Entity, FocusHandle,
+    FontWeight, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ParentElement as _,
+    Render, ScrollHandle, SharedString, StatefulInteractiveElement as _, Styled as _, Subscription,
+    Window, canvas, div, ease_out_quint, point, prelude::FluentBuilder as _, px, relative, rems,
+    size,
+};
+use std::time::Duration;
 
 #[derive(Default)]
 pub(super) struct MainView {
@@ -20,18 +35,21 @@ pub(super) struct MainView {
     dropdowns: Dropdowns,
     scroll: ScrollHandle,
     last_page: Option<i32>,
+    applied_theme: Option<(bool, bool)>,
     delete_focus: Option<(FocusHandle, FocusHandle)>,
-    interval: settings::Interval,
-    wheel: settings::WheelMotion,
+    interval_slider: Option<(Entity<SliderState>, i32, Subscription)>,
 }
 
 impl MainWindow {
-    pub fn show(&self) -> gpui::Result<()> {
+    pub fn show(&self) -> gpui_kit::Result<()> {
         let ui = self.clone();
         self.window()
             .show("实时字幕翻译", (900., 600.), move |window, cx| {
                 let weak = ui.as_weak();
-                ui.set_frame_dark(super::native::is_dark(window.appearance()));
+                let dark = super::native::is_dark(window.appearance());
+                ui.set_frame_dark(dark);
+                sync_theme(Some(window), Some(dark), ui.window().has_mica(), cx);
+
                 window.on_window_should_close(cx, move |_, _| {
                     let weak = weak.clone();
                     runtime::dispatch(move || {
@@ -48,8 +66,13 @@ impl MainWindow {
                 })
                 .detach();
                 cx.observe_window_appearance(window, |this: &mut MainView, window, cx| {
-                    sync_theme(Some(window), cx);
                     let dark = super::native::is_dark(window.appearance());
+                    let has_mica = this
+                        .ui
+                        .upgrade()
+                        .is_some_and(|ui| ui.window().has_mica());
+                    sync_theme(Some(window), Some(dark), has_mica, cx);
+                    this.applied_theme = Some((dark, has_mica));
                     let weak = this.ui.clone();
                     runtime::dispatch(move || {
                         if let Some(ui) = weak.upgrade() {
@@ -61,12 +84,13 @@ impl MainWindow {
                 .detach();
                 MainView {
                     ui: ui.as_weak(),
+                    applied_theme: Some((dark, ui.window().has_mica())),
                     ..Default::default()
                 }
             })
     }
 
-    pub fn hide(&self) -> gpui::Result<()> {
+    pub fn hide(&self) -> gpui_kit::Result<()> {
         self.window().hide(false);
         Ok(())
     }
@@ -78,104 +102,137 @@ impl Render for MainView {
             return div();
         };
         let s = ui.state();
-        let p = Palette::for_window(s.frame_dark, ui.window().has_mica());
+        let theme_key = (s.frame_dark, ui.window().has_mica());
+        if self.applied_theme != Some(theme_key) {
+            self.applied_theme = Some(theme_key);
+            sync_theme(Some(window), Some(s.frame_dark), ui.window().has_mica(), cx);
+        }
+
         if self.last_page.replace(s.page) != Some(s.page) {
-            self.wheel.cancel();
             self.fields.clear();
-            self.interval = settings::Interval::default();
             self.dropdowns.close();
             self.scroll.set_offset(point(px(0.), px(0.)));
         }
+
         let content = match s.page {
-            0 => self.captions(&s, &ui, p).into_any_element(),
-            2 => self.history(&s, &ui, p, window, cx).into_any_element(),
-            _ if s.data_state == 2 => self.settings(&s, &ui, p, window, cx).into_any_element(),
-            _ => recovery(&s, &ui, p).into_any_element(),
+            0 => self.captions(&s, &ui, cx).into_any_element(),
+            2 => self.history(&s, &ui, window, cx).into_any_element(),
+            _ if s.data_state == 2 => self.settings(&s, &ui, window, cx).into_any_element(),
+            _ => recovery(&s, &ui, cx).into_any_element(),
         };
+
         let caption_log = (s.page == 0).then(|| {
             let ui = ui.clone();
             let checked = s.caption_log_enabled;
-            titlebar_button(
-                p,
-                "caption-cards",
-                None,
-                if checked {
+            Button::new("caption-cards")
+                .ghost()
+                .small()
+                .selected(checked)
+                .icon(app_icon(if checked {
                     "original-icons/history.svg"
                 } else {
                     "original-icons/history-dismiss.svg"
-                },
-                "字幕历史卡片",
-                checked,
-                move || {
-                    ui.set_caption_log_enabled(!checked);
-                    ui.invoke_setting_edited("CaptionLogEnabled".into(), (!checked).to_string());
-                },
-            )
-            .into_any_element()
+                }))
+                .accessibility_label("字幕历史卡片")
+                .tooltip("字幕历史卡片")
+                .on_click(move |_, _, _| {
+                    let ui = ui.clone();
+                    runtime::dispatch(move || {
+                        ui.set_caption_log_enabled(!checked);
+                        ui.invoke_setting_edited(
+                            "CaptionLogEnabled".into(),
+                            (!checked).to_string(),
+                        );
+                    });
+                })
+                .into_any_element()
         });
+
         let title_ui = ui.clone();
-        let mut layout = col()
+        let compact = window.viewport_size().width < px(620.);
+
+        let show_data_banner =
+            s.retry_save || (!s.data_message.is_empty() && s.data_message != "设置已保存。");
+
+        let right_pane = v_flex()
+            .flex_1()
+            .h_full()
+            .min_w_0()
+            .when(show_data_banner, |pane| {
+                let retry_ui = ui.clone();
+                let mut banner = if s.retry_save {
+                    Alert::error("data-status", s.data_message.clone()).small()
+                } else {
+                    Alert::warning("data-status", s.data_message.clone()).small()
+                };
+                if s.retry_save {
+                    banner = banner.banner();
+                }
+                pane.child(
+                    h_flex()
+                        .px_4()
+                        .pt_3()
+                        .gap_2()
+                        .child(div().flex_1().min_w_0().child(banner))
+                        .when(s.retry_save, |d| {
+                            d.child(
+                                Button::new("retry-save")
+                                    .outline()
+                                    .small()
+                                    .label("重试保存")
+                                    .on_click(move |_, _, _| {
+                                        let retry_ui = retry_ui.clone();
+                                        runtime::dispatch(move || {
+                                            retry_ui.invoke_data_action(4, String::new());
+                                        });
+                                    }),
+                            )
+                        }),
+                )
+            })
+            .child(
+                v_flex()
+                    .flex_1()
+                    .min_h_0()
+                    .w_full()
+                    .child(entrance(
+                        SharedString::from(format!("main-page-{}-{}", s.page, s.data_state == 2)),
+                        content,
+                    )),
+            );
+
+        let mut layout = v_flex()
             .size_full()
             .relative()
-            .font_family(s.ui_font_family.clone())
-            .text_size(px(14.))
-            .line_height(px(20.))
-            .text_color(p.foreground)
+            .bg(cx.theme().background)
+            .text_sm()
+            .text_color(cx.theme().foreground)
             .child(titlebar(
-                p,
                 "实时字幕翻译",
                 caption_log,
                 "关闭主窗口",
                 move |action| title_ui.invoke_window_action(action),
+                cx,
             ))
+            .child(hairline(cx))
             .child(
-                row()
-                    .items_start()
-                    .bg(p.window_background)
+                h_flex()
+                    .items_stretch()
                     .flex_1()
                     .min_h_0()
                     .w_full()
-                    .child(sidebar(&s, &ui, p, window.viewport_size().width < px(620.)))
-                    .child(
-                        col()
-                            .flex_1()
-                            .h_full()
-                            .min_w_0()
-                            .child(entrance(("main-page", s.page as usize), content)),
-                    ),
+                    .child(sidebar(&s, &ui, compact, cx))
+                    .child(right_pane),
             )
             .child(grip());
-        if s.retry_save || (!s.data_message.is_empty() && s.data_message != "设置已保存。") {
-            let retry_ui = ui.clone();
-            let message = row()
-                .bg(p.window_background)
-                .w_full()
-                .p(px(4.))
-                .gap(px(8.))
-                .child(label(s.data_message.clone()).flex_1().min_w_0())
-                .children(s.retry_save.then(|| {
-                    action(
-                        "retry-save",
-                        "重试保存",
-                        "重试保存",
-                        p,
-                        false,
-                        true,
-                        move || retry_ui.invoke_data_action(4, String::new()),
-                    )
-                }));
-            layout = col()
-                .size_full()
-                .child(message)
-                .child(layout.flex_1().min_h_0());
-        }
+
         if s.delete_confirm {
             let handles = self.delete_focus.get_or_insert_with(|| {
                 let cancel = cx.focus_handle();
-                cancel.focus(window);
+                cancel.focus(window, cx);
                 (cancel, cx.focus_handle())
             });
-            layout = layout.child(delete_dialog(&ui, p, handles.clone()));
+            layout = layout.child(delete_dialog(&ui, handles.clone(), cx));
         } else {
             self.delete_focus = None;
         }
@@ -183,7 +240,7 @@ impl Render for MainView {
     }
 }
 
-fn sidebar(s: &MainState, ui: &MainWindow, p: Palette, compact: bool) -> Div {
+fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
     let navs = [
         ("字幕", "original-icons/home.svg"),
         ("设置", "original-icons/settings.svg"),
@@ -193,178 +250,260 @@ fn sidebar(s: &MainState, ui: &MainWindow, p: Palette, compact: bool) -> Div {
     let captions = ui.clone();
     let topmost = ui.clone();
     let (paused, enabled, pinned) = (s.log_only, s.captions_enabled, s.topmost);
-    col()
-        .w(px(if compact { 60. } else { 144. }))
-        .border_r_1()
-        .border_color(p.pane_divider)
+    let active_index = s.page.clamp(0, 2) as f32;
+    let pill_color = cx.theme().sidebar_accent;
+    let pill_radius = f32::from(cx.theme().radius);
+
+    v_flex()
+        .w(if compact { rems(3.0) } else { rems(7.75) })
         .h_full()
         .flex_shrink_0()
-        .px(px(10.))
-        .pt(px(12.))
-        .pb(px(8.))
-        .gap(px(6.))
-        .children(navs.into_iter().enumerate().map(|(index, (name, icon))| {
-            let ui = ui.clone();
-            let index = index as i32;
-            let item = nav(
-                name,
-                if compact { "" } else { name },
-                Some(icon),
-                s.page == index,
-                p,
-                move || {
-                    ui.set_page(index);
-                    ui.invoke_page_changed(index);
-                },
-            );
-            if compact {
-                tip(item.pl_0().gap_0().justify_center(), name, p)
-            } else {
-                item
-            }
-        }))
-        .child(div().flex_1())
-        .child(divider(p).opacity(0.45))
+        .bg(cx.theme().sidebar)
+        .border_r_1()
+        .border_color(cx.theme().sidebar_border)
+        .p_1p5()
+        .gap_1()
         .child(
-            row()
-                .when(compact, |d| d.flex_col())
-                .when(!compact, |d| d.h(px(32.)))
-                .gap(px(6.))
-                .child(icon_button(
-                    "pause",
-                    if paused {
-                        "original-icons/pause-filled.svg"
-                    } else {
-                        "original-icons/pause.svg"
-                    },
-                    if paused {
-                        "恢复翻译"
-                    } else {
-                        "暂停翻译"
-                    },
-                    p,
-                    paused,
-                    false,
-                    true,
-                    37.,
-                    32.,
-                    16.,
-                    move || {
-                        pause.set_log_only(!paused);
-                        pause.invoke_pause_changed(!paused);
-                    },
-                ))
-                .child(icon_button(
-                    "captions",
-                    if enabled {
-                        "original-icons/captions.svg"
-                    } else {
-                        "original-icons/captions-off.svg"
-                    },
-                    if s.engine_busy {
-                        "正在切换字幕…"
-                    } else if enabled {
-                        "关闭字幕"
-                    } else {
-                        "开启字幕"
-                    },
-                    p,
-                    enabled,
-                    false,
-                    !s.engine_busy,
-                    37.,
-                    32.,
-                    16.,
-                    move || captions.invoke_captions_changed(!enabled),
-                ))
-                .child(icon_button(
-                    "topmost",
-                    if pinned {
-                        "original-icons/pin.svg"
-                    } else {
-                        "original-icons/pin-off.svg"
-                    },
-                    "始终置顶",
-                    p,
-                    pinned,
-                    false,
-                    true,
-                    37.,
-                    32.,
-                    16.,
-                    move || {
-                        topmost.set_topmost(!pinned);
-                        topmost.invoke_topmost_changed(!pinned);
-                    },
-                )),
+            v_flex()
+                .relative()
+                .gap_1()
+                .child(
+                    canvas(
+                        move |_, window, cx| {
+                            let step = rems(2.5).to_pixels(window.rem_size());
+                            smooth_spring("main-nav-pill", step * active_index, window, cx)
+                        },
+                        move |bounds, y, window, _| {
+                            let pill_h = rems(2.25).to_pixels(window.rem_size());
+                            let pill = Bounds::new(
+                                point(bounds.origin.x, bounds.origin.y + y),
+                                size(bounds.size.width, pill_h),
+                            );
+                            paint_fill(pill, pill_color, pill_radius, window);
+                        },
+                    )
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full(),
+                )
+                .children(navs.into_iter().enumerate().map(|(index, (name, icon))| {
+                    let ui = ui.clone();
+                    let index = index as i32;
+                    nav_item(
+                        name,
+                        name,
+                        Some(icon),
+                        compact,
+                        s.page == index,
+                        false,
+                        cx,
+                        move || {
+                            ui.set_page(index);
+                            ui.invoke_page_changed(index);
+                        },
+                    )
+                })),
+        )
+        .child(div().flex_1())
+        .child(hairline(cx))
+        .child(
+            div()
+                .flex()
+                .when(compact, |d| d.flex_col().items_center())
+                .when(!compact, |d| d.flex_row().justify_between())
+                .pt_1()
+                .gap_1()
+                .child(
+                    Button::new("pause")
+                        .ghost()
+                        .small()
+                        .selected(paused)
+                        .icon(
+                            app_icon(if paused {
+                                "original-icons/pause-filled.svg"
+                            } else {
+                                "original-icons/pause.svg"
+                            })
+                            .small(),
+                        )
+                        .accessibility_label(if paused { "恢复翻译" } else { "暂停翻译" })
+                        .tooltip(if paused { "恢复翻译" } else { "暂停翻译" })
+                        .on_click(move |_, _, _| {
+                            let pause = pause.clone();
+                            runtime::dispatch(move || {
+                                pause.set_log_only(!paused);
+                                pause.invoke_pause_changed(!paused);
+                            });
+                        }),
+                )
+                .child(
+                    Button::new("captions")
+                        .ghost()
+                        .small()
+                        .selected(enabled)
+                        .disabled(s.engine_busy)
+                        .icon(
+                            app_icon(if enabled {
+                                "original-icons/captions.svg"
+                            } else {
+                                "original-icons/captions-off.svg"
+                            })
+                            .small(),
+                        )
+                        .accessibility_label(if s.engine_busy {
+                            "正在切换字幕…"
+                        } else if enabled {
+                            "关闭字幕"
+                        } else {
+                            "开启字幕"
+                        })
+                        .tooltip(if s.engine_busy {
+                            "正在切换字幕…"
+                        } else if enabled {
+                            "关闭字幕"
+                        } else {
+                            "开启字幕"
+                        })
+                        .on_click(move |_, _, _| {
+                            let captions = captions.clone();
+                            runtime::dispatch(move || captions.invoke_captions_changed(!enabled));
+                        }),
+                )
+                .child(
+                    Button::new("topmost")
+                        .ghost()
+                        .small()
+                        .selected(pinned)
+                        .icon(
+                            app_icon(if pinned {
+                                "original-icons/pin.svg"
+                            } else {
+                                "original-icons/pin-off.svg"
+                            })
+                            .small(),
+                        )
+                        .accessibility_label("始终置顶")
+                        .tooltip("始终置顶")
+                        .on_click(move |_, _, _| {
+                            let topmost = topmost.clone();
+                            runtime::dispatch(move || {
+                                topmost.set_topmost(!pinned);
+                                topmost.invoke_topmost_changed(!pinned);
+                            });
+                        }),
+                ),
         )
 }
 
 impl MainView {
-    fn captions(&self, s: &MainState, ui: &MainWindow, p: Palette) -> impl IntoElement {
-        let wheel = self.wheel.clone();
-        let scroll = self.scroll.clone();
-        let mut content = col()
-            .on_scroll_wheel(move |event, window, cx| wheel.handle(event, &scroll, window, cx))
-            .px(px(20.))
-            .py(px(18.))
-            .gap(px(12.))
-            .child(caption(
+    fn captions(&self, s: &MainState, ui: &MainWindow, cx: &App) -> impl IntoElement {
+        let mut content = v_flex()
+            .px_5()
+            .py_3p5()
+            .gap_3()
+            .child(caption_block(
                 "source",
+                "原文",
                 s.source_caption.clone(),
+                "开启字幕后，将在此显示实时识别原文",
                 s.original_font_size,
-                34.,
+                2.5,
                 Some(0),
+                false,
                 ui,
-                p,
+                cx,
             ))
-            .children(
-                (!s.caption_notice.is_empty())
-                    .then(|| label(s.caption_notice.clone()).text_size(px(13.))),
-            )
-            .child(caption(
+            .when(!s.caption_notice.is_empty(), |d| {
+                d.child(Alert::warning("caption-notice", s.caption_notice.clone()).small())
+            })
+            .child(caption_block(
                 "translation",
+                "译文",
                 s.translated_caption.clone(),
+                "译文将在此实时显示",
                 s.translated_font_size,
-                43.,
+                2.75,
                 Some(1),
+                true,
                 ui,
-                p,
-            ))
-            .children(
-                (s.latency_show && !s.latency_ms.is_empty())
-                    .then(|| label(format!("延迟：{} ms", s.latency_ms)).text_size(px(12.))),
-            )
-            .children(
-                (!s.copy_message.is_empty())
-                    .then(|| label(s.copy_message.clone()).text_size(px(12.))),
-            );
-        if s.caption_log_enabled {
-            content = content.child(col().gap(px(14.)).children(
-                s.caption_cards.iter().enumerate().map(|(index, card)| {
-                    col()
-                        .gap(px(8.))
-                        .child(caption(
-                            ("source-card", index),
-                            card.source.clone(),
-                            12,
-                            34.,
-                            None,
-                            ui,
-                            p,
-                        ))
-                        .child(caption(
-                            ("translated-card", index),
-                            card.translation.clone(),
-                            16,
-                            34.,
-                            None,
-                            ui,
-                            p,
-                        ))
-                }),
+                cx,
             ));
+
+        let show_latency = s.latency_show && !s.latency_ms.is_empty();
+        let show_copy = !s.copy_message.is_empty();
+        if show_latency || show_copy {
+            let copy_is_error = s.copy_message.contains("失败");
+            content = content.child(
+                h_flex()
+                    .gap_3()
+                    .px_1()
+                    .text_xs()
+                    .when(show_latency, |d| {
+                        d.child(
+                            div()
+                                .text_color(cx.theme().muted_foreground)
+                                .child(format!("延迟 {} ms", s.latency_ms)),
+                        )
+                    })
+                    .when(show_copy, |d| {
+                        d.child(
+                            div()
+                                .text_color(if copy_is_error {
+                                    cx.theme().danger
+                                } else {
+                                    cx.theme().primary
+                                })
+                                .child(s.copy_message.clone()),
+                        )
+                    }),
+            );
         }
+
+        if s.caption_log_enabled {
+            content = content.child(
+                v_flex()
+                    .pt_1()
+                    .gap_2()
+                    .child(
+                        div()
+                            .px_1()
+                            .text_xs()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(cx.theme().muted_foreground)
+                            .child("最近记录"),
+                    )
+                    .children(s.caption_cards.iter().enumerate().map(|(index, card)| {
+                        v_flex()
+                            .gap_1p5()
+                            .child(caption_block(
+                                ("source-card", index),
+                                "",
+                                card.source.clone(),
+                                "",
+                                12,
+                                2.0,
+                                None,
+                                false,
+                                ui,
+                                cx,
+                            ))
+                            .child(caption_block(
+                                ("translated-card", index),
+                                "",
+                                card.translation.clone(),
+                                "",
+                                15,
+                                2.0,
+                                None,
+                                true,
+                                ui,
+                                cx,
+                            ))
+                    })),
+            );
+        }
+
         scroller("captions-scroll", &self.scroll, content)
     }
 
@@ -372,7 +511,6 @@ impl MainView {
         &mut self,
         s: &MainState,
         ui: &MainWindow,
-        p: Palette,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Div {
@@ -383,21 +521,20 @@ impl MainView {
         let (size, sizes) = (format!("{}/页", s.history_size), [20, 30, 50, 100]);
         let dropdown = self.dropdowns.show(
             "history-size",
-            p,
             &size,
             sizes.map(|n| format!("{n}/页")).to_vec(),
             None,
             "每页条数",
-            35.,
             window,
+            cx,
             move |index, _| size_ui.invoke_history_action(3, sizes[index]),
         );
+
         let search_ui = ui.clone();
-        let (input, focus) = self.fields.input(
+        let (input, _) = self.fields.input(
             "search",
             &s.history_query,
-            "搜索",
-            false,
+            "搜索字幕或译文（支持 % _）",
             false,
             true,
             window,
@@ -413,44 +550,24 @@ impl MainView {
         let export = ui.clone();
         let delete = ui.clone();
         let refresh = ui.clone();
-        let search = tip(
-            field_shell("history-search", p, &focus, window, 35.)
-                .pl(px(12.))
-                .w((window.viewport_size().width - px(650.))
-                    .max(px(150.))
-                    .min(px(220.)))
-                .child(div().min_w_0().flex_1().child(input))
-                .children((!s.history_query.is_empty()).then(|| {
-                    icon_button(
-                        "history-clear",
-                        "icons/close.svg",
-                        "清除搜索，返回原页",
-                        p,
-                        false,
-                        false,
-                        true,
-                        30.,
-                        30.,
-                        16.,
-                        move || clear.invoke_history_action(1, 0),
-                    )
-                }))
-                .child(icon_button(
-                    "history-submit",
-                    "original-icons/search.svg",
-                    "搜索",
-                    p,
-                    false,
-                    false,
-                    true,
-                    30.,
-                    30.,
-                    16.,
-                    move || submit.invoke_history_action(0, 0),
-                )),
-            "提交搜索；支持 % 和 _ 通配符",
-            p,
-        );
+
+        let search_input = input
+            .prefix(Icon::new(IconName::Search).small())
+            .when(!s.history_query.is_empty(), |i| {
+                i.suffix(
+                    Button::new("history-clear")
+                        .ghost()
+                        .xsmall()
+                        .icon(app_icon("icons/close.svg").xsmall())
+                        .accessibility_label("清除搜索")
+                        .tooltip("清除搜索，返回原页")
+                        .on_click(move |_, _, _| {
+                            let clear = clear.clone();
+                            runtime::dispatch(move || clear.invoke_history_action(1, 0));
+                        }),
+                )
+            });
+
         let ready = !s.file_busy && !s.export_busy && !s.delete_busy;
         let header = HistoryItem {
             stamp: "时间".into(),
@@ -459,239 +576,406 @@ impl MainView {
             service: "API".into(),
             ..Default::default()
         };
-        col()
+
+        v_flex()
             .size_full()
-            .p(px(15.))
-            .gap(px(5.))
+            .p_4()
+            .gap_3()
             .child(
-                row()
-                    .gap(px(4.))
+                h_flex()
+                    .gap_2()
                     .flex_shrink_0()
-                    .child(icon_button(
-                        "history-prev",
-                        "original-icons/previous.svg",
-                        "上一页",
-                        p,
-                        false,
-                        true,
-                        page > 1,
-                        38.,
-                        30.,
-                        16.,
-                        move || previous.invoke_history_requested(page - 1),
-                    ))
                     .child(
-                        label(format!("{page}/{}", s.history_pages))
-                            .min_w(px(34.))
-                            .text_center()
-                            .text_size(px(15.)),
+                        div()
+                            .flex_1()
+                            .min_w(rems(8.5))
+                            .max_w(rems(15.))
+                            .child(search_input),
                     )
-                    .child(icon_button(
-                        "history-next",
-                        "original-icons/next.svg",
-                        "下一页",
-                        p,
-                        false,
-                        true,
-                        page < s.history_pages,
-                        38.,
-                        30.,
-                        16.,
-                        move || next.invoke_history_requested(page + 1),
-                    ))
-                    .child(div().w(px(86.)).flex_shrink_0().child(dropdown))
-                    .child(search)
+                    .child(
+                        Button::new("history-submit")
+                            .outline()
+                            .small()
+                            .icon(app_icon("original-icons/search.svg").small())
+                            .accessibility_label("搜索")
+                            .tooltip("提交搜索；支持 % 和 _ 通配符")
+                            .on_click(move |_, _, _| {
+                                let submit = submit.clone();
+                                runtime::dispatch(move || submit.invoke_history_action(0, 0));
+                            }),
+                    )
                     .child(div().flex_1())
-                    .child(icon_button(
-                        "history-export",
-                        "original-icons/download.svg",
-                        if s.export_busy {
-                            "正在导出全部历史"
-                        } else {
-                            "导出全部历史"
-                        },
-                        p,
-                        false,
-                        true,
-                        ready,
-                        38.,
-                        30.,
-                        16.,
-                        move || export.invoke_file_requested(3),
-                    ))
-                    .child(icon_button(
-                        "history-delete",
-                        "original-icons/delete.svg",
-                        "全部删除",
-                        p,
-                        false,
-                        true,
-                        ready,
-                        38.,
-                        30.,
-                        16.,
-                        move || delete.invoke_delete_action(0),
-                    ))
-                    .child(icon_button(
-                        "history-refresh",
-                        "original-icons/refresh.svg",
-                        "刷新",
-                        p,
-                        false,
-                        true,
-                        true,
-                        38.,
-                        30.,
-                        16.,
-                        move || refresh.invoke_history_action(2, 0),
-                    )),
+                    .child(
+                        h_flex()
+                            .gap_1()
+                            .child(
+                                Button::new("history-prev")
+                                    .ghost()
+                                    .small()
+                                    .disabled(page <= 1)
+                                    .icon(app_icon("original-icons/previous.svg").small())
+                                    .accessibility_label("上一页")
+                                    .tooltip("上一页")
+                                    .on_click(move |_, _, _| {
+                                        let previous = previous.clone();
+                                        runtime::dispatch(move || {
+                                            previous.invoke_history_requested(page - 1)
+                                        });
+                                    }),
+                            )
+                            .child(
+                                div()
+                                    .px_1p5()
+                                    .text_xs()
+                                    .text_color(cx.theme().muted_foreground)
+                                    .child(format!("{page} / {}", s.history_pages)),
+                            )
+                            .child(
+                                Button::new("history-next")
+                                    .ghost()
+                                    .small()
+                                    .disabled(page >= s.history_pages)
+                                    .icon(app_icon("original-icons/next.svg").small())
+                                    .accessibility_label("下一页")
+                                    .tooltip("下一页")
+                                    .on_click(move |_, _, _| {
+                                        let next = next.clone();
+                                        runtime::dispatch(move || {
+                                            next.invoke_history_requested(page + 1)
+                                        });
+                                    }),
+                            ),
+                    )
+                    .child(div().w(rems(6.75)).flex_shrink_0().child(dropdown))
+                    .child(div().w(px(1.)).h_4().bg(cx.theme().border))
+                    .child(
+                        Button::new("history-refresh")
+                            .ghost()
+                            .small()
+                            .icon(app_icon("original-icons/refresh.svg").small())
+                            .accessibility_label("刷新")
+                            .tooltip("刷新")
+                            .on_click(move |_, _, _| {
+                                let refresh = refresh.clone();
+                                runtime::dispatch(move || refresh.invoke_history_action(2, 0));
+                            }),
+                    )
+                    .child(
+                        Button::new("history-export")
+                            .outline()
+                            .small()
+                            .loading(s.export_busy)
+                            .disabled(!ready)
+                            .icon(app_icon("original-icons/download.svg").small())
+                            .accessibility_label("导出全部历史")
+                            .tooltip(if s.export_busy {
+                                "正在导出全部历史"
+                            } else {
+                                "导出全部历史"
+                            })
+                            .on_click(move |_, _, _| {
+                                let export = export.clone();
+                                runtime::dispatch(move || export.invoke_file_requested(3));
+                            }),
+                    )
+                    .child(
+                        Button::new("history-delete")
+                            .ghost()
+                            .danger()
+                            .small()
+                            .disabled(!ready)
+                            .icon(app_icon("original-icons/delete.svg").small())
+                            .accessibility_label("全部删除")
+                            .tooltip("全部删除")
+                            .on_click(move |_, _, _| {
+                                let delete = delete.clone();
+                                runtime::dispatch(move || delete.invoke_delete_action(0));
+                            }),
+                    ),
             )
-            .children((!s.export_message.is_empty()).then(|| label(s.export_message.clone())))
-            .children((!s.delete_message.is_empty()).then(|| label(s.delete_message.clone())))
-            .child(history_line(0, &header, true, p))
-            .child(scroller(
-                "history-scroll",
-                &self.scroll,
-                col().children(s.history_rows.iter().enumerate().map(|(i, line)| {
-                    col()
-                        .child(history_line(i + 1, line, false, p))
-                        .child(divider(p))
-                })),
-            ))
+            .when(!s.export_message.is_empty(), |d| {
+                let err = s.export_message.contains("未完成")
+                    || s.export_message.contains("失败")
+                    || s.export_message.contains("不会被覆盖");
+                d.child(if err {
+                    Alert::warning("history-export-msg", s.export_message.clone()).small()
+                } else {
+                    Alert::info("history-export-msg", s.export_message.clone()).small()
+                })
+            })
+            .when(!s.delete_message.is_empty(), |d| {
+                let err = s.delete_message.contains("未完成") || s.delete_message.contains("失败");
+                d.child(if err {
+                    Alert::error("history-delete-msg", s.delete_message.clone()).small()
+                } else {
+                    Alert::info("history-delete-msg", s.delete_message.clone()).small()
+                })
+            })
+            .child(
+                section_card(cx)
+                    .flex_1()
+                    .min_h_0()
+                    .overflow_hidden()
+                    .child(history_line(0, &header, true, cx))
+                    .child(hairline(cx))
+                    .child(if s.history_rows.row_count() == 0 {
+                        v_flex()
+                            .flex_1()
+                            .min_h_0()
+                            .items_center()
+                            .justify_center()
+                            .child(
+                                Empty::new().header(
+                                    EmptyHeader::new()
+                                        .media(
+                                            EmptyMedia::new()
+                                                .with_variant(EmptyMediaVariant::Icon)
+                                                .child(Icon::new(IconName::Inbox).small()),
+                                        )
+                                        .title(EmptyTitle::new().child("暂无历史记录"))
+                                        .description(EmptyDescription::new().child(
+                                            if s.history_query.is_empty() {
+                                                "开启实时字幕翻译后，记录会自动保存在这里。"
+                                            } else {
+                                                "没有找到匹配的记录，可尝试调整关键词。"
+                                            },
+                                        )),
+                                ),
+                            )
+                            .into_any_element()
+                    } else {
+                        scroller(
+                            "history-scroll",
+                            &self.scroll,
+                            v_flex().children(s.history_rows.iter().enumerate().map(
+                                |(i, line)| {
+                                    v_flex()
+                                        .child(history_line(i + 1, line, false, cx))
+                                        .child(hairline(cx))
+                                },
+                            )),
+                        )
+                        .into_any_element()
+                    }),
+            )
     }
 }
 
-fn history_line(index: usize, entry: &HistoryItem, header: bool, p: Palette) -> Div {
+fn history_line(index: usize, entry: &HistoryItem, header: bool, cx: &App) -> Div {
     let fields = [
         (&entry.stamp, 0.4, Some(&entry.stamp_full)),
         (&entry.source, 1., None),
         (&entry.translation, 1., None),
         (&entry.service, 0.3, Some(&entry.language)),
     ];
-    row()
+    h_flex()
         .items_start()
-        .px(px(8.))
-        .py(px(8.))
-        .gap(px(8.))
-        .when(header, |d| d.font_weight(FontWeight::SEMIBOLD))
+        .px_3()
+        .py_2()
+        .gap_3()
+        .when(header, |d| {
+            d.bg(cx.theme().table_head)
+                .text_xs()
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(cx.theme().table_head_foreground)
+        })
+        .when(!header, |d| {
+            d.text_sm()
+                .text_color(cx.theme().foreground)
+                .hover(|row| row.bg(cx.theme().table_hover))
+        })
         .children(
             fields
                 .into_iter()
                 .enumerate()
                 .map(|(i, (text, ratio, hint))| {
-                    let cell = label(text.clone())
+                    let cell = div()
                         .id(("history", index * 4 + i))
                         .flex_basis(px(0.))
-                        .flex_grow()
+                        .flex_grow(ratio)
                         .min_w_0()
-                        .map(|mut d| {
-                            d.style().flex_grow = Some(ratio);
-                            d
-                        });
+                        .child(text.clone());
                     if let Some(hint) = hint.filter(|hint| !hint.is_empty()) {
-                        tip(cell, hint.clone(), p)
+                        let hint: SharedString = hint.clone().into();
+                        cell.tooltip(move |window, cx| {
+                            gpui_kit::component::tooltip::Tooltip::new(hint.clone())
+                                .build(window, cx)
+                        })
+                        .into_any_element()
                     } else {
-                        cell
+                        cell.into_any_element()
                     }
                 }),
         )
 }
 
-fn caption(
-    id: impl Into<gpui::ElementId>,
+#[allow(clippy::too_many_arguments)]
+fn caption_block(
+    id: impl Into<ElementId>,
+    eyebrow: &'static str,
     text: String,
+    placeholder: &'static str,
     font_size: i32,
-    min: f32,
+    min_rems: f32,
     role: Option<i32>,
+    accent_eyebrow: bool,
     ui: &MainWindow,
-    p: Palette,
+    cx: &App,
 ) -> impl IntoElement {
     let copy_ui = ui.clone();
     let resize = ui.clone();
     let copy = text.clone();
     let id = id.into();
-    tip(
-        div()
-            .id(id.clone())
-            .debug_selector(|| id.to_string())
-            .relative()
-            .w_full()
-            .min_h(px(min))
-            .px(px(14.))
-            .py(px(10.))
-            .text_size(px(font_size as f32))
-            .line_height(relative(1.24))
-            .contour(Some(p.control), None, 9.)
-            .cursor_pointer()
-            .child(text)
-            .on_mouse_down(MouseButton::Left, move |_, _, _| {
-                let ui = copy_ui.clone();
-                let text = copy.clone();
-                runtime::dispatch(move || ui.invoke_caption_copy_requested(text));
-            })
-            .on_scroll_wheel(move |event, _, cx| {
-                let modifiers = event.modifiers;
-                let amount = event.delta.pixel_delta(px(20.)).y;
-                if let Some(role) = role
-                    && modifiers.control
-                    && !modifiers.shift
-                    && !modifiers.alt
-                    && !modifiers.platform
-                    && amount != px(0.)
-                {
-                    let ui = resize.clone();
-                    cx.stop_propagation();
-                    runtime::dispatch(move || {
-                        ui.invoke_caption_font_adjusted(role, if amount > px(0.) { 1 } else { -1 })
-                    });
-                }
-            }),
-        "单击复制字幕",
-        p,
+    let is_empty = text.is_empty();
+    let radius = f32::from(cx.theme().radius_lg);
+
+    let card = h_flex()
+        .id(id.clone())
+        .debug_selector(|| id.to_string())
+        .relative()
+        .w_full()
+        .min_h(rems(min_rems))
+        .when(is_empty, |d| d.items_center())
+        .when(!is_empty, |d| d.items_baseline())
+        .px_3p5()
+        .py_2p5()
+        .gap_3()
+        .rounded(cx.theme().radius_lg)
+        .contour(Some(cx.theme().group_box), Some(cx.theme().border), radius);
+
+    pointer_feedback(
+        (id, "caption-fb"),
+        card,
+        cx.theme().secondary_hover,
+        cx.theme().secondary_active,
+        radius,
     )
+    .tooltip(|window, cx| {
+        gpui_kit::component::tooltip::Tooltip::new("单击复制字幕").build(window, cx)
+    })
+    .when(!eyebrow.is_empty(), |d| {
+        d.child(
+            div()
+                .w(rems(2.25))
+                .flex_shrink_0()
+                .text_xs()
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(if accent_eyebrow {
+                    cx.theme().primary
+                } else {
+                    cx.theme().muted_foreground
+                })
+                .child(eyebrow),
+        )
+    })
+    .child(
+        div()
+            .flex_1()
+            .min_w_0()
+            .when(is_empty, |d| d.text_xs().line_height(relative(1.35)))
+            .when(!is_empty, |d| {
+                d.text_size(px(font_size as f32)).line_height(relative(1.25))
+            })
+            .text_color(if is_empty {
+                cx.theme().muted_foreground
+            } else {
+                cx.theme().foreground
+            })
+            .child(if is_empty {
+                placeholder.to_owned()
+            } else {
+                text
+            }),
+    )
+        .on_mouse_down(MouseButton::Left, move |_, _, _| {
+            let ui = copy_ui.clone();
+            let text = copy.clone();
+            runtime::dispatch(move || ui.invoke_caption_copy_requested(text));
+        })
+        .on_scroll(move |event, _, cx| {
+            let modifiers = event.modifiers;
+            let amount = event.delta.pixel_delta(px(20.)).y;
+            if let Some(role) = role
+                && modifiers.control
+                && !modifiers.shift
+                && !modifiers.alt
+                && !modifiers.platform
+                && amount != px(0.)
+            {
+                let ui = resize.clone();
+                cx.stop_propagation();
+                runtime::dispatch(move || {
+                    ui.invoke_caption_font_adjusted(role, if amount > px(0.) { 1 } else { -1 })
+                });
+            }
+        })
 }
 
-fn recovery(s: &MainState, ui: &MainWindow, p: Palette) -> Div {
-    let mut content = col().p(px(18.)).items_start().gap(px(12.));
-    if s.data_state >= 3 {
-        content = content.child(label(s.recovery_location.clone()));
-    }
+fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
     let retry = ui.clone();
     let reset = ui.clone();
     let replace = ui.clone();
     let locate = ui.clone();
     let ready = !s.file_busy;
+
+    let mut card = section_card(cx)
+        .max_w(rems(34.))
+        .p_5()
+        .gap_3()
+        .child(
+            div()
+                .text_base()
+                .font_weight(FontWeight::SEMIBOLD)
+                .child("需要恢复数据"),
+        );
+
+    if s.data_state >= 3 && !s.recovery_location.is_empty() {
+        card = card.child(
+            div()
+                .text_xs()
+                .text_color(cx.theme().muted_foreground)
+                .child(s.recovery_location.clone()),
+        );
+    }
+
+    let mut actions = h_flex().flex_wrap().gap_2().pt_1();
     if s.data_state == 3 || s.data_state == 4 {
-        content = content
-            .child(action(
-                "reset",
-                "保留原文件并恢复默认设置",
-                "保留原文件并恢复默认设置",
-                p,
-                false,
-                ready,
-                move || reset.invoke_data_action(0, String::new()),
-            ))
-            .child(action(
-                "replace",
-                "选择另一份配置文件恢复…",
-                "选择另一份配置文件恢复…",
-                p,
-                false,
-                ready,
-                move || replace.invoke_file_requested(1),
-            ));
+        actions = actions
+            .child(
+                Button::new("reset")
+                    .outline()
+                    .small()
+                    .disabled(!ready)
+                    .label("保留原文件并恢复默认设置")
+                    .on_click(move |_, _, _| {
+                        let reset = reset.clone();
+                        runtime::dispatch(move || reset.invoke_data_action(0, String::new()));
+                    }),
+            )
+            .child(
+                Button::new("replace")
+                    .outline()
+                    .small()
+                    .disabled(!ready)
+                    .label("选择另一份配置文件恢复…")
+                    .on_click(move |_, _, _| {
+                        let replace = replace.clone();
+                        runtime::dispatch(move || replace.invoke_file_requested(1));
+                    }),
+            );
     }
     if s.data_state == 3 {
-        content = content.child(action(
-            "locate",
-            "选择原数据目录完成恢复…",
-            "选择原数据目录完成恢复…",
-            p,
-            false,
-            ready,
-            move || locate.invoke_file_requested(2),
-        ));
+        actions = actions.child(
+            Button::new("locate")
+                .outline()
+                .small()
+                .disabled(!ready)
+                .label("选择原数据目录完成恢复…")
+                .on_click(move |_, _, _| {
+                    let locate = locate.clone();
+                    runtime::dispatch(move || locate.invoke_file_requested(2));
+                }),
+        );
     }
     if s.data_state >= 3 {
         let title = if s.data_state == 3 {
@@ -699,36 +983,45 @@ fn recovery(s: &MainState, ui: &MainWindow, p: Palette) -> Div {
         } else {
             "重新载入"
         };
-        content = content.child(action(
-            "retry-data",
-            title,
-            title,
-            p,
-            false,
-            ready,
-            move || retry.invoke_data_action(3, String::new()),
-        ));
+        actions = actions.child(
+            Button::new("retry-data")
+                .primary()
+                .small()
+                .disabled(!ready)
+                .label(title)
+                .on_click(move |_, _, _| {
+                    let retry = retry.clone();
+                    runtime::dispatch(move || retry.invoke_data_action(3, String::new()));
+                }),
+        );
     }
-    content
+
+    v_flex()
+        .size_full()
+        .p_6()
+        .items_center()
+        .justify_center()
+        .child(card.child(actions))
 }
 
 fn delete_dialog(
     ui: &MainWindow,
-    p: Palette,
     (cancel_focus, confirm_focus): (FocusHandle, FocusHandle),
+    cx: &App,
 ) -> impl IntoElement {
     let cancel = ui.clone();
     let confirm = ui.clone();
     let escape = ui.clone();
     let first = cancel_focus.clone();
     let second = confirm_focus.clone();
+
     div()
         .id("delete-dialog")
         .absolute()
         .top_0()
         .left_0()
         .size_full()
-        .bg(rgba(0x00000080))
+        .bg(cx.theme().overlay)
         .flex()
         .items_center()
         .justify_center()
@@ -737,9 +1030,9 @@ fn delete_dialog(
             if e.keystroke.key == "tab" {
                 cx.stop_propagation();
                 if first.is_focused(window) {
-                    second.focus(window);
+                    second.focus(window, cx);
                 } else {
-                    first.focus(window);
+                    first.focus(window, cx);
                 }
             }
             if e.keystroke.key == "escape" {
@@ -747,55 +1040,69 @@ fn delete_dialog(
                 let ui = escape.clone();
                 runtime::dispatch(move || ui.invoke_delete_action(1));
             }
+            if e.keystroke.key == "enter" || e.keystroke.key == "space" {
+                cx.stop_propagation();
+                let action = if second.is_focused(window) { 2 } else { 1 };
+                let ui = escape.clone();
+                runtime::dispatch(move || ui.invoke_delete_action(action));
+            }
         })
         .child(
-            col()
-                .w(px(380.))
-                .h(px(170.))
-                .p(px(18.))
-                .gap(px(8.))
-                .contour(Some(p.background), Some(p.border), 6.)
-                .child(
-                    label("删除全部历史记录？")
-                        .text_size(px(18.))
-                        .font_weight(FontWeight::SEMIBOLD),
+            v_flex()
+                .relative()
+                .w(rems(24.))
+                .p_5()
+                .gap_3()
+                .text_color(cx.theme().popover_foreground)
+                .rounded(cx.theme().radius_lg)
+                .contour(
+                    Some(cx.theme().popover),
+                    Some(cx.theme().border),
+                    f32::from(cx.theme().radius_lg),
                 )
-                .child(label("历史记录将永久删除，当前翻译上下文也会清空。"))
-                .child(div().flex_1())
+                .shadow_xl()
                 .child(
-                    row()
+                    div()
+                        .text_base()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .child("删除全部历史记录？"),
+                )
+                .child(
+                    div()
+                        .text_sm()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("历史记录将永久删除，当前翻译上下文也会清空。"),
+                )
+                .child(
+                    h_flex()
                         .justify_end()
-                        .gap(px(8.))
+                        .gap_2()
+                        .pt_2()
                         .child(
-                            action(
-                                "cancel-delete",
-                                "取消",
-                                "取消",
-                                p,
-                                false,
-                                true,
-                                move || cancel.invoke_delete_action(1),
-                            )
-                            .track_focus(&cancel_focus),
+                            Button::new("cancel-delete")
+                                .outline()
+                                .label("取消")
+                                .track_focus(&cancel_focus)
+                                .on_click(move |_, _, _| {
+                                    let cancel = cancel.clone();
+                                    runtime::dispatch(move || cancel.invoke_delete_action(1));
+                                }),
                         )
                         .child(
-                            action(
-                                "confirm-delete",
-                                "全部删除",
-                                "全部删除",
-                                p,
-                                false,
-                                true,
-                                move || confirm.invoke_delete_action(2),
-                            )
-                            .track_focus(&confirm_focus),
+                            Button::new("confirm-delete")
+                                .danger()
+                                .label("全部删除")
+                                .track_focus(&confirm_focus)
+                                .on_click(move |_, _, _| {
+                                    let confirm = confirm.clone();
+                                    runtime::dispatch(move || confirm.invoke_delete_action(2));
+                                }),
                         ),
                 ),
         )
         .with_animation(
             "delete-confirmation",
-            gpui::Animation::new(std::time::Duration::from_millis(170))
-                .with_easing(gpui::ease_out_quint()),
+            Animation::new(Duration::from_millis(140)).with_easing(ease_out_quint()),
             |dialog, phase| dialog.opacity(phase),
         )
 }
