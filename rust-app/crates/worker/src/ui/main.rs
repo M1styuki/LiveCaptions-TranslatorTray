@@ -21,10 +21,10 @@ use gpui_kit::component::{
 };
 use gpui_kit::{
     Animation, AnimationExt as _, App, Bounds, Context, Div, ElementId, Entity, FocusHandle,
-    FontWeight, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ParentElement as _,
-    Render, ScrollHandle, SharedString, StatefulInteractiveElement as _, Styled as _, Subscription,
-    Window, canvas, div, ease_out_quint, point, prelude::FluentBuilder as _, px, relative, rems,
-    size,
+    FontWeight, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton,
+    ParentElement as _, Render, ScrollHandle, SharedString, StatefulInteractiveElement as _,
+    Styled as _, Subscription, Window, canvas, div, ease_out_quint, point,
+    prelude::FluentBuilder as _, px, relative, rems, size,
 };
 use std::time::Duration;
 
@@ -67,10 +67,7 @@ impl MainWindow {
                 .detach();
                 cx.observe_window_appearance(window, |this: &mut MainView, window, cx| {
                     let dark = super::native::is_dark(window.appearance());
-                    let has_mica = this
-                        .ui
-                        .upgrade()
-                        .is_some_and(|ui| ui.window().has_mica());
+                    let has_mica = this.ui.upgrade().is_some_and(|ui| ui.window().has_mica());
                     sync_theme(Some(window), Some(dark), has_mica, cx);
                     this.applied_theme = Some((dark, has_mica));
                     let weak = this.ui.clone();
@@ -190,16 +187,10 @@ impl Render for MainView {
                         }),
                 )
             })
-            .child(
-                v_flex()
-                    .flex_1()
-                    .min_h_0()
-                    .w_full()
-                    .child(entrance(
-                        SharedString::from(format!("main-page-{}-{}", s.page, s.data_state == 2)),
-                        content,
-                    )),
-            );
+            .child(v_flex().flex_1().min_h_0().w_full().child(entrance(
+                SharedString::from(format!("main-page-{}-{}", s.page, s.data_state == 2)),
+                content,
+            )));
 
         let mut layout = v_flex()
             .size_full()
@@ -327,8 +318,16 @@ fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
                             })
                             .small(),
                         )
-                        .accessibility_label(if paused { "恢复翻译" } else { "暂停翻译" })
-                        .tooltip(if paused { "恢复翻译" } else { "暂停翻译" })
+                        .accessibility_label(if paused {
+                            "恢复翻译"
+                        } else {
+                            "暂停翻译"
+                        })
+                        .tooltip(if paused {
+                            "恢复翻译"
+                        } else {
+                            "暂停翻译"
+                        })
                         .on_click(move |_, _, _| {
                             let pause = pause.clone();
                             runtime::dispatch(move || {
@@ -551,9 +550,9 @@ impl MainView {
         let delete = ui.clone();
         let refresh = ui.clone();
 
-        let search_input = input
-            .prefix(Icon::new(IconName::Search).small())
-            .when(!s.history_query.is_empty(), |i| {
+        let search_input = input.prefix(Icon::new(IconName::Search).small()).when(
+            !s.history_query.is_empty(),
+            |i| {
                 i.suffix(
                     Button::new("history-clear")
                         .ghost()
@@ -566,7 +565,8 @@ impl MainView {
                             runtime::dispatch(move || clear.invoke_history_action(1, 0));
                         }),
                 )
-            });
+            },
+        );
 
         let ready = !s.file_busy && !s.export_busy && !s.delete_busy;
         let header = HistoryItem {
@@ -874,7 +874,8 @@ fn caption_block(
             .min_w_0()
             .when(is_empty, |d| d.text_xs().line_height(relative(1.35)))
             .when(!is_empty, |d| {
-                d.text_size(px(font_size as f32)).line_height(relative(1.25))
+                d.text_size(px(font_size as f32))
+                    .line_height(relative(1.25))
             })
             .text_color(if is_empty {
                 cx.theme().muted_foreground
@@ -887,28 +888,28 @@ fn caption_block(
                 text
             }),
     )
-        .on_mouse_down(MouseButton::Left, move |_, _, _| {
-            let ui = copy_ui.clone();
-            let text = copy.clone();
-            runtime::dispatch(move || ui.invoke_caption_copy_requested(text));
-        })
-        .on_scroll(move |event, _, cx| {
-            let modifiers = event.modifiers;
-            let amount = event.delta.pixel_delta(px(20.)).y;
-            if let Some(role) = role
-                && modifiers.control
-                && !modifiers.shift
-                && !modifiers.alt
-                && !modifiers.platform
-                && amount != px(0.)
-            {
-                let ui = resize.clone();
-                cx.stop_propagation();
-                runtime::dispatch(move || {
-                    ui.invoke_caption_font_adjusted(role, if amount > px(0.) { 1 } else { -1 })
-                });
-            }
-        })
+    .on_mouse_down(MouseButton::Left, move |_, _, _| {
+        let ui = copy_ui.clone();
+        let text = copy.clone();
+        runtime::dispatch(move || ui.invoke_caption_copy_requested(text));
+    })
+    .on_scroll(move |event, _, cx| {
+        let modifiers = event.modifiers;
+        let amount = event.delta.pixel_delta(px(20.)).y;
+        if let Some(role) = role
+            && modifiers.control
+            && !modifiers.shift
+            && !modifiers.alt
+            && !modifiers.platform
+            && amount != px(0.)
+        {
+            let ui = resize.clone();
+            cx.stop_propagation();
+            runtime::dispatch(move || {
+                ui.invoke_caption_font_adjusted(role, if amount > px(0.) { 1 } else { -1 })
+            });
+        }
+    })
 }
 
 fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
@@ -918,16 +919,12 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
     let locate = ui.clone();
     let ready = !s.file_busy;
 
-    let mut card = section_card(cx)
-        .max_w(rems(34.))
-        .p_5()
-        .gap_3()
-        .child(
-            div()
-                .text_base()
-                .font_weight(FontWeight::SEMIBOLD)
-                .child("需要恢复数据"),
-        );
+    let mut card = section_card(cx).max_w(rems(34.)).p_5().gap_3().child(
+        div()
+            .text_base()
+            .font_weight(FontWeight::SEMIBOLD)
+            .child("需要恢复数据"),
+    );
 
     if s.data_state >= 3 && !s.recovery_location.is_empty() {
         card = card.child(

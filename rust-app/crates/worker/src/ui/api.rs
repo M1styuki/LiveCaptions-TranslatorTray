@@ -52,10 +52,7 @@ impl ApiWindow {
                 });
                 cx.observe_window_appearance(window, |this: &mut ApiView, window, cx| {
                     let dark = super::native::is_dark(window.appearance());
-                    let has_mica = this
-                        .ui
-                        .upgrade()
-                        .is_some_and(|ui| ui.window().has_mica());
+                    let has_mica = this.ui.upgrade().is_some_and(|ui| ui.window().has_mica());
                     sync_theme(Some(window), Some(dark), has_mica, cx);
                     this.applied_theme = Some((dark, has_mica));
                     let weak = this.ui.clone();
@@ -198,7 +195,12 @@ impl Render for ApiView {
             .child(
                 v_flex()
                     .gap_1()
-                    .child(div().text_xl().font_weight(FontWeight::SEMIBOLD).child(title.to_owned()))
+                    .child(
+                        div()
+                            .text_xl()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .child(title.to_owned()),
+                    )
                     .child(
                         div()
                             .text_sm()
@@ -249,19 +251,13 @@ impl Render for ApiView {
                     .min_h_0()
                     .w_full()
                     .child(sidebar)
-                    .child(
-                        v_flex()
-                            .flex_1()
-                            .h_full()
-                            .min_w_0()
-                            .child(entrance(
-                                SharedString::from(format!(
-                                    "api-section-{}-{}",
-                                    s.section, s.active_editor.config_index
-                                )),
-                                scroller("api-scroll", &self.scroll, content),
-                            )),
-                    ),
+                    .child(v_flex().flex_1().h_full().min_w_0().child(entrance(
+                        SharedString::from(format!(
+                            "api-section-{}-{}",
+                            s.section, s.active_editor.config_index
+                        )),
+                        scroller("api-scroll", &self.scroll, content),
+                    ))),
             )
             .child(grip())
     }
@@ -328,7 +324,12 @@ impl ApiView {
                 h_flex()
                     .gap_2()
                     .items_center()
-                    .child(div().text_sm().font_weight(FontWeight::SEMIBOLD).child("配置"))
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .child("配置"),
+                    )
                     .child(
                         Button::new("previous-config")
                             .ghost()
@@ -434,7 +435,12 @@ impl ApiView {
             form = form.child(
                 v_flex()
                     .gap_1p5()
-                    .child(div().text_sm().font_weight(FontWeight::MEDIUM).child("模型名称"))
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(FontWeight::MEDIUM)
+                            .child("模型名称"),
+                    )
                     .child(
                         h_flex()
                             .gap_2()
@@ -566,7 +572,12 @@ impl ApiView {
                 h_flex()
                     .justify_between()
                     .gap_3()
-                    .child(div().text_sm().font_weight(FontWeight::MEDIUM).child("温度"))
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(FontWeight::MEDIUM)
+                            .child("温度"),
+                    )
                     .child(number_stepper(
                         &mut self.fields,
                         "Temperature",
@@ -612,23 +623,12 @@ fn field<T: 'static>(
     cx: &mut Context<T>,
     callback: impl Fn(String) + 'static,
 ) -> Div {
-    let (input, _) = fields.input(
-        name,
-        value,
-        hint,
-        secret,
-        true,
-        window,
-        cx,
-        move |event| {
-            if let Edit::Change(value) = event {
-                callback(value);
-            }
-        },
-    );
-    let wrapped = div()
-        .debug_selector(|| title.to_owned())
-        .child(input);
+    let (input, _) = fields.input(name, value, hint, secret, true, window, cx, move |event| {
+        if let Edit::Change(value) = event {
+            callback(value);
+        }
+    });
+    let wrapped = div().debug_selector(|| title.to_owned()).child(input);
 
     if let Some(width) = width_rems {
         h_flex()

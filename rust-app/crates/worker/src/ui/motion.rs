@@ -70,9 +70,8 @@ pub fn pointer_feedback(
         .child(
             canvas(
                 move |_, window, cx| {
-                    let state = window.use_keyed_state(state_id.clone(), cx, |_, _| {
-                        PointerState::default()
-                    });
+                    let state = window
+                        .use_keyed_state(state_id.clone(), cx, |_, _| PointerState::default());
                     *slot.borrow_mut() = Some(state.clone());
                     let s = *state.read(cx);
                     let hover = smooth_value(

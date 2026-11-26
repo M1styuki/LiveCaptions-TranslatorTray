@@ -121,7 +121,10 @@ fn redraw(window: &mut VisualTestContext, width: f32, height: f32) {
     });
 }
 
-fn center(window: &mut VisualTestContext, selector: &'static str) -> gpui_kit::Point<gpui_kit::Pixels> {
+fn center(
+    window: &mut VisualTestContext,
+    selector: &'static str,
+) -> gpui_kit::Point<gpui_kit::Pixels> {
     window
         .debug_bounds(selector)
         .unwrap_or_else(|| panic!("missing UI element {selector}"))

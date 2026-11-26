@@ -229,7 +229,11 @@ pub fn app_icon(path: &'static str) -> Icon {
 }
 
 pub fn hairline(cx: &App) -> Div {
-    div().w_full().h(px(1.)).flex_shrink_0().bg(cx.theme().border)
+    div()
+        .w_full()
+        .h(px(1.))
+        .flex_shrink_0()
+        .bg(cx.theme().border)
 }
 
 pub fn section_card(cx: &App) -> Div {
@@ -642,9 +646,7 @@ impl Fields {
                 unreachable!("field {id} kind mismatch");
             };
             let _ = existed;
-            let input = Input::new(state)
-                .small()
-                .when(secret, |d| d.mask_toggle());
+            let input = Input::new(state).small().when(secret, |d| d.mask_toggle());
             return (input, focus);
         } else {
             cx.new(|cx| {
@@ -689,9 +691,7 @@ impl Fields {
         });
 
         let focus = state.focus_handle(cx);
-        let input = Input::new(&state)
-            .small()
-            .when(secret, |d| d.mask_toggle());
+        let input = Input::new(&state).small().when(secret, |d| d.mask_toggle());
         self.0.insert(
             id,
             Field {
@@ -934,13 +934,11 @@ impl Dropdowns {
                 .when(uses_arrow, |d| {
                     d.focusable().tab_stop(true).on_click(move |_, window, _| {
                         arrow_scroll.set_offset(point(px(0.), px(0.)));
-                        arrow_state.set(
-                            if arrow_state.get().is_some_and(|(key, _)| key == id) {
-                                None
-                            } else {
-                                Some((id, current))
-                            },
-                        );
+                        arrow_state.set(if arrow_state.get().is_some_and(|(key, _)| key == id) {
+                            None
+                        } else {
+                            Some((id, current))
+                        });
                         window.refresh();
                     })
                 })
@@ -1037,10 +1035,11 @@ impl Dropdowns {
             });
             let state = self.opened.clone();
             let available = window.viewport_size().height;
-            let max_height = rems(21.).to_pixels(window.rem_size()).min(available - px(16.));
+            let max_height = rems(21.)
+                .to_pixels(window.rem_size())
+                .min(available - px(16.));
             let desired = (px(10.) + px(28.) * items.len() as f32).min(max_height);
-            let y = if bounds.bottom() + px(4.) + desired > available && bounds.origin.y > desired
-            {
+            let y = if bounds.bottom() + px(4.) + desired > available && bounds.origin.y > desired {
                 bounds.origin.y - px(4.) - desired
             } else {
                 bounds.bottom() + px(4.)
@@ -1120,36 +1119,37 @@ pub fn number_stepper<T: 'static>(
     step: impl Fn(i32) + 'static,
 ) -> AnyElement {
     let typed = callback;
-    let (input, focus) = fields.input(
-        id,
-        value,
-        "",
-        false,
-        false,
-        window,
-        cx,
-        move |edit| match edit {
-            Edit::Change(text) => {
-                if let Some((min, max)) = int {
-                    if let Ok(value) = text.parse::<f64>()
-                        && value.fract() == 0.
-                        && value >= min as f64
-                        && value <= max as f64
-                    {
-                        typed((value as i32).to_string());
+    let (input, focus) =
+        fields.input(
+            id,
+            value,
+            "",
+            false,
+            false,
+            window,
+            cx,
+            move |edit| match edit {
+                Edit::Change(text) => {
+                    if let Some((min, max)) = int {
+                        if let Ok(value) = text.parse::<f64>()
+                            && value.fract() == 0.
+                            && value >= min as f64
+                            && value <= max as f64
+                        {
+                            typed((value as i32).to_string());
+                        }
+                    } else {
+                        typed(text);
                     }
-                } else {
-                    typed(text);
                 }
-            }
-            Edit::Blur | Edit::Submit if int.is_some() => {
-                if let Some(app) = runtime::app() {
-                    app.refresh();
+                Edit::Blur | Edit::Submit if int.is_some() => {
+                    if let Some(app) = runtime::app() {
+                        app.refresh();
+                    }
                 }
-            }
-            _ => {}
-        },
-    );
+                _ => {}
+            },
+        );
 
     let held = fields.0[&id].held.clone();
     let reset = fields.0[&id].reset.clone();

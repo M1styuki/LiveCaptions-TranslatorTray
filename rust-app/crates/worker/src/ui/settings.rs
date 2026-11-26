@@ -187,54 +187,51 @@ impl MainView {
         });
 
         let api_ui = ui.clone();
-        let translation_card = v_flex()
-            .gap_1p5()
-            .child(section_heading("翻译", cx))
-            .child(
-                section_card(cx)
-                    .child(setting_row(
-                        "翻译服务",
-                        "Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。",
-                        div().w(rems(10.)).flex_shrink_0().child(service),
+        let translation_card = v_flex().gap_1p5().child(section_heading("翻译", cx)).child(
+            section_card(cx)
+                .child(setting_row(
+                    "翻译服务",
+                    "Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。",
+                    div().w(rems(10.)).flex_shrink_0().child(service),
+                    cx,
+                ))
+                .child(hairline(cx))
+                .child(setting_row(
+                    "翻译服务与提示词配置",
+                    "管理各翻译服务的接口地址、密钥与模型提示词",
+                    contour_button(
+                        "configure-api",
+                        "配置",
+                        "打开翻译服务与提示词设置",
                         cx,
-                    ))
-                    .child(hairline(cx))
-                    .child(setting_row(
-                        "翻译服务与提示词配置",
-                        "管理各翻译服务的接口地址、密钥与模型提示词",
-                        contour_button(
-                            "configure-api",
-                            "配置",
-                            "打开翻译服务与提示词设置",
-                            cx,
-                            move || api_ui.invoke_api_requested(),
-                        ),
-                        cx,
-                    ))
-                    .child(hairline(cx))
-                    .child(setting_row(
-                        "目标语言",
-                        "译文的语言代码，例如 zh-CN。",
-                        div().w(rems(10.)).flex_shrink_0().child(language),
-                        cx,
-                    ))
-                    .child(hairline(cx))
-                    .child(setting_row(
-                        "调用间隔",
-                        "按字幕变化次数控制调用频率，数值越小越频繁。",
-                        h_flex()
-                            .gap_3()
-                            .flex_shrink_0()
-                            .child(
-                                div()
-                                    .text_xs()
-                                    .text_color(cx.theme().muted_foreground)
-                                    .child(format!("{} 次", s.max_sync_interval)),
-                            )
-                            .child(slider),
-                        cx,
-                    )),
-            );
+                        move || api_ui.invoke_api_requested(),
+                    ),
+                    cx,
+                ))
+                .child(hairline(cx))
+                .child(setting_row(
+                    "目标语言",
+                    "译文的语言代码，例如 zh-CN。",
+                    div().w(rems(10.)).flex_shrink_0().child(language),
+                    cx,
+                ))
+                .child(hairline(cx))
+                .child(setting_row(
+                    "调用间隔",
+                    "按字幕变化次数控制调用频率，数值越小越频繁。",
+                    h_flex()
+                        .gap_3()
+                        .flex_shrink_0()
+                        .child(
+                            div()
+                                .text_xs()
+                                .text_color(cx.theme().muted_foreground)
+                                .child(format!("{} 次", s.max_sync_interval)),
+                        )
+                        .child(slider),
+                    cx,
+                )),
+        );
 
         let config = ui.clone();
         let context_card = v_flex()
