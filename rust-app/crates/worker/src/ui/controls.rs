@@ -1,4 +1,6 @@
-use super::motion::{SmoothScroll, pointer_feedback, smooth_spring, smooth_value};
+use super::motion::{
+    SmoothScroll, pointer_feedback, pointer_feedback_corners, smooth_spring, smooth_value,
+};
 use super::runtime;
 use super::shape::{ContinuousCorners as _, paint_fill, paint_outline};
 use gpui_kit::component::{
@@ -11,11 +13,12 @@ use gpui_kit::component::{
 };
 use gpui_kit::{
     Animation, AnimationExt as _, AnyElement, App, AppContext as _, AssetSource, BorderStyle,
-    Bounds, Context, CursorStyle, Div, ElementId, Entity, FocusHandle, Focusable as _, FontWeight,
-    Hsla, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ParentElement as _,
-    PathBuilder, Pixels, Role, ScrollHandle, SharedString, StatefulInteractiveElement as _,
-    Styled as _, Subscription, Window, WindowControlArea, anchored, canvas, deferred, div,
-    ease_out_quint, fill, point, prelude::FluentBuilder as _, px, quad, rems, size,
+    Bounds, Context, Corners, CursorStyle, Div, ElementId, Entity, FocusHandle, Focusable as _,
+    FontWeight, Hsla, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton,
+    ParentElement as _, PathBuilder, Pixels, Role, ScrollHandle, SharedString,
+    StatefulInteractiveElement as _, Styled as _, Subscription, Window, WindowControlArea,
+    anchored, canvas, deferred, div, ease_out_quint, fill, point, prelude::FluentBuilder as _, px,
+    quad, rems, size,
 };
 use std::{
     borrow::Cow,
@@ -245,17 +248,39 @@ pub fn section_card(cx: &App) -> Div {
         .shadow_xs()
 }
 
-pub fn card_rows(rows: impl IntoIterator<Item = Div>, cx: &App) -> Div {
-    let rows: Vec<Div> = rows.into_iter().collect();
+pub enum CardItem {
+    Static(Div),
+    Interactive(Box<dyn FnOnce(Corners<Pixels>) -> Div>),
+}
+
+impl From<Div> for CardItem {
+    fn from(row: Div) -> Self {
+        Self::Static(row)
+    }
+}
+
+pub fn card_rows<I: Into<CardItem>>(rows: impl IntoIterator<Item = I>, cx: &App) -> Div {
+    let rows: Vec<CardItem> = rows.into_iter().map(Into::into).collect();
     let count = rows.len();
     let radius = cx.theme().radius_lg;
     let surface = cx.theme().group_box;
     v_flex()
         .w_full()
         .gap(px(2.))
-        .children(rows.into_iter().enumerate().map(|(i, row)| {
+        .children(rows.into_iter().enumerate().map(|(i, item)| {
+            let (top, bottom) = (i == 0, i + 1 == count);
+            let corners = Corners {
+                top_left: if top { radius } else { px(0.) },
+                top_right: if top { radius } else { px(0.) },
+                bottom_right: if bottom { radius } else { px(0.) },
+                bottom_left: if bottom { radius } else { px(0.) },
+            };
+            let row = match item {
+                CardItem::Static(row) => row,
+                CardItem::Interactive(build) => build(corners),
+            };
             let tile = row.w_full().overflow_hidden().bg(surface).shadow_xs();
-            match (i == 0, i + 1 == count) {
+            match (top, bottom) {
                 (true, true) => tile.rounded(radius),
                 (true, false) => tile.rounded_t(radius),
                 (false, true) => tile.rounded_b(radius),
@@ -271,75 +296,80 @@ pub fn navigation_row(
     hint: &'static str,
     cx: &App,
     on_click: impl Fn() + 'static,
-) -> Div {
+) -> CardItem {
     let callback = Rc::new(on_click);
     let click_cb = callback.clone();
     let key_cb = callback;
     let hint_text: SharedString = hint.to_owned().into();
+    let hover_fill = cx.theme().accent.opacity(0.65);
+    let press_fill = cx.theme().accent;
+    let fg = cx.theme().foreground;
+    let muted = cx.theme().muted_foreground;
 
-    let row = h_flex()
-        .id(id)
-        .debug_selector(|| id.to_owned())
-        .relative()
-        .w_full()
-        .min_h(px(56.))
-        .px_4()
-        .py_2p5()
-        .items_center()
-        .justify_between()
-        .gap_4()
-        .focusable()
-        .tab_stop(true)
-        .role(Role::Button);
+    CardItem::Interactive(Box::new(move |corners| {
+        let row = h_flex()
+            .id(id)
+            .debug_selector(|| id.to_owned())
+            .relative()
+            .w_full()
+            .min_h(px(56.))
+            .px_4()
+            .py_2p5()
+            .items_center()
+            .justify_between()
+            .gap_4()
+            .focusable()
+            .tab_stop(true)
+            .role(Role::Button);
 
-    let row = pointer_feedback(
-        (ElementId::from(id), "nav-row-fb"),
-        row,
-        cx.theme().accent.opacity(0.65),
-        cx.theme().accent,
-        0.,
-    )
-    .child(
-        v_flex()
-            .flex_1()
-            .min_w_0()
-            .gap_0p5()
-            .child(
-                div()
-                    .text_sm()
-                    .font_weight(FontWeight::MEDIUM)
-                    .text_color(cx.theme().foreground)
-                    .child(title),
-            )
-            .child(
-                div()
-                    .text_xs()
-                    .text_color(cx.theme().muted_foreground)
-                    .child(description),
-            ),
-    )
-    .child(
-        Icon::new(IconName::ChevronRight)
-            .small()
-            .text_color(cx.theme().muted_foreground),
-    )
-    .tooltip(move |window, cx| {
-        gpui_kit::component::tooltip::Tooltip::new(hint_text.clone()).build(window, cx)
-    })
-    .on_click(move |_, _, cx| {
-        cx.stop_propagation();
-        let cb = click_cb.clone();
-        runtime::dispatch(move || cb());
-    })
-    .on_key_down(move |event: &KeyDownEvent, _, cx| {
-        if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+        let row = pointer_feedback_corners(
+            (ElementId::from(id), "nav-row-fb"),
+            row,
+            hover_fill,
+            press_fill,
+            corners,
+        )
+        .child(
+            v_flex()
+                .flex_1()
+                .min_w_0()
+                .gap_0p5()
+                .child(
+                    div()
+                        .text_sm()
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(fg)
+                        .child(title),
+                )
+                .child(div().text_xs().text_color(muted).child(description)),
+        )
+        .child(Icon::new(IconName::ChevronRight).small().text_color(muted))
+        .tooltip(move |window, cx| {
+            gpui_kit::component::tooltip::Tooltip::new(hint_text.clone()).build(window, cx)
+        })
+        .on_click(move |_, _, cx| {
             cx.stop_propagation();
-            let cb = key_cb.clone();
+            let cb = click_cb.clone();
             runtime::dispatch(move || cb());
-        }
-    });
+        })
+        .on_key_down(move |event: &KeyDownEvent, _, cx| {
+            if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                cx.stop_propagation();
+                let cb = key_cb.clone();
+                runtime::dispatch(move || cb());
+            }
+        });
 
-    div().w_full().child(row)
+        div().w_full().child(row)
+    }))
+}
+
+pub fn flat_button_variant(cx: &App) -> ButtonCustomVariant {
+    ButtonCustomVariant::new(cx)
+        .color(cx.theme().button)
+        .foreground(cx.theme().button_foreground)
+        .hover(cx.theme().button_hover)
+        .active(cx.theme().button_active)
 }
 
 pub fn animated_chevron(id: impl Into<ElementId>, color: Hsla, up: bool) -> impl IntoElement {

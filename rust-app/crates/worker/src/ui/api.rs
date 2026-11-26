@@ -2,7 +2,7 @@ use super::{
     Weak,
     controls::*,
     model::{ApiState, ApiWindow},
-    motion::{SmoothScroll, entrance},
+    motion::{SmoothScroll, slide_entrance},
     runtime,
     theme::sync_theme,
 };
@@ -251,11 +251,12 @@ impl Render for ApiView {
                     .min_h_0()
                     .w_full()
                     .child(sidebar)
-                    .child(v_flex().flex_1().h_full().min_w_0().child(entrance(
+                    .child(v_flex().flex_1().h_full().min_w_0().child(slide_entrance(
                         SharedString::from(format!(
                             "api-section-{}-{}",
                             s.section, s.active_editor.config_index
                         )),
+                        -20.,
                         scroller("api-scroll", &self.scroll, &self.smooth_scroll, content),
                     ))),
             )
@@ -369,7 +370,7 @@ impl ApiView {
                     .child(div().flex_1())
                     .child(
                         Button::new("new-config")
-                            .outline()
+                            .custom(flat_button_variant(cx))
                             .small()
                             .label("新建")
                             .tooltip("新增此服务的配置")
@@ -447,7 +448,7 @@ impl ApiView {
                             .child(div().flex_1().min_w_0().child(menu))
                             .child(
                                 Button::new("load-models")
-                                    .outline()
+                                    .custom(flat_button_variant(cx))
                                     .small()
                                     .loading(s.models_loading)
                                     .disabled(s.models_loading)

@@ -50,6 +50,42 @@ pub fn pointer_feedback(
     press_fill: Hsla,
     radius: f32,
 ) -> Stateful<Div> {
+    pointer_feedback_with(
+        id,
+        control,
+        hover_fill,
+        press_fill,
+        move |bounds, color, window| {
+            super::shape::paint_fill(bounds, color, radius, window);
+        },
+    )
+}
+
+pub fn pointer_feedback_corners(
+    id: impl Into<ElementId>,
+    control: Stateful<Div>,
+    hover_fill: Hsla,
+    press_fill: Hsla,
+    corners: gpui_kit::Corners<Pixels>,
+) -> Stateful<Div> {
+    pointer_feedback_with(
+        id,
+        control,
+        hover_fill,
+        press_fill,
+        move |bounds, color, window| {
+            super::shape::paint_fill_corners(bounds, color, corners, window);
+        },
+    )
+}
+
+fn pointer_feedback_with(
+    id: impl Into<ElementId>,
+    control: Stateful<Div>,
+    hover_fill: Hsla,
+    press_fill: Hsla,
+    paint: impl Fn(gpui_kit::Bounds<Pixels>, Hsla, &mut Window) + 'static,
+) -> Stateful<Div> {
     let id: ElementId = id.into();
     let state_id = ElementId::NamedChild(id.clone().into(), "__pointer-state".into());
     let hover_id = id.clone();
@@ -95,8 +131,8 @@ pub fn pointer_feedback(
                     (hover, press)
                 },
                 move |bounds, (hover, press), window, _| {
-                    super::shape::paint_fill(bounds, hover_fill.opacity(hover), radius, window);
-                    super::shape::paint_fill(bounds, press_fill.opacity(press), radius, window);
+                    paint(bounds, hover_fill.opacity(hover), window);
+                    paint(bounds, press_fill.opacity(press), window);
                 },
             )
             .absolute()
@@ -132,6 +168,25 @@ pub fn entrance(id: impl Into<ElementId>, content: impl IntoElement) -> impl Int
                 id,
                 Animation::new(Duration::from_millis(190)).with_easing(ease_out_quint()),
                 |div, t| div.opacity(t).top(px(6. * (1. - t))),
+            ),
+    )
+}
+
+pub fn slide_entrance(
+    id: impl Into<ElementId>,
+    offset_x: f32,
+    content: impl IntoElement,
+) -> impl IntoElement {
+    div().relative().size_full().overflow_hidden().child(
+        v_flex()
+            .absolute()
+            .top_0()
+            .size_full()
+            .child(content)
+            .with_animation(
+                id,
+                Animation::new(Duration::from_millis(220)).with_easing(ease_out_quint()),
+                move |div, t| div.opacity(t).left(px(offset_x * (1. - t))),
             ),
     )
 }

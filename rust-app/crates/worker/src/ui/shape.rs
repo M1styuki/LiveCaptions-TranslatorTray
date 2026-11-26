@@ -35,6 +35,18 @@ pub fn paint_fill(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &mut
     }
 }
 
+pub fn paint_fill_corners(
+    bounds: Bounds<Pixels>,
+    color: Hsla,
+    corners: gpui_kit::Corners<Pixels>,
+    window: &mut Window,
+) {
+    if color.a == 0. || bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+        return;
+    }
+    window.paint_quad(fill(bounds, color).corner_radii(corners));
+}
+
 pub fn paint_outline(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &mut Window) {
     if color.a > 0.
         && bounds.size.width > px(1.)

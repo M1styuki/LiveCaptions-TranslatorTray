@@ -198,7 +198,8 @@ impl MainView {
                             "Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。",
                             div().w(rems(10.)).flex_shrink_0().child(service),
                             cx,
-                        ),
+                        )
+                        .into(),
                         navigation_row(
                             "configure-api",
                             "翻译服务与提示词配置",
@@ -212,7 +213,8 @@ impl MainView {
                             "译文的语言代码，例如 zh-CN。",
                             div().w(rems(10.)).flex_shrink_0().child(language),
                             cx,
-                        ),
+                        )
+                        .into(),
                         setting_row(
                             "调用间隔",
                             "按字幕变化次数控制调用频率，数值越小越频繁。",
@@ -227,7 +229,8 @@ impl MainView {
                                 )
                                 .child(slider),
                             cx,
-                        ),
+                        )
+                        .into(),
                     ],
                     cx,
                 ));

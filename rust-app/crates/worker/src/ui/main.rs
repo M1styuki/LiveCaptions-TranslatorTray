@@ -178,7 +178,7 @@ impl Render for MainView {
                         .when(s.retry_save, |d| {
                             d.child(
                                 Button::new("retry-save")
-                                    .outline()
+                                    .custom(flat_button_variant(cx))
                                     .small()
                                     .label("重试保存")
                                     .on_click(move |_, _, _| {
@@ -599,7 +599,7 @@ impl MainView {
                     )
                     .child(
                         Button::new("history-submit")
-                            .outline()
+                            .custom(flat_button_variant(cx))
                             .small()
                             .icon(app_icon("original-icons/search.svg").small())
                             .accessibility_label("搜索")
@@ -667,7 +667,7 @@ impl MainView {
                     )
                     .child(
                         Button::new("history-export")
-                            .outline()
+                            .custom(flat_button_variant(cx))
                             .small()
                             .loading(s.export_busy)
                             .disabled(!ready)
@@ -946,7 +946,7 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
         actions = actions
             .child(
                 Button::new("reset")
-                    .outline()
+                    .custom(flat_button_variant(cx))
                     .small()
                     .disabled(!ready)
                     .label("保留原文件并恢复默认设置")
@@ -957,7 +957,7 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
             )
             .child(
                 Button::new("replace")
-                    .outline()
+                    .custom(flat_button_variant(cx))
                     .small()
                     .disabled(!ready)
                     .label("选择另一份配置文件恢复…")
@@ -970,7 +970,7 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
     if s.data_state == 3 {
         actions = actions.child(
             Button::new("locate")
-                .outline()
+                .custom(flat_button_variant(cx))
                 .small()
                 .disabled(!ready)
                 .label("选择原数据目录完成恢复…")
@@ -1060,7 +1060,7 @@ fn delete_dialog(
                 .rounded(cx.theme().radius_lg)
                 .contour(
                     Some(cx.theme().popover),
-                    Some(cx.theme().border),
+                    None,
                     f32::from(cx.theme().radius_lg),
                 )
                 .shadow_xl()
@@ -1083,7 +1083,7 @@ fn delete_dialog(
                         .pt_2()
                         .child(
                             Button::new("cancel-delete")
-                                .outline()
+                                .custom(flat_button_variant(cx))
                                 .label("取消")
                                 .track_focus(&cancel_focus)
                                 .on_click(move |_, _, _| {
