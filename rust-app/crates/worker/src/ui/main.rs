@@ -5,7 +5,9 @@ use super::{
     Weak,
     controls::*,
     model::{HistoryItem, MainState, MainWindow},
-    motion::{SmoothScroll, entrance, pointer_feedback, smooth_spring},
+    motion::{
+        SmoothScroll, entrance, expand_progress, pointer_feedback, reveal_row, smooth_spring,
+    },
     runtime,
     shape::{ContinuousCorners as _, paint_fill},
     theme::sync_theme,

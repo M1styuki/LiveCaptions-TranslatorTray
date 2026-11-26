@@ -242,7 +242,7 @@ pub fn section_card(cx: &App) -> Div {
         .w_full()
         .rounded(cx.theme().radius_lg)
         .bg(cx.theme().group_box)
-        .shadow_sm()
+        .shadow_xs()
 }
 
 pub fn card_rows(rows: impl IntoIterator<Item = Div>, cx: &App) -> Div {
@@ -254,7 +254,7 @@ pub fn card_rows(rows: impl IntoIterator<Item = Div>, cx: &App) -> Div {
         .w_full()
         .gap(px(2.))
         .children(rows.into_iter().enumerate().map(|(i, row)| {
-            let tile = row.w_full().bg(surface).shadow_sm();
+            let tile = row.w_full().overflow_hidden().bg(surface).shadow_xs();
             match (i == 0, i + 1 == count) {
                 (true, true) => tile.rounded(radius),
                 (true, false) => tile.rounded_t(radius),
@@ -262,6 +262,84 @@ pub fn card_rows(rows: impl IntoIterator<Item = Div>, cx: &App) -> Div {
                 (false, false) => tile,
             }
         }))
+}
+
+pub fn navigation_row(
+    id: &'static str,
+    title: &'static str,
+    description: &'static str,
+    hint: &'static str,
+    cx: &App,
+    on_click: impl Fn() + 'static,
+) -> Div {
+    let callback = Rc::new(on_click);
+    let click_cb = callback.clone();
+    let key_cb = callback;
+    let hint_text: SharedString = hint.to_owned().into();
+
+    let row = h_flex()
+        .id(id)
+        .debug_selector(|| id.to_owned())
+        .relative()
+        .w_full()
+        .min_h(px(56.))
+        .px_4()
+        .py_2p5()
+        .items_center()
+        .justify_between()
+        .gap_4()
+        .focusable()
+        .tab_stop(true)
+        .role(Role::Button);
+
+    let row = pointer_feedback(
+        (ElementId::from(id), "nav-row-fb"),
+        row,
+        cx.theme().accent.opacity(0.65),
+        cx.theme().accent,
+        0.,
+    )
+    .child(
+        v_flex()
+            .flex_1()
+            .min_w_0()
+            .gap_0p5()
+            .child(
+                div()
+                    .text_sm()
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(cx.theme().foreground)
+                    .child(title),
+            )
+            .child(
+                div()
+                    .text_xs()
+                    .text_color(cx.theme().muted_foreground)
+                    .child(description),
+            ),
+    )
+    .child(
+        Icon::new(IconName::ChevronRight)
+            .small()
+            .text_color(cx.theme().muted_foreground),
+    )
+    .tooltip(move |window, cx| {
+        gpui_kit::component::tooltip::Tooltip::new(hint_text.clone()).build(window, cx)
+    })
+    .on_click(move |_, _, cx| {
+        cx.stop_propagation();
+        let cb = click_cb.clone();
+        runtime::dispatch(move || cb());
+    })
+    .on_key_down(move |event: &KeyDownEvent, _, cx| {
+        if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+            cx.stop_propagation();
+            let cb = key_cb.clone();
+            runtime::dispatch(move || cb());
+        }
+    });
+
+    div().w_full().child(row)
 }
 
 pub fn animated_chevron(id: impl Into<ElementId>, color: Hsla, up: bool) -> impl IntoElement {
@@ -412,6 +490,7 @@ pub fn nav_item(
         })
 }
 
+#[allow(dead_code)]
 pub fn contour_button(
     id: &'static str,
     label: &'static str,
@@ -435,7 +514,7 @@ pub fn contour_button(
         .justify_center()
         .items_center()
         .rounded(cx.theme().radius)
-        .contour(Some(cx.theme().button), Some(cx.theme().input), radius)
+        .contour(Some(cx.theme().button), None, radius)
         .focusable()
         .tab_stop(true)
         .role(Role::Button)
@@ -704,7 +783,7 @@ pub fn win11_switch(
                         bounds,
                         px(radius),
                         track_bg,
-                        px(1.35),
+                        px(1.15),
                         track_border,
                         BorderStyle::Solid,
                     ));
@@ -1028,7 +1107,6 @@ impl Dropdowns {
         let is_open = open.is_some();
         let radius = f32::from(cx.theme().radius);
         let popup_radius = f32::from(cx.theme().radius_lg);
-        let rest_border = cx.theme().input;
         let open_border = cx.theme().ring;
 
         let mut control = h_flex()
@@ -1039,7 +1117,7 @@ impl Dropdowns {
             .h_8()
             .flex_shrink_0()
             .rounded(cx.theme().radius)
-            .contour(Some(cx.theme().input_background()), None, radius)
+            .contour(Some(cx.theme().button), None, radius)
             .child(
                 canvas(
                     move |_, window, cx| {
@@ -1052,7 +1130,6 @@ impl Dropdowns {
                         )
                     },
                     move |bounds, amount, window, _| {
-                        paint_outline(bounds, rest_border.opacity(1. - amount), radius, window);
                         paint_outline(bounds, open_border.opacity(amount), radius, window);
                     },
                 )
@@ -1355,7 +1432,6 @@ pub fn number_stepper<T: 'static>(
     let focused = focus.is_focused(window);
     let hint_text: SharedString = hint.to_owned().into();
     let radius = f32::from(cx.theme().radius);
-    let rest_border = cx.theme().input;
     let focus_border = cx.theme().ring;
 
     h_flex()
@@ -1367,7 +1443,7 @@ pub fn number_stepper<T: 'static>(
         .pr_0p5()
         .flex_shrink_0()
         .rounded(cx.theme().radius)
-        .contour(Some(cx.theme().input_background()), None, radius)
+        .contour(Some(cx.theme().button), None, radius)
         .child(
             canvas(
                 move |_, window, cx| {
@@ -1380,7 +1456,6 @@ pub fn number_stepper<T: 'static>(
                     )
                 },
                 move |bounds, amount, window, _| {
-                    paint_outline(bounds, rest_border.opacity(1. - amount), radius, window);
                     paint_outline(bounds, focus_border.opacity(amount), radius, window);
                 },
             )

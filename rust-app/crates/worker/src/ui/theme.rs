@@ -76,18 +76,18 @@ pub fn sync_theme(
             theme.colors.button_primary_active = c(0x1678cc);
             theme.colors.button_primary_foreground = c(0xffffff);
 
-            theme.colors.secondary = a(0xffffff10);
-            theme.colors.secondary_hover = a(0xffffff18);
-            theme.colors.secondary_active = a(0xffffff0b);
+            theme.colors.secondary = a(0xffffff14);
+            theme.colors.secondary_hover = a(0xffffff1d);
+            theme.colors.secondary_active = a(0xffffff0c);
             theme.colors.secondary_foreground = c(0xf5f5f5);
-            theme.colors.button_secondary = a(0xffffff10);
-            theme.colors.button_secondary_hover = a(0xffffff18);
-            theme.colors.button_secondary_active = a(0xffffff0b);
+            theme.colors.button_secondary = a(0xffffff14);
+            theme.colors.button_secondary_hover = a(0xffffff1d);
+            theme.colors.button_secondary_active = a(0xffffff0c);
             theme.colors.button_secondary_foreground = c(0xf5f5f5);
 
-            theme.colors.button = a(0xffffff10);
-            theme.colors.button_hover = a(0xffffff18);
-            theme.colors.button_active = a(0xffffff0b);
+            theme.colors.button = a(0xffffff14);
+            theme.colors.button_hover = a(0xffffff1d);
+            theme.colors.button_active = a(0xffffff0c);
             theme.colors.button_foreground = c(0xf5f5f5);
 
             theme.colors.accent = a(0xffffff0f);
@@ -153,18 +153,18 @@ pub fn sync_theme(
             theme.colors.button_primary_active = c(0x00539c);
             theme.colors.button_primary_foreground = c(0xffffff);
 
-            theme.colors.secondary = a(0xffffffc8);
-            theme.colors.secondary_hover = a(0xf9f9f9ee);
-            theme.colors.secondary_active = a(0xf0f0f0dd);
+            theme.colors.secondary = a(0xffffffe0);
+            theme.colors.secondary_hover = a(0xfffffff4);
+            theme.colors.secondary_active = a(0xf2f2f2e0);
             theme.colors.secondary_foreground = c(0x1a1a1a);
-            theme.colors.button_secondary = a(0xffffffc8);
-            theme.colors.button_secondary_hover = a(0xf9f9f9ee);
-            theme.colors.button_secondary_active = a(0xf0f0f0dd);
+            theme.colors.button_secondary = a(0xffffffe0);
+            theme.colors.button_secondary_hover = a(0xfffffff4);
+            theme.colors.button_secondary_active = a(0xf2f2f2e0);
             theme.colors.button_secondary_foreground = c(0x1a1a1a);
 
-            theme.colors.button = a(0xffffffcc);
-            theme.colors.button_hover = a(0xf9f9f9f0);
-            theme.colors.button_active = a(0xf0f0f0e0);
+            theme.colors.button = a(0xffffffe0);
+            theme.colors.button_hover = a(0xfffffff4);
+            theme.colors.button_active = a(0xf2f2f2e0);
             theme.colors.button_foreground = c(0x1a1a1a);
 
             theme.colors.accent = a(0x0000000c);

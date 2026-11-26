@@ -136,6 +136,34 @@ pub fn entrance(id: impl Into<ElementId>, content: impl IntoElement) -> impl Int
     )
 }
 
+pub fn expand_progress(
+    id: impl Into<TransitionId>,
+    expanded: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> f32 {
+    smooth_value(
+        id,
+        if expanded { 1. } else { 0. },
+        Duration::from_millis(210),
+        window,
+        cx,
+    )
+}
+
+pub fn reveal_row(row: Div, progress: f32, max_height: f32) -> Div {
+    if progress >= 0.999 {
+        return row;
+    }
+    div()
+        .w_full()
+        .min_h_0()
+        .overflow_hidden()
+        .max_h(px(max_height * progress))
+        .opacity(progress)
+        .child(row.relative().top(px(-4. * (1. - progress))))
+}
+
 #[derive(Default)]
 struct SmoothScrollState {
     target_y: f32,

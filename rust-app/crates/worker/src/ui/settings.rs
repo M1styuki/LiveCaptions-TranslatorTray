@@ -8,7 +8,7 @@ use gpui_kit::component::{
 };
 use gpui_kit::{
     App, AppContext as _, Context, Div, Entity, FontWeight, InteractiveElement as _, IntoElement,
-    ParentElement as _, Styled as _, Window, div, rems,
+    ParentElement as _, Styled as _, Window, div, px, rems,
 };
 
 const SERVICES: [&str; 11] = [
@@ -159,8 +159,9 @@ impl MainView {
         );
 
         let aware = s.context_aware;
+        let context_reveal = expand_progress("settings-context-reveal", aware, window, cx);
         let contexts_text = s.num_contexts.to_string();
-        let contexts_stepper = aware.then(|| {
+        let contexts_stepper = (aware || context_reveal > 0.001).then(|| {
             let config = ui.clone();
             number_stepper(
                 &mut self.fields,
@@ -198,17 +199,13 @@ impl MainView {
                             div().w(rems(10.)).flex_shrink_0().child(service),
                             cx,
                         ),
-                        setting_row(
+                        navigation_row(
+                            "configure-api",
                             "翻译服务与提示词配置",
                             "管理各翻译服务的接口地址、密钥与模型提示词",
-                            contour_button(
-                                "configure-api",
-                                "配置",
-                                "打开翻译服务与提示词设置",
-                                cx,
-                                move || api_ui.invoke_api_requested(),
-                            ),
+                            "打开翻译服务与提示词设置",
                             cx,
+                            move || api_ui.invoke_api_requested(),
                         ),
                         setting_row(
                             "目标语言",
@@ -265,11 +262,15 @@ impl MainView {
             ),
         ];
         if let Some(stepper) = contexts_stepper {
-            context_rows.push(setting_row(
-                "上下文句数",
-                "翻译时提供给服务的前文句数，可设为 1–10。",
-                stepper,
-                cx,
+            context_rows.push(reveal_row(
+                setting_row(
+                    "上下文句数",
+                    "翻译时提供给服务的前文句数，可设为 1–10。",
+                    stepper,
+                    cx,
+                ),
+                context_reveal,
+                84.,
             ));
         }
         let context_card = v_flex()
@@ -364,7 +365,7 @@ impl MainView {
             &self.smooth_scroll,
             v_flex()
                 .w_full()
-                .max_w(rems(52.))
+                .max_w(rems(56.))
                 .mx_auto()
                 .px_6()
                 .py_3p5()
@@ -409,9 +410,10 @@ fn setting_row(
     h_flex()
         .justify_between()
         .items_center()
+        .min_h(px(56.))
         .gap_4()
         .px_4()
-        .py_2()
+        .py_2p5()
         .child(
             v_flex()
                 .flex_1()

@@ -780,6 +780,8 @@ fn original_number_input(ui: &MainWindow, window: &mut VisualTestContext) {
     ui.set_num_contexts(2);
     ui.set_display_sentences(1);
     redraw(window, 900., 600.);
+    window.executor().advance_clock(Duration::from_millis(250));
+    redraw(window, 900., 600.);
     let position = center(window, "contexts-1");
     window.simulate_mouse_move(position, None, Modifiers::none());
     window.simulate_mouse_down(position, MouseButton::Left, Modifiers::none());
