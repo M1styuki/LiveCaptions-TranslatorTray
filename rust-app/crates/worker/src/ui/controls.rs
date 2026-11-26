@@ -10,12 +10,12 @@ use gpui_kit::component::{
     v_flex,
 };
 use gpui_kit::{
-    Animation, AnimationExt as _, AnyElement, App, AppContext as _, AssetSource, Bounds, Context,
-    CursorStyle, Div, ElementId, Entity, FocusHandle, Focusable as _, FontWeight, Hsla,
-    InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ParentElement as _,
+    Animation, AnimationExt as _, AnyElement, App, AppContext as _, AssetSource, BorderStyle,
+    Bounds, Context, CursorStyle, Div, ElementId, Entity, FocusHandle, Focusable as _, FontWeight,
+    Hsla, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ParentElement as _,
     PathBuilder, Pixels, Role, ScrollHandle, SharedString, StatefulInteractiveElement as _,
     Styled as _, Subscription, Window, WindowControlArea, anchored, canvas, deferred, div,
-    ease_out_quint, fill, point, prelude::FluentBuilder as _, px, rems, size,
+    ease_out_quint, fill, point, prelude::FluentBuilder as _, px, quad, rems, size,
 };
 use std::{
     borrow::Cow,
@@ -243,6 +243,41 @@ pub fn section_card(cx: &App) -> Div {
         .w_full()
         .rounded(cx.theme().radius_lg)
         .contour(Some(cx.theme().group_box), Some(cx.theme().border), radius)
+}
+
+pub fn card_rows(rows: impl IntoIterator<Item = Div>, cx: &App) -> Div {
+    let rows: Vec<Div> = rows.into_iter().collect();
+    let count = rows.len();
+    let radius = cx.theme().radius_lg;
+    let surface = cx.theme().group_box;
+    let border = cx.theme().border;
+    v_flex()
+        .relative()
+        .w_full()
+        .child(
+            v_flex()
+                .w_full()
+                .gap(px(2.))
+                .children(rows.into_iter().enumerate().map(|(i, row)| {
+                    let tile = row.w_full().bg(surface);
+                    match (i == 0, i + 1 == count) {
+                        (true, true) => tile.rounded(radius),
+                        (true, false) => tile.rounded_t(radius),
+                        (false, true) => tile.rounded_b(radius),
+                        (false, false) => tile,
+                    }
+                })),
+        )
+        .child(
+            div()
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full()
+                .rounded(radius)
+                .border_1()
+                .border_color(border),
+        )
 }
 
 pub fn animated_chevron(id: impl Into<ElementId>, color: Hsla, up: bool) -> impl IntoElement {
@@ -590,6 +625,7 @@ pub fn win11_switch(
     let released = slot.clone();
     let outside = slot.clone();
 
+    let transparent = cx.theme().transparent;
     let off_border = cx.theme().muted_foreground.opacity(0.75);
     let off_border_hover = cx.theme().foreground.opacity(0.65);
     let off_fill_hover = cx.theme().accent;
@@ -663,22 +699,23 @@ pub fn win11_switch(
                 },
                 move |bounds, (hover, press, slide, on_mix), window, _| {
                     let radius = f32::from(bounds.size.height) / 2.;
-                    if on_mix < 1. {
-                        let off_bg = off_fill_hover
-                            .opacity(hover * (1. - on_mix))
-                            .blend(off_fill_press.opacity(press * (1. - on_mix)));
-                        paint_fill(bounds, off_bg, radius, window);
-                        let off_stroke = off_border.blend(off_border_hover.opacity(hover));
-                        paint_outline(bounds, off_stroke.opacity(1. - on_mix), radius, window);
-                    }
-                    if on_mix > 0. {
-                        let active_fill = on_fill
-                            .blend(on_fill_hover.opacity(hover))
-                            .blend(on_fill_press.opacity(press))
-                            .opacity(on_mix);
-                        paint_fill(bounds, active_fill, radius, window);
-                        paint_outline(bounds, active_fill, radius, window);
-                    }
+                    let off_bg = transparent
+                        .blend(off_fill_hover.opacity(hover))
+                        .blend(off_fill_press.opacity(press));
+                    let active_bg = on_fill
+                        .blend(on_fill_hover.opacity(hover))
+                        .blend(on_fill_press.opacity(press));
+                    let track_bg = off_bg.blend(active_bg.opacity(on_mix));
+                    let off_stroke = off_border.blend(off_border_hover.opacity(hover));
+                    let track_border = off_stroke.blend(active_bg.opacity(on_mix));
+                    window.paint_quad(quad(
+                        bounds,
+                        px(radius),
+                        track_bg,
+                        px(1.),
+                        track_border,
+                        BorderStyle::Solid,
+                    ));
 
                     let thumb_h = 12. + 2. * hover.max(press);
                     let thumb_w = thumb_h + 3. * press;

@@ -186,94 +186,96 @@ impl MainView {
         });
 
         let api_ui = ui.clone();
-        let translation_card = v_flex().gap_1p5().child(section_heading("翻译", cx)).child(
-            section_card(cx)
-                .child(setting_row(
-                    "翻译服务",
-                    "Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。",
-                    div().w(rems(10.)).flex_shrink_0().child(service),
+        let translation_card =
+            v_flex()
+                .gap_1p5()
+                .child(section_heading("翻译", cx))
+                .child(card_rows(
+                    [
+                        setting_row(
+                            "翻译服务",
+                            "Google 无需配置；DeepSeek 使用 OpenAI 兼容接口。",
+                            div().w(rems(10.)).flex_shrink_0().child(service),
+                            cx,
+                        ),
+                        setting_row(
+                            "翻译服务与提示词配置",
+                            "管理各翻译服务的接口地址、密钥与模型提示词",
+                            contour_button(
+                                "configure-api",
+                                "配置",
+                                "打开翻译服务与提示词设置",
+                                cx,
+                                move || api_ui.invoke_api_requested(),
+                            ),
+                            cx,
+                        ),
+                        setting_row(
+                            "目标语言",
+                            "译文的语言代码，例如 zh-CN。",
+                            div().w(rems(10.)).flex_shrink_0().child(language),
+                            cx,
+                        ),
+                        setting_row(
+                            "调用间隔",
+                            "按字幕变化次数控制调用频率，数值越小越频繁。",
+                            h_flex()
+                                .gap_3()
+                                .flex_shrink_0()
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(cx.theme().muted_foreground)
+                                        .child(format!("{} 次", s.max_sync_interval)),
+                                )
+                                .child(slider),
+                            cx,
+                        ),
+                    ],
                     cx,
-                ))
-                .child(hairline(cx))
-                .child(setting_row(
-                    "翻译服务与提示词配置",
-                    "管理各翻译服务的接口地址、密钥与模型提示词",
-                    contour_button(
-                        "configure-api",
-                        "配置",
-                        "打开翻译服务与提示词设置",
-                        cx,
-                        move || api_ui.invoke_api_requested(),
-                    ),
-                    cx,
-                ))
-                .child(hairline(cx))
-                .child(setting_row(
-                    "目标语言",
-                    "译文的语言代码，例如 zh-CN。",
-                    div().w(rems(10.)).flex_shrink_0().child(language),
-                    cx,
-                ))
-                .child(hairline(cx))
-                .child(setting_row(
-                    "调用间隔",
-                    "按字幕变化次数控制调用频率，数值越小越频繁。",
-                    h_flex()
-                        .gap_3()
-                        .flex_shrink_0()
-                        .child(
-                            div()
-                                .text_xs()
-                                .text_color(cx.theme().muted_foreground)
-                                .child(format!("{} 次", s.max_sync_interval)),
-                        )
-                        .child(slider),
-                    cx,
-                )),
-        );
+                ));
 
         let config = ui.clone();
+        let mut context_rows = vec![
+            setting_row(
+                "前文句数",
+                "悬浮字幕中保留的前文句数，可设为 0–6。",
+                sentences_stepper,
+                cx,
+            ),
+            setting_row(
+                "上下文翻译",
+                "向翻译服务提供前文；模型服务会使用更多 token。",
+                win11_switch(
+                    "context-aware",
+                    aware,
+                    if aware {
+                        "上下文翻译：已开启"
+                    } else {
+                        "上下文翻译：已关闭"
+                    },
+                    "上下文翻译",
+                    cx,
+                    move |next| {
+                        let config = config.clone();
+                        runtime::dispatch(move || set(&config, "ContextAware", next));
+                    },
+                ),
+                cx,
+            ),
+        ];
+        if let Some(stepper) = contexts_stepper {
+            context_rows.push(setting_row(
+                "上下文句数",
+                "翻译时提供给服务的前文句数，可设为 1–10。",
+                stepper,
+                cx,
+            ));
+        }
         let context_card = v_flex()
             .gap_1p5()
             .child(section_heading("字幕与上下文", cx))
-            .child(
-                section_card(cx)
-                    .child(setting_row(
-                        "前文句数",
-                        "悬浮字幕中保留的前文句数，可设为 0–6。",
-                        sentences_stepper,
-                        cx,
-                    ))
-                    .child(hairline(cx))
-                    .child(setting_row(
-                        "上下文翻译",
-                        "向翻译服务提供前文；模型服务会使用更多 token。",
-                        win11_switch(
-                            "context-aware",
-                            aware,
-                            if aware {
-                                "上下文翻译：已开启"
-                            } else {
-                                "上下文翻译：已关闭"
-                            },
-                            "上下文翻译",
-                            cx,
-                            move |next| {
-                                let config = config.clone();
-                                runtime::dispatch(move || set(&config, "ContextAware", next));
-                            },
-                        ),
-                        cx,
-                    ))
-                    .when_some(contexts_stepper, |card, stepper| {
-                        card.child(hairline(cx)).child(setting_row(
-                            "上下文句数",
-                            "翻译时提供给服务的前文句数，可设为 1–10。",
-                            stepper,
-                            cx,
-                        ))
-                    }),
-            );
+            .child(card_rows(context_rows, cx));
 
         let visibility = ui.clone();
         let hidden = s.live_captions_hidden;
@@ -285,9 +287,9 @@ impl MainView {
         let system_card = v_flex()
             .gap_1p5()
             .child(section_heading("窗口与系统", cx))
-            .child(
-                section_card(cx)
-                    .child(setting_row(
+            .child(card_rows(
+                [
+                    setting_row(
                         "显示系统字幕",
                         "在系统字幕中修改源语言；隐藏窗口后仍可识别。",
                         win11_switch(
@@ -308,9 +310,8 @@ impl MainView {
                             },
                         ),
                         cx,
-                    ))
-                    .child(hairline(cx))
-                    .child(setting_row(
+                    ),
+                    setting_row(
                         "显示翻译延迟",
                         "在字幕页显示最近一次翻译请求的耗时（毫秒）。",
                         win11_switch(
@@ -329,9 +330,8 @@ impl MainView {
                             },
                         ),
                         cx,
-                    ))
-                    .child(hairline(cx))
-                    .child(setting_row(
+                    ),
+                    setting_row(
                         "开机自启动",
                         "登录 Windows 后驻留托盘；字幕需手动开启。",
                         win11_switch(
@@ -350,8 +350,10 @@ impl MainView {
                             },
                         ),
                         cx,
-                    )),
-            )
+                    ),
+                ],
+                cx,
+            ))
             .when(!s.autostart_message.is_empty(), |d| {
                 d.child(Alert::warning("autostart-msg", s.autostart_message.clone()).small())
             });

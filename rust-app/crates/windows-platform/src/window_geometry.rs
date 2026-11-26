@@ -123,12 +123,16 @@ pub fn round_corners(window: usize) -> io::Result<()> {
 pub fn enable_mica(window: usize) -> io::Result<()> {
     use windows::Win32::{
         Graphics::Dwm::{
-            DWMSBT_MAINWINDOW, DWMWA_SYSTEMBACKDROP_TYPE, DwmExtendFrameIntoClientArea,
-            DwmSetWindowAttribute,
+            DWMSBT_MAINWINDOW, DWMWA_SYSTEMBACKDROP_TYPE, DWMWA_WINDOW_CORNER_PREFERENCE,
+            DWMWCP_ROUND, DwmExtendFrameIntoClientArea, DwmSetWindowAttribute,
         },
         UI::{
             Controls::MARGINS,
-            WindowsAndMessaging::{GWL_EXSTYLE, GetWindowLongW, WS_EX_NOREDIRECTIONBITMAP},
+            WindowsAndMessaging::{
+                GWL_EXSTYLE, GWL_STYLE, GetWindowLongW, SWP_FRAMECHANGED, SWP_NOACTIVATE,
+                SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SetWindowLongW, SetWindowPos,
+                WS_EX_NOREDIRECTIONBITMAP, WS_SYSMENU,
+            },
         },
     };
     let window = HWND(window as *mut _);
@@ -154,7 +158,26 @@ pub fn enable_mica(window: usize) -> io::Result<()> {
                 cyBottomHeight: -1,
             },
         )
-        .map_err(io::Error::other)
+        .map_err(io::Error::other)?;
+        // Strip WS_SYSMENU so Win11 DWM never paints duplicate behind-the-glass ─ □ ×.
+        let style = GetWindowLongW(window, GWL_STYLE) as u32;
+        SetWindowLongW(window, GWL_STYLE, (style & !WS_SYSMENU.0) as i32);
+        let _ = DwmSetWindowAttribute(
+            window,
+            DWMWA_WINDOW_CORNER_PREFERENCE,
+            std::ptr::from_ref(&DWMWCP_ROUND).cast(),
+            size_of_val(&DWMWCP_ROUND) as u32,
+        );
+        let _ = SetWindowPos(
+            window,
+            None,
+            0,
+            0,
+            0,
+            0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+        );
+        Ok(())
     }
 }
 
