@@ -368,9 +368,8 @@ impl ApiView {
                             }),
                     )
                     .child(div().flex_1())
-                    .child(
+                    .child(ring_button(
                         Button::new("new-config")
-                            .custom(flat_button_variant(cx))
                             .small()
                             .label("新建")
                             .tooltip("新增此服务的配置")
@@ -378,7 +377,8 @@ impl ApiView {
                                 let new_cb = new_cb.clone();
                                 runtime::dispatch(move || new_cb());
                             }),
-                    )
+                        cx,
+                    ))
                     .child(
                         Button::new("delete-config")
                             .ghost()
@@ -446,9 +446,8 @@ impl ApiView {
                         h_flex()
                             .gap_2()
                             .child(div().flex_1().min_w_0().child(menu))
-                            .child(
+                            .child(ring_button(
                                 Button::new("load-models")
-                                    .custom(flat_button_variant(cx))
                                     .small()
                                     .loading(s.models_loading)
                                     .disabled(s.models_loading)
@@ -462,7 +461,8 @@ impl ApiView {
                                         let load_cb = load_cb.clone();
                                         runtime::dispatch(move || load_cb());
                                     }),
-                            ),
+                                cx,
+                            )),
                     ),
             );
         } else if llm {

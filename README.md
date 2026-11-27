@@ -1,46 +1,40 @@
-# LiveCaptions TranslatorTray · Rust
+# LiveCaptions TranslatorTray
 
-基于 Windows 实时字幕的轻量桌面翻译工具，现已使用 Rust 重构。支持 Windows 11 x64，单个 EXE 运行，无需安装 .NET 或 Rust。
+基于 Windows 实时字幕的轻量桌面实时翻译工具。Windows 11 原生 Mica 外观，单文件直接运行，无需安装 .NET 或其他运行时。
 
 [下载最新版](https://github.com/M1styuki/LiveCaptions-TranslatorTray/releases/latest) · [使用说明](docs/USER-GUIDE.md) · [构建说明](docs/BUILDING.md) · [验证范围](docs/VALIDATION.md)
 
-## 使用
+## 使用方式
 
-1. 先在 Windows 中完成“实时字幕”的首次设置和所需语言下载。识别语言在 Windows 实时字幕中选择。
-2. 下载并运行 `LiveCaptionsTray.exe`，程序驻留在系统托盘。
-3. 右键托盘图标打开设置。首次直接显示设置页并创建默认配置，无需额外确认。
-4. Google 可直接使用；DeepSeek 等兼容服务在 OpenAI 接口中填写地址、模型和密钥。
-5. 左击托盘图标开启或关闭字幕翻译；完全退出请使用右键菜单的“退出”。
+1. 先在 Windows 中完成「实时字幕」的首次设置并下载所需语音识别语言（识别语言在 Windows 实时字幕中选择）。
+2. 下载并运行 `LiveCaptionsTray.exe`，程序常驻系统托盘。
+3. 右键点击托盘图标即可打开设置页；首次启动会自动生成默认配置并直接进入设置。
+4. Google 翻译可直接使用；DeepSeek 等 OpenAI 兼容服务可在对应接口页面填写地址、模型名称和密钥。
+5. 左键点击托盘图标开启或关闭字幕翻译；需要完全退出时在右键菜单选择「退出」。
 
-## 功能
+## 主要功能
 
-- Google、Google2、OpenAI 兼容接口、OpenRouter、Ollama、LMStudio、DeepL、有道、百度、MTranServer、LibreTranslate。
-- 每个服务支持独立配置；提供上下文翻译、调用间隔和显示句数设置。
-- 可置顶的字幕浮窗，可调整字体、描边、背景和透明度。
-- 字幕与译文历史、搜索、分页及全量 CSV 导出。
-- 分组设置页、单服务 API 编辑页、短促交互动画。
-- 托盘右键菜单使用 Windows 原生样式，跟随系统深浅色。
-- 托盘与按需启动的工作进程分离；关闭引擎和所有窗口后仅保留托盘进程。
+- **多翻译引擎支持**：内置 Google、Google2、OpenAI 兼容接口、OpenRouter、Ollama、LMStudio、DeepL、有道、百度、MTranServer、LibreTranslate。
+- **独立接口与上下文控制**：每个翻译服务均可保存独立配置，支持上下文翻译、调用间隔与显示句数调节。
+- **可置顶字幕浮窗**：自由调整字体、描边、背景色与透明度，适应视频或会议叠加场景。
+- **历史记录管理**：支持字幕与译文检索、分页浏览以及全量 CSV 导出。
+- **原生界面体验**：Windows 11 Fluent 2 分组设置与原生样式托盘菜单，自动跟随系统浅/深色切换；关闭窗口与引擎后仅保留极轻量的托盘进程。
 
-## 数据与升级
+## 数据保存与升级
 
-配置和历史保存在 EXE 旁的 `data` 文件夹。升级 Rust 版时退出程序、替换 EXE，保留 `data` 即可。配置可能包含服务密钥，历史包含字幕内容，不应上传或公开分享。
+配置和翻译历史统一保存在 `LiveCaptionsTray.exe` 同级的 `data` 文件夹中。升级时只需退出程序并替换 `LiveCaptionsTray.exe`，保留 `data` 文件夹即可完整延续配置与历史记录（配置文件可能含接口密钥，历史记录包含字幕文本，请勿公开分享）。
 
-本版不提供旧版配置导入，也不会自动扫描 EXE 旁的旧配置。首次从 C# 版切换时，请单独放置 Rust 版并在设置中配置服务。已有 Rust 数据可以继续使用，损坏数据仍提供恢复操作。
+## 从源码构建
 
-## 开发
-
-Rust 工程位于 [rust-app](rust-app/)，固定 Rust 1.99.1 和 Windows x64 MSVC 目标。在已启用 MSVC / Windows SDK 的 PowerShell 中：
+主工程位于 [rust-app](rust-app/)，固定使用 Rust 1.99.1 与 `x86_64-pc-windows-msvc` 目标。在已配置 MSVC 与 Windows SDK 的 PowerShell 中执行：
 
 ```powershell
 cd rust-app
 cargo build --release --locked
 ```
 
-输出：`rust-app/target/x86_64-pc-windows-msvc/release/LiveCaptionsTray.exe`。完整命令与测试边界见[构建说明](docs/BUILDING.md)。
+构建产物位于 `rust-app/target/x86_64-pc-windows-msvc/release/LiveCaptionsTray.exe`。完整测试与构建细则请参见[构建说明](docs/BUILDING.md)。
 
 ## 来源与许可
 
-本仓库原有 C# 版本及历史提交保留在 Git 历史中。Rust 重构以 [7c0dfa3](https://github.com/M1styuki/LiveCaptions-TranslatorTray/tree/7c0dfa3e8b37db9c941d884f8de7642f915b9a0a) 为行为基线；上游项目为 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator)。
-
-Rust 应用及组合程序采用 [GPL-3.0-only](LICENSE)。原版材料及第三方资源保留各自许可，详见 [NOTICE](NOTICE) 和 [licenses](licenses/)。
+本项目行为基线参考 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator)。本体代码及组合程序采用 [GPL-3.0-only](LICENSE) 协议，相关原始材料与第三方组件许可请见 [NOTICE](NOTICE) 与 [licenses](licenses/)。

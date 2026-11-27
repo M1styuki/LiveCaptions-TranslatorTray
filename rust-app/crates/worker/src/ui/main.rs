@@ -176,9 +176,8 @@ impl Render for MainView {
                         .gap_2()
                         .child(div().flex_1().min_w_0().child(banner))
                         .when(s.retry_save, |d| {
-                            d.child(
+                            d.child(ring_button(
                                 Button::new("retry-save")
-                                    .custom(flat_button_variant(cx))
                                     .small()
                                     .label("重试保存")
                                     .on_click(move |_, _, _| {
@@ -187,7 +186,8 @@ impl Render for MainView {
                                             retry_ui.invoke_data_action(4, String::new());
                                         });
                                     }),
-                            )
+                                cx,
+                            ))
                         }),
                 )
             })
@@ -597,9 +597,8 @@ impl MainView {
                             .max_w(rems(15.))
                             .child(search_input),
                     )
-                    .child(
+                    .child(ring_button(
                         Button::new("history-submit")
-                            .custom(flat_button_variant(cx))
                             .small()
                             .icon(app_icon("original-icons/search.svg").small())
                             .accessibility_label("搜索")
@@ -608,7 +607,8 @@ impl MainView {
                                 let submit = submit.clone();
                                 runtime::dispatch(move || submit.invoke_history_action(0, 0));
                             }),
-                    )
+                        cx,
+                    ))
                     .child(div().flex_1())
                     .child(
                         h_flex()
@@ -665,9 +665,8 @@ impl MainView {
                                 runtime::dispatch(move || refresh.invoke_history_action(2, 0));
                             }),
                     )
-                    .child(
+                    .child(ring_button(
                         Button::new("history-export")
-                            .custom(flat_button_variant(cx))
                             .small()
                             .loading(s.export_busy)
                             .disabled(!ready)
@@ -682,7 +681,8 @@ impl MainView {
                                 let export = export.clone();
                                 runtime::dispatch(move || export.invoke_file_requested(3));
                             }),
-                    )
+                        cx,
+                    ))
                     .child(
                         Button::new("history-delete")
                             .ghost()
@@ -944,9 +944,8 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
     let mut actions = h_flex().flex_wrap().gap_2().pt_1();
     if s.data_state == 3 || s.data_state == 4 {
         actions = actions
-            .child(
+            .child(ring_button(
                 Button::new("reset")
-                    .custom(flat_button_variant(cx))
                     .small()
                     .disabled(!ready)
                     .label("保留原文件并恢复默认设置")
@@ -954,10 +953,10 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
                         let reset = reset.clone();
                         runtime::dispatch(move || reset.invoke_data_action(0, String::new()));
                     }),
-            )
-            .child(
+                cx,
+            ))
+            .child(ring_button(
                 Button::new("replace")
-                    .custom(flat_button_variant(cx))
                     .small()
                     .disabled(!ready)
                     .label("选择另一份配置文件恢复…")
@@ -965,12 +964,12 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
                         let replace = replace.clone();
                         runtime::dispatch(move || replace.invoke_file_requested(1));
                     }),
-            );
+                cx,
+            ));
     }
     if s.data_state == 3 {
-        actions = actions.child(
+        actions = actions.child(ring_button(
             Button::new("locate")
-                .custom(flat_button_variant(cx))
                 .small()
                 .disabled(!ready)
                 .label("选择原数据目录完成恢复…")
@@ -978,7 +977,8 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
                     let locate = locate.clone();
                     runtime::dispatch(move || locate.invoke_file_requested(2));
                 }),
-        );
+            cx,
+        ));
     }
     if s.data_state >= 3 {
         let title = if s.data_state == 3 {
@@ -1081,16 +1081,16 @@ fn delete_dialog(
                         .justify_end()
                         .gap_2()
                         .pt_2()
-                        .child(
+                        .child(ring_button(
                             Button::new("cancel-delete")
-                                .custom(flat_button_variant(cx))
                                 .label("取消")
                                 .track_focus(&cancel_focus)
                                 .on_click(move |_, _, _| {
                                     let cancel = cancel.clone();
                                     runtime::dispatch(move || cancel.invoke_delete_action(1));
                                 }),
-                        )
+                            cx,
+                        ))
                         .child(
                             Button::new("confirm-delete")
                                 .danger()

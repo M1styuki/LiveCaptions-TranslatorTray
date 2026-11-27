@@ -2,7 +2,9 @@ use super::motion::{
     SmoothScroll, pointer_feedback, pointer_feedback_corners, smooth_spring, smooth_value,
 };
 use super::runtime;
-use super::shape::{ContinuousCorners as _, paint_fill, paint_outline};
+use super::shape::{
+    ContinuousCorners as _, HighlightRing, highlight_layer, paint_fill, paint_outline,
+};
 use gpui_kit::component::{
     ActiveTheme as _, Icon, IconName, Sizable as _,
     button::{Button, ButtonCustomVariant, ButtonRounded, ButtonVariants as _},
@@ -364,20 +366,29 @@ pub fn navigation_row(
     }))
 }
 
-pub fn control_highlight(cx: &App) -> Hsla {
+pub fn control_highlight(cx: &App) -> HighlightRing {
     if cx.theme().is_dark() {
-        cx.theme().switch_thumb.opacity(0.14)
+        HighlightRing {
+            top: cx.theme().switch_thumb.opacity(0.16),
+            rest: cx.theme().switch_thumb.opacity(0.08),
+            stop: 0.28,
+        }
     } else {
-        cx.theme().switch_thumb.opacity(0.85)
+        HighlightRing {
+            top: cx.theme().foreground.opacity(0.08),
+            rest: cx.theme().foreground.opacity(0.14),
+            stop: 0.82,
+        }
     }
 }
 
-pub fn flat_button_variant(cx: &App) -> ButtonCustomVariant {
-    ButtonCustomVariant::new(cx)
-        .color(cx.theme().button)
-        .foreground(cx.theme().button_foreground)
-        .hover(cx.theme().button_hover)
-        .active(cx.theme().button_active)
+pub fn ring_button(button: Button, cx: &App) -> Div {
+    let radius = f32::from(cx.theme().radius);
+    div()
+        .relative()
+        .flex_shrink_0()
+        .child(button.secondary())
+        .child(highlight_layer(None, Some(control_highlight(cx)), radius))
 }
 
 pub fn animated_chevron(id: impl Into<ElementId>, color: Hsla, up: bool) -> impl IntoElement {

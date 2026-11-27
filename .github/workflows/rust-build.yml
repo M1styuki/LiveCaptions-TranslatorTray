@@ -1,4 +1,4 @@
-name: Rust Windows build
+name: Windows Build
 
 on:
   push:
@@ -36,6 +36,6 @@ jobs:
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
-          name: LiveCaptionsTray-win11-x64
+          name: LiveCaptionsTray
           path: rust-app/target/x86_64-pc-windows-msvc/release/LiveCaptionsTray.exe
           if-no-files-found: error

@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "captions-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -4067,7 +4067,7 @@ checksum = "02b614978e47ce529faee66579f2b2fe19c94aa96d910a6a9a8043b2b02d8175"
 
 [[package]]
 name = "live-captions-app"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "tray-host",
  "worker",
@@ -5591,7 +5591,7 @@ dependencies = [
 
 [[package]]
 name = "protocol"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -5599,7 +5599,7 @@ dependencies = [
 
 [[package]]
 name = "providers"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "captions-core",
  "reqwest",
@@ -6852,7 +6852,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "storage"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "captions-core",
  "chrono",
@@ -7507,7 +7507,7 @@ dependencies = [
 
 [[package]]
 name = "tray-host"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "protocol",
  "windows 0.62.2",
@@ -8502,7 +8502,7 @@ dependencies = [
 
 [[package]]
 name = "windows-platform"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "captions-core",
  "windows 0.62.2",
@@ -8890,7 +8890,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "worker"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "captions-core",
  "futures",

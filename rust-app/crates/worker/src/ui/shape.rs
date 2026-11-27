@@ -62,8 +62,23 @@ pub fn paint_outline(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &
     }
 }
 
-pub fn paint_top_highlight(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &mut Window) {
-    if color.a <= 0. || bounds.size.width <= px(2.) || bounds.size.height <= px(2.) {
+#[derive(Clone, Copy)]
+pub struct HighlightRing {
+    pub top: Hsla,
+    pub rest: Hsla,
+    pub stop: f32,
+}
+
+pub fn paint_ring_highlight(
+    bounds: Bounds<Pixels>,
+    ring: HighlightRing,
+    radius: f32,
+    window: &mut Window,
+) {
+    if (ring.top.a <= 0. && ring.rest.a <= 0.)
+        || bounds.size.width <= px(2.)
+        || bounds.size.height <= px(2.)
+    {
         return;
     }
     if let Ok(shape) = path(
@@ -75,8 +90,8 @@ pub fn paint_top_highlight(bounds: Bounds<Pixels>, color: Hsla, radius: f32, win
     {
         let sheen = gpui_kit::linear_gradient(
             180.,
-            gpui_kit::linear_color_stop(color, 0.0),
-            gpui_kit::linear_color_stop(color.opacity(0.0), 0.20),
+            gpui_kit::linear_color_stop(ring.top, 0.0),
+            gpui_kit::linear_color_stop(ring.rest, ring.stop),
         );
         window.paint_path(shape, sheen);
     }
@@ -101,7 +116,11 @@ pub fn layer(fill: Option<Hsla>, stroke: Option<Hsla>, radius: f32) -> AnyElemen
     .into_any_element()
 }
 
-pub fn highlight_layer(fill: Option<Hsla>, highlight: Option<Hsla>, radius: f32) -> AnyElement {
+pub fn highlight_layer(
+    fill: Option<Hsla>,
+    highlight: Option<HighlightRing>,
+    radius: f32,
+) -> AnyElement {
     canvas(
         |_, _, _| (),
         move |bounds, _, window, _| {
@@ -109,7 +128,7 @@ pub fn highlight_layer(fill: Option<Hsla>, highlight: Option<Hsla>, radius: f32)
                 paint_fill(bounds, fill, radius, window);
             }
             if let Some(highlight) = highlight {
-                paint_top_highlight(bounds, highlight, radius, window);
+                paint_ring_highlight(bounds, highlight, radius, window);
             }
         },
     )
@@ -125,7 +144,12 @@ pub trait ContinuousCorners: Styled + ParentElement + Sized {
         self.child(layer(fill, stroke, radius))
     }
 
-    fn contour_highlight(self, fill: Option<Hsla>, highlight: Option<Hsla>, radius: f32) -> Self {
+    fn contour_highlight(
+        self,
+        fill: Option<Hsla>,
+        highlight: Option<HighlightRing>,
+        radius: f32,
+    ) -> Self {
         self.child(highlight_layer(fill, highlight, radius))
     }
 }
