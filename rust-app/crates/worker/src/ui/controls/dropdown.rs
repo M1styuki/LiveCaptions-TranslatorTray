@@ -1,7 +1,7 @@
 use super::super::{
     motion::pointer_feedback,
     runtime,
-    shape::{ContinuousCorners as _, focus_ring_layer},
+    shape::{ContinuousCorners as _, focus_ring_layer, offset_radius},
 };
 use super::{animated_chevron, control_highlight};
 use gpui_kit::component::{
@@ -191,6 +191,8 @@ impl Dropdowns {
         {
             let state = self.opened.clone();
             let accent = cx.theme().accent;
+            const MENU_PADDING: f32 = 5.;
+            let option_radius = offset_radius(popup_radius, MENU_PADDING);
             let items = values.into_iter().enumerate().map(|(index, value)| {
                 let select = select.clone();
                 let state = state.clone();
@@ -205,13 +207,13 @@ impl Dropdowns {
                     .w_full()
                     .gap_1p5()
                     .flex_shrink_0()
-                    .when(active, |d| d.contour(Some(accent), None, 4.));
+                    .when(active, |d| d.contour(Some(accent), None, option_radius));
                 pointer_feedback(
                     (SharedString::from(format!("{id}-opt-fb")), index),
                     row,
                     accent.opacity(0.65),
                     accent,
-                    4.,
+                    option_radius,
                 )
                 .child(
                     h_flex()
@@ -264,7 +266,7 @@ impl Dropdowns {
                                 .relative()
                                 .w(bounds.size.width)
                                 .max_h(max_height)
-                                .p_1()
+                                .p(px(MENU_PADDING))
                                 .text_color(cx.theme().popover_foreground)
                                 .rounded(cx.theme().radius_lg)
                                 .contour(

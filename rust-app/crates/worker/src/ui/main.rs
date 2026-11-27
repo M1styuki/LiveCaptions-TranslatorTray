@@ -9,7 +9,7 @@ use super::{
         SmoothScroll, entrance, expand_progress, pointer_feedback, reveal_row, smooth_spring,
     },
     runtime,
-    shape::{ContinuousCorners as _, paint_fill},
+    shape::{ContinuousCorners as _, offset_radius, paint_fill},
     theme::sync_theme,
 };
 use gpui_kit::component::{
@@ -589,7 +589,7 @@ impl MainView {
                     false,
                     true,
                     false,
-                    4.,
+                    offset_radius(f32::from(cx.theme().radius), 3.),
                     cx,
                 ))
             },

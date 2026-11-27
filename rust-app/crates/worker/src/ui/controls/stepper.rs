@@ -1,7 +1,7 @@
 use super::super::{
     motion::pointer_feedback,
     runtime,
-    shape::{ContinuousCorners as _, focus_ring_layer},
+    shape::{ContinuousCorners as _, focus_ring_layer, offset_radius},
 };
 use super::{Edit, Fields, control_highlight};
 use gpui_kit::component::{ActiveTheme as _, Icon, IconName, Sizable as _, h_flex};
@@ -78,7 +78,7 @@ pub fn number_stepper<T: 'static>(
         .relative()
         .w(rems(8.125))
         .h_8()
-        .pr_0p5()
+        .pr(px(3.))
         .flex_shrink_0()
         .contour_fill(cx.theme().button, radius)
         .ring_highlight(control_highlight(cx), radius)
@@ -129,8 +129,7 @@ pub fn number_stepper<T: 'static>(
                 .id(("step", delta as i32 as usize))
                 .debug_selector(|| format!("{id}-{delta}"))
                 .relative()
-                .h_6()
-                .w_6()
+                .size(px(26.))
                 .flex_shrink_0()
                 .justify_center();
 
@@ -139,7 +138,7 @@ pub fn number_stepper<T: 'static>(
                 btn,
                 cx.theme().accent,
                 cx.theme().secondary_active,
-                4.,
+                offset_radius(radius, 3.),
             )
             .tooltip(move |window, cx| {
                 gpui_kit::component::tooltip::Tooltip::new(tooltip_text.clone()).build(window, cx)

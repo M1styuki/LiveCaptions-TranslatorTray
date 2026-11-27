@@ -98,13 +98,20 @@ pub fn paint_fill_corners(
     }
 }
 
+pub const HIGHLIGHT_STROKE: f32 = 0.65;
+const CAD_OFFSET_FACTOR: f32 = 0.887_555_2;
+
+pub fn offset_radius(outer_radius: f32, inset: f32) -> f32 {
+    (outer_radius - inset * CAD_OFFSET_FACTOR).max(0.)
+}
+
 pub fn paint_outline(bounds: Bounds<Pixels>, color: Hsla, radius: f32, window: &mut Window) {
     if color.a > 0.
         && bounds.size.width > px(1.)
         && bounds.size.height > px(1.)
         && let Ok(shape) = path(
             bounds.dilate(px(-0.5)),
-            (radius - 0.5).max(0.),
+            offset_radius(radius, 0.5),
             PathBuilder::stroke(px(1.)),
         )
         .build()
@@ -132,10 +139,11 @@ pub fn paint_ring_highlight(
     {
         return;
     }
+    let inset = HIGHLIGHT_STROKE * 0.5;
     if let Ok(shape) = path(
-        bounds.dilate(px(-0.5)),
-        (radius - 0.5).max(0.),
-        PathBuilder::stroke(px(1.)),
+        bounds.dilate(px(-inset)),
+        offset_radius(radius, inset),
+        PathBuilder::stroke(px(HIGHLIGHT_STROKE)),
     )
     .build()
     {
@@ -257,3 +265,20 @@ pub trait ContinuousCorners: Styled + ParentElement + Sized {
 }
 
 impl<T: Styled + ParentElement> ContinuousCorners for T {}
+
+#[cfg(test)]
+mod tests {
+    use super::offset_radius;
+
+    #[test]
+    fn offset_radius_keeps_exact_equidistant_diagonal_gap() {
+        for (outer, inset) in [(10.0_f32, 5.0_f32), (5.0, 3.0), (5.0, 0.325)] {
+            let inner = offset_radius(outer, inset);
+            let diag_outer = 0.2 * std::f32::consts::SQRT_2 * 1.65 * outer;
+            let diag_inner =
+                inset * std::f32::consts::SQRT_2 + 0.2 * std::f32::consts::SQRT_2 * 1.65 * inner;
+            assert!(((diag_inner - diag_outer) - inset).abs() < 1e-4);
+        }
+        assert_eq!(offset_radius(2.0, 5.0), 0.0);
+    }
+}
