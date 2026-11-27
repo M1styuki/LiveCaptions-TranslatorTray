@@ -7,10 +7,7 @@ use super::{
     theme::sync_theme,
 };
 use gpui_kit::component::{
-    ActiveTheme as _, Disableable as _, Sizable as _,
-    alert::Alert,
-    button::{Button, ButtonVariants as _},
-    h_flex, v_flex,
+    ActiveTheme as _, Disableable as _, Sizable as _, alert::Alert, button::Button, h_flex, v_flex,
 };
 use gpui_kit::{
     Context, Div, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, Render,
@@ -331,9 +328,9 @@ impl ApiView {
                             .font_weight(FontWeight::SEMIBOLD)
                             .child("配置"),
                     )
-                    .child(
+                    .child(ghost_button(
+                        "previous-config",
                         Button::new("previous-config")
-                            .ghost()
                             .small()
                             .disabled(entry.config_index <= 0)
                             .icon(app_icon("original-icons/previous.svg").small())
@@ -343,7 +340,12 @@ impl ApiView {
                                 let prev_cb = prev_cb.clone();
                                 runtime::dispatch(move || prev_cb());
                             }),
-                    )
+                        false,
+                        entry.config_index > 0,
+                        false,
+                        f32::from(cx.theme().radius),
+                        cx,
+                    ))
                     .child(
                         div()
                             .text_xs()
@@ -354,9 +356,9 @@ impl ApiView {
                                 entry.config_count
                             )),
                     )
-                    .child(
+                    .child(ghost_button(
+                        "next-config",
                         Button::new("next-config")
-                            .ghost()
                             .small()
                             .disabled(entry.config_index + 1 >= entry.config_count)
                             .icon(app_icon("original-icons/next.svg").small())
@@ -366,9 +368,15 @@ impl ApiView {
                                 let next_cb = next_cb.clone();
                                 runtime::dispatch(move || next_cb());
                             }),
-                    )
+                        false,
+                        entry.config_index + 1 < entry.config_count,
+                        false,
+                        f32::from(cx.theme().radius),
+                        cx,
+                    ))
                     .child(div().flex_1())
                     .child(ring_button(
+                        "new-config",
                         Button::new("new-config")
                             .small()
                             .label("新建")
@@ -377,12 +385,12 @@ impl ApiView {
                                 let new_cb = new_cb.clone();
                                 runtime::dispatch(move || new_cb());
                             }),
+                        true,
                         cx,
                     ))
-                    .child(
+                    .child(ghost_button(
+                        "delete-config",
                         Button::new("delete-config")
-                            .ghost()
-                            .danger()
                             .small()
                             .disabled(entry.config_count <= 1)
                             .label("删除")
@@ -391,7 +399,12 @@ impl ApiView {
                                 let del_cb = del_cb.clone();
                                 runtime::dispatch(move || del_cb());
                             }),
-                    ),
+                        false,
+                        entry.config_count > 1,
+                        true,
+                        f32::from(cx.theme().radius),
+                        cx,
+                    )),
             )
             .child(hairline(cx));
 
@@ -447,6 +460,7 @@ impl ApiView {
                             .gap_2()
                             .child(div().flex_1().min_w_0().child(menu))
                             .child(ring_button(
+                                "load-models",
                                 Button::new("load-models")
                                     .small()
                                     .loading(s.models_loading)
@@ -461,6 +475,7 @@ impl ApiView {
                                         let load_cb = load_cb.clone();
                                         runtime::dispatch(move || load_cb());
                                     }),
+                                !s.models_loading,
                                 cx,
                             )),
                     ),

@@ -280,7 +280,6 @@ pub fn ring_input(
         .w_full()
         .h_8()
         .px_2p5()
-        .rounded(cx.theme().radius)
         .contour_fill(cx.theme().button, radius)
         .child(
             div()
@@ -312,7 +311,6 @@ pub fn ring_textarea(
         .relative()
         .w_full()
         .p_2()
-        .rounded(cx.theme().radius)
         .contour_fill(cx.theme().button, radius)
         .child(textarea.appearance(false).p_0())
         .ring_highlight(control_highlight(cx), radius)

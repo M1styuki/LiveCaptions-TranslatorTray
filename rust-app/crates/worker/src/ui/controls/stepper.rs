@@ -80,7 +80,6 @@ pub fn number_stepper<T: 'static>(
         .h_8()
         .pr_0p5()
         .flex_shrink_0()
-        .rounded(cx.theme().radius)
         .contour_fill(cx.theme().button, radius)
         .ring_highlight(control_highlight(cx), radius)
         .child(focus_ring_layer(

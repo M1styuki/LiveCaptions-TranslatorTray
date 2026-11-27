@@ -6,7 +6,7 @@ mod slider;
 mod stepper;
 mod switch;
 
-pub use button::{accent_ring_button, ring_button};
+pub use button::{danger_ring_button, ghost_button, primary_ring_button, ring_button};
 pub use card::{card_rows, hairline, navigation_row, section_card, section_heading, setting_row};
 pub use dropdown::Dropdowns;
 pub use fields::{Edit, Fields, ring_input, ring_textarea};

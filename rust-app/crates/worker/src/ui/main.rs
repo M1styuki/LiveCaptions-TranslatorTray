@@ -13,17 +13,18 @@ use super::{
     theme::sync_theme,
 };
 use gpui_kit::component::{
-    ActiveTheme as _, Disableable as _, Icon, IconName, Selectable as _, Sizable as _,
+    ActiveTheme as _, Disableable as _, Icon, IconName, Sizable as _,
     alert::Alert,
-    button::{Button, ButtonVariants as _},
+    button::Button,
     empty::{Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle},
     h_flex, v_flex,
 };
 use gpui_kit::{
-    Animation, AnimationExt as _, App, Bounds, Context, Div, ElementId, FocusHandle, FontWeight,
-    InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ParentElement as _, Render,
-    ScrollHandle, SharedString, StatefulInteractiveElement as _, Styled as _, Window, canvas, div,
-    ease_out_quint, point, prelude::FluentBuilder as _, px, relative, rems, size,
+    Animation, AnimationExt as _, App, Bounds, Context, Corners, Div, ElementId, FocusHandle,
+    FontWeight, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton,
+    ParentElement as _, Render, ScrollHandle, SharedString, StatefulInteractiveElement as _,
+    Styled as _, Window, canvas, div, ease_out_quint, point, prelude::FluentBuilder as _, px,
+    relative, rems, size,
 };
 use std::time::Duration;
 
@@ -121,28 +122,34 @@ impl Render for MainView {
         let caption_log = (s.page == 0).then(|| {
             let ui = ui.clone();
             let checked = s.caption_log_enabled;
-            Button::new("caption-cards")
-                .ghost()
-                .small()
-                .selected(checked)
-                .icon(app_icon(if checked {
-                    "original-icons/history.svg"
-                } else {
-                    "original-icons/history-dismiss.svg"
-                }))
-                .accessibility_label("字幕历史卡片")
-                .tooltip("字幕历史卡片")
-                .on_click(move |_, _, _| {
-                    let ui = ui.clone();
-                    runtime::dispatch(move || {
-                        ui.set_caption_log_enabled(!checked);
-                        ui.invoke_setting_edited(
-                            "CaptionLogEnabled".into(),
-                            (!checked).to_string(),
-                        );
-                    });
-                })
-                .into_any_element()
+            ghost_button(
+                "caption-cards",
+                Button::new("caption-cards")
+                    .small()
+                    .icon(app_icon(if checked {
+                        "original-icons/history.svg"
+                    } else {
+                        "original-icons/history-dismiss.svg"
+                    }))
+                    .accessibility_label("字幕历史卡片")
+                    .tooltip("字幕历史卡片")
+                    .on_click(move |_, _, _| {
+                        let ui = ui.clone();
+                        runtime::dispatch(move || {
+                            ui.set_caption_log_enabled(!checked);
+                            ui.invoke_setting_edited(
+                                "CaptionLogEnabled".into(),
+                                (!checked).to_string(),
+                            );
+                        });
+                    }),
+                checked,
+                true,
+                false,
+                f32::from(cx.theme().radius),
+                cx,
+            )
+            .into_any_element()
         });
 
         let title_ui = ui.clone();
@@ -173,6 +180,7 @@ impl Render for MainView {
                         .child(div().flex_1().min_w_0().child(banner))
                         .when(s.retry_save, |d| {
                             d.child(ring_button(
+                                "retry-save",
                                 Button::new("retry-save")
                                     .small()
                                     .label("重试保存")
@@ -182,6 +190,7 @@ impl Render for MainView {
                                             retry_ui.invoke_data_action(4, String::new());
                                         });
                                     }),
+                                true,
                                 cx,
                             ))
                         }),
@@ -301,11 +310,10 @@ fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
                 .when(!compact, |d| d.flex_row().justify_between())
                 .pt_1()
                 .gap_1()
-                .child(
+                .child(ghost_button(
+                    "pause",
                     Button::new("pause")
-                        .ghost()
                         .small()
-                        .selected(paused)
                         .icon(
                             app_icon(if paused {
                                 "original-icons/pause-filled.svg"
@@ -331,12 +339,16 @@ fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
                                 pause.invoke_pause_changed(!paused);
                             });
                         }),
-                )
-                .child(
+                    paused,
+                    true,
+                    false,
+                    f32::from(cx.theme().radius),
+                    cx,
+                ))
+                .child(ghost_button(
+                    "captions",
                     Button::new("captions")
-                        .ghost()
                         .small()
-                        .selected(enabled)
                         .disabled(s.engine_busy)
                         .icon(
                             app_icon(if enabled {
@@ -364,12 +376,16 @@ fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
                             let captions = captions.clone();
                             runtime::dispatch(move || captions.invoke_captions_changed(!enabled));
                         }),
-                )
-                .child(
+                    enabled,
+                    !s.engine_busy,
+                    false,
+                    f32::from(cx.theme().radius),
+                    cx,
+                ))
+                .child(ghost_button(
+                    "topmost",
                     Button::new("topmost")
-                        .ghost()
                         .small()
-                        .selected(pinned)
                         .icon(
                             app_icon(if pinned {
                                 "original-icons/pin.svg"
@@ -387,7 +403,12 @@ fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
                                 topmost.invoke_topmost_changed(!pinned);
                             });
                         }),
-                ),
+                    pinned,
+                    true,
+                    false,
+                    f32::from(cx.theme().radius),
+                    cx,
+                )),
         )
 }
 
@@ -554,9 +575,9 @@ impl MainView {
         let search_input = input.prefix(Icon::new(IconName::Search).small()).when(
             !s.history_query.is_empty(),
             |i| {
-                i.suffix(
+                i.suffix(ghost_button(
+                    "history-clear",
                     Button::new("history-clear")
-                        .ghost()
                         .xsmall()
                         .icon(app_icon("icons/close.svg").xsmall())
                         .accessibility_label("清除搜索")
@@ -565,7 +586,12 @@ impl MainView {
                             let clear = clear.clone();
                             runtime::dispatch(move || clear.invoke_history_action(1, 0));
                         }),
-                )
+                    false,
+                    true,
+                    false,
+                    4.,
+                    cx,
+                ))
             },
         );
 
@@ -600,6 +626,7 @@ impl MainView {
                             )),
                     )
                     .child(ring_button(
+                        "history-submit",
                         Button::new("history-submit")
                             .small()
                             .icon(app_icon("original-icons/search.svg").small())
@@ -609,15 +636,16 @@ impl MainView {
                                 let submit = submit.clone();
                                 runtime::dispatch(move || submit.invoke_history_action(0, 0));
                             }),
+                        true,
                         cx,
                     ))
                     .child(div().flex_1())
                     .child(
                         h_flex()
                             .gap_1()
-                            .child(
+                            .child(ghost_button(
+                                "history-prev",
                                 Button::new("history-prev")
-                                    .ghost()
                                     .small()
                                     .disabled(page <= 1)
                                     .icon(app_icon("original-icons/previous.svg").small())
@@ -629,7 +657,12 @@ impl MainView {
                                             previous.invoke_history_requested(page - 1)
                                         });
                                     }),
-                            )
+                                false,
+                                page > 1,
+                                false,
+                                f32::from(cx.theme().radius),
+                                cx,
+                            ))
                             .child(
                                 div()
                                     .px_1p5()
@@ -637,9 +670,9 @@ impl MainView {
                                     .text_color(cx.theme().muted_foreground)
                                     .child(format!("{page} / {}", s.history_pages)),
                             )
-                            .child(
+                            .child(ghost_button(
+                                "history-next",
                                 Button::new("history-next")
-                                    .ghost()
                                     .small()
                                     .disabled(page >= s.history_pages)
                                     .icon(app_icon("original-icons/next.svg").small())
@@ -651,13 +684,18 @@ impl MainView {
                                             next.invoke_history_requested(page + 1)
                                         });
                                     }),
-                            ),
+                                false,
+                                page < s.history_pages,
+                                false,
+                                f32::from(cx.theme().radius),
+                                cx,
+                            )),
                     )
                     .child(div().w(rems(6.75)).flex_shrink_0().child(dropdown))
                     .child(div().w(px(1.)).h_4().bg(cx.theme().border))
-                    .child(
+                    .child(ghost_button(
+                        "history-refresh",
                         Button::new("history-refresh")
-                            .ghost()
                             .small()
                             .icon(app_icon("original-icons/refresh.svg").small())
                             .accessibility_label("刷新")
@@ -666,8 +704,14 @@ impl MainView {
                                 let refresh = refresh.clone();
                                 runtime::dispatch(move || refresh.invoke_history_action(2, 0));
                             }),
-                    )
+                        false,
+                        true,
+                        false,
+                        f32::from(cx.theme().radius),
+                        cx,
+                    ))
                     .child(ring_button(
+                        "history-export",
                         Button::new("history-export")
                             .small()
                             .loading(s.export_busy)
@@ -683,12 +727,12 @@ impl MainView {
                                 let export = export.clone();
                                 runtime::dispatch(move || export.invoke_file_requested(3));
                             }),
+                        ready && !s.export_busy,
                         cx,
                     ))
-                    .child(
+                    .child(ghost_button(
+                        "history-delete",
                         Button::new("history-delete")
-                            .ghost()
-                            .danger()
                             .small()
                             .disabled(!ready)
                             .icon(app_icon("original-icons/delete.svg").small())
@@ -698,7 +742,12 @@ impl MainView {
                                 let delete = delete.clone();
                                 runtime::dispatch(move || delete.invoke_delete_action(0));
                             }),
-                    ),
+                        false,
+                        ready,
+                        true,
+                        f32::from(cx.theme().radius),
+                        cx,
+                    )),
             )
             .when(!s.export_message.is_empty(), |d| {
                 let err = s.export_message.contains("未完成")
@@ -782,7 +831,14 @@ fn history_line(index: usize, entry: &HistoryItem, header: bool, cx: &App) -> Di
         .py_2()
         .gap_3()
         .when(header, |d| {
-            d.bg(cx.theme().table_head)
+            let head_corners = Corners {
+                top_left: cx.theme().radius_lg,
+                top_right: cx.theme().radius_lg,
+                bottom_right: px(0.),
+                bottom_left: px(0.),
+            };
+            d.relative()
+                .contour_fill_corners(cx.theme().table_head, head_corners)
                 .text_xs()
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_color(cx.theme().table_head_foreground)
@@ -848,7 +904,6 @@ fn caption_block(
         .px_3p5()
         .py_2p5()
         .gap_3()
-        .rounded(cx.theme().radius_lg)
         .contour(Some(cx.theme().group_box), Some(cx.theme().border), radius);
 
     pointer_feedback(
@@ -947,6 +1002,7 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
     if s.data_state == 3 || s.data_state == 4 {
         actions = actions
             .child(ring_button(
+                "reset",
                 Button::new("reset")
                     .small()
                     .disabled(!ready)
@@ -955,9 +1011,11 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
                         let reset = reset.clone();
                         runtime::dispatch(move || reset.invoke_data_action(0, String::new()));
                     }),
+                ready,
                 cx,
             ))
             .child(ring_button(
+                "replace",
                 Button::new("replace")
                     .small()
                     .disabled(!ready)
@@ -966,11 +1024,13 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
                         let replace = replace.clone();
                         runtime::dispatch(move || replace.invoke_file_requested(1));
                     }),
+                ready,
                 cx,
             ));
     }
     if s.data_state == 3 {
         actions = actions.child(ring_button(
+            "locate",
             Button::new("locate")
                 .small()
                 .disabled(!ready)
@@ -979,6 +1039,7 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
                     let locate = locate.clone();
                     runtime::dispatch(move || locate.invoke_file_requested(2));
                 }),
+            ready,
             cx,
         ));
     }
@@ -988,9 +1049,9 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
         } else {
             "重新载入"
         };
-        actions = actions.child(accent_ring_button(
+        actions = actions.child(primary_ring_button(
+            "retry-data",
             Button::new("retry-data")
-                .primary()
                 .small()
                 .disabled(!ready)
                 .label(title)
@@ -998,6 +1059,7 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
                     let retry = retry.clone();
                     runtime::dispatch(move || retry.invoke_data_action(3, String::new()));
                 }),
+            ready,
             cx,
         ));
     }
@@ -1085,6 +1147,7 @@ fn delete_dialog(
                         .gap_2()
                         .pt_2()
                         .child(ring_button(
+                            "cancel-delete",
                             Button::new("cancel-delete")
                                 .label("取消")
                                 .track_focus(&cancel_focus)
@@ -1092,17 +1155,19 @@ fn delete_dialog(
                                     let cancel = cancel.clone();
                                     runtime::dispatch(move || cancel.invoke_delete_action(1));
                                 }),
+                            true,
                             cx,
                         ))
-                        .child(accent_ring_button(
+                        .child(danger_ring_button(
+                            "confirm-delete",
                             Button::new("confirm-delete")
-                                .danger()
                                 .label("全部删除")
                                 .track_focus(&confirm_focus)
                                 .on_click(move |_, _, _| {
                                     let confirm = confirm.clone();
                                     runtime::dispatch(move || confirm.invoke_delete_action(2));
                                 }),
+                            true,
                             cx,
                         )),
                 ),

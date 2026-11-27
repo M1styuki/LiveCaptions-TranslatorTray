@@ -222,6 +222,12 @@ pub struct SmoothCorner {
     pub segments: [[[f32; 2]; 3]; 2],
 }
 
+#[derive(Clone, Copy)]
+pub enum SmoothVertex {
+    Sharp([f32; 2]),
+    Curve(SmoothCorner),
+}
+
 pub fn smooth_corners([left, top, right, bottom]: [f32; 4], radius: f32) -> [SmoothCorner; 4] {
     // Extend the transition along the edges. At the diagonal this retains
     // the visible corner depth of the original nominal circular radius.
@@ -244,6 +250,57 @@ pub fn smooth_corners([left, top, right, bottom]: [f32; 4], radius: f32) -> [Smo
         corner(right, bottom - r, 0., r),
         corner(left + r, bottom, -r, 0.),
         corner(left, top + r, 0., -r),
+    ]
+}
+
+pub fn smooth_corners_radii(
+    [left, top, right, bottom]: [f32; 4],
+    [tl, tr, br, bl]: [f32; 4],
+) -> [SmoothVertex; 4] {
+    let w = (right - left).max(0.);
+    let h = (bottom - top).max(0.);
+
+    let mut tl = (tl * 1.65).max(0.);
+    let mut tr = (tr * 1.65).max(0.);
+    let mut br = (br * 1.65).max(0.);
+    let mut bl = (bl * 1.65).max(0.);
+
+    let mut scale = 1.0f32;
+    if tl + tr > w && tl + tr > 0. {
+        scale = scale.min(w / (tl + tr));
+    }
+    if bl + br > w && bl + br > 0. {
+        scale = scale.min(w / (bl + br));
+    }
+    if tl + bl > h && tl + bl > 0. {
+        scale = scale.min(h / (tl + bl));
+    }
+    if tr + br > h && tr + br > 0. {
+        scale = scale.min(h / (tr + br));
+    }
+    tl *= scale;
+    tr *= scale;
+    br *= scale;
+    bl *= scale;
+
+    let corner = |x, y, dx, dy, sharp_x, sharp_y, r: f32| {
+        if r <= 0. {
+            return SmoothVertex::Sharp([sharp_x, sharp_y]);
+        }
+        let at = |along, across| [x + dx * along - dy * across, y + dy * along + dx * across];
+        SmoothVertex::Curve(SmoothCorner {
+            start: at(0., 0.),
+            segments: [
+                [at(0.275, 0.), at(0.6, 0.), at(0.8, 0.2)],
+                [at(1., 0.4), at(1., 0.725), at(1., 1.)],
+            ],
+        })
+    };
+    [
+        corner(right - tr, top, tr, 0., right, top, tr),
+        corner(right, bottom - br, 0., br, right, bottom, br),
+        corner(left + bl, bottom, -bl, 0., left, bottom, bl),
+        corner(left, top + tl, 0., -tl, left, top, tl),
     ]
 }
 
@@ -271,6 +328,25 @@ mod tests {
             let left = curvature(at_left_join, subtract(at_left_join, subtract(c, b)));
             let right = curvature(at_right_join, subtract(subtract(e, d), at_right_join));
             assert!((left - right).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn smooth_corners_radii_handles_mixed_sharp_and_narrow_corners() {
+        let top_only = smooth_corners_radii([0., 0., 200., 56.], [10., 10., 0., 0.]);
+        assert!(matches!(top_only[0], SmoothVertex::Curve(_)));
+        assert!(matches!(top_only[1], SmoothVertex::Sharp([200., 56.])));
+        assert!(matches!(top_only[2], SmoothVertex::Sharp([0., 56.])));
+        assert!(matches!(top_only[3], SmoothVertex::Curve(_)));
+
+        let narrow = smooth_corners_radii([0., 0., 12., 8.], [10., 10., 10., 10.]);
+        for vertex in narrow {
+            let SmoothVertex::Curve(corner) = vertex else {
+                panic!("expected curved corner on non-zero narrow rect");
+            };
+            let [[_, _, _], [_, _, end]] = corner.segments;
+            assert!(end[0] >= 0. && end[0] <= 12.);
+            assert!(end[1] >= 0. && end[1] <= 8.);
         }
     }
 

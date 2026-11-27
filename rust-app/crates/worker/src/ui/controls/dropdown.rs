@@ -68,7 +68,6 @@ impl Dropdowns {
             .w_full()
             .h_8()
             .flex_shrink_0()
-            .rounded(cx.theme().radius)
             .contour_fill(cx.theme().button, radius);
         if !is_open {
             control = pointer_feedback(
