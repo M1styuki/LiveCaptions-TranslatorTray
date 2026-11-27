@@ -273,7 +273,7 @@ impl ApiView {
         cx: &mut Context<Self>,
     ) -> Div {
         let ui = ui.clone();
-        let (editor, _) = self.fields.textarea(
+        let (editor, focus) = self.fields.textarea(
             "prompt",
             &s.prompt,
             "翻译提示词；保留目标语言占位符 {0}",
@@ -294,7 +294,7 @@ impl ApiView {
                     .text_color(cx.theme().muted_foreground)
                     .child("{0} 代表目标语言，需保留在提示词中。源文本用 🔤 标记包围。"),
             )
-            .child(editor)
+            .child(ring_textarea("prompt", editor, &focus, window, cx))
     }
 
     fn editor(
@@ -624,12 +624,14 @@ fn field<T: 'static>(
     cx: &mut Context<T>,
     callback: impl Fn(String) + 'static,
 ) -> Div {
-    let (input, _) = fields.input(name, value, hint, secret, true, window, cx, move |event| {
+    let (input, focus) = fields.input(name, value, hint, secret, true, window, cx, move |event| {
         if let Edit::Change(value) = event {
             callback(value);
         }
     });
-    let wrapped = div().debug_selector(|| title.to_owned()).child(input);
+    let wrapped = div()
+        .debug_selector(|| title.to_owned())
+        .child(ring_input(name, input, &focus, window, cx));
 
     if let Some(width) = width_rems {
         h_flex()

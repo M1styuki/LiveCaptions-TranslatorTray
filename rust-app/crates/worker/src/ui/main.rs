@@ -17,16 +17,13 @@ use gpui_kit::component::{
     alert::Alert,
     button::{Button, ButtonVariants as _},
     empty::{Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle},
-    h_flex,
-    slider::SliderState,
-    v_flex,
+    h_flex, v_flex,
 };
 use gpui_kit::{
-    Animation, AnimationExt as _, App, Bounds, Context, Div, ElementId, Entity, FocusHandle,
-    FontWeight, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton,
-    ParentElement as _, Render, ScrollHandle, SharedString, StatefulInteractiveElement as _,
-    Styled as _, Subscription, Window, canvas, div, ease_out_quint, point,
-    prelude::FluentBuilder as _, px, relative, rems, size,
+    Animation, AnimationExt as _, App, Bounds, Context, Div, ElementId, FocusHandle, FontWeight,
+    InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ParentElement as _, Render,
+    ScrollHandle, SharedString, StatefulInteractiveElement as _, Styled as _, Window, canvas, div,
+    ease_out_quint, point, prelude::FluentBuilder as _, px, relative, rems, size,
 };
 use std::time::Duration;
 
@@ -40,7 +37,6 @@ pub(super) struct MainView {
     last_page: Option<i32>,
     applied_theme: Option<(bool, bool)>,
     delete_focus: Option<(FocusHandle, FocusHandle)>,
-    interval_slider: Option<(Entity<SliderState>, i32, Subscription)>,
 }
 
 impl MainWindow {
@@ -535,7 +531,7 @@ impl MainView {
         );
 
         let search_ui = ui.clone();
-        let (input, _) = self.fields.input(
+        let (input, search_focus) = self.fields.input(
             "search",
             &s.history_query,
             "搜索字幕或译文（支持 % _）",
@@ -595,7 +591,13 @@ impl MainView {
                             .flex_1()
                             .min_w(rems(8.5))
                             .max_w(rems(15.))
-                            .child(search_input),
+                            .child(ring_input(
+                                "search",
+                                search_input,
+                                &search_focus,
+                                window,
+                                cx,
+                            )),
                     )
                     .child(ring_button(
                         Button::new("history-submit")
@@ -986,7 +988,7 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
         } else {
             "重新载入"
         };
-        actions = actions.child(
+        actions = actions.child(accent_ring_button(
             Button::new("retry-data")
                 .primary()
                 .small()
@@ -996,7 +998,8 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
                     let retry = retry.clone();
                     runtime::dispatch(move || retry.invoke_data_action(3, String::new()));
                 }),
-        );
+            cx,
+        ));
     }
 
     v_flex()
@@ -1091,7 +1094,7 @@ fn delete_dialog(
                                 }),
                             cx,
                         ))
-                        .child(
+                        .child(accent_ring_button(
                             Button::new("confirm-delete")
                                 .danger()
                                 .label("全部删除")
@@ -1100,7 +1103,8 @@ fn delete_dialog(
                                     let confirm = confirm.clone();
                                     runtime::dispatch(move || confirm.invoke_delete_action(2));
                                 }),
-                        ),
+                            cx,
+                        )),
                 ),
         )
         .with_animation(

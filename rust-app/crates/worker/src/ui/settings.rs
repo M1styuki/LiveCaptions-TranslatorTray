@@ -1,15 +1,6 @@
 use super::*;
-use gpui_kit::component::{
-    ActiveTheme as _,
-    alert::Alert,
-    h_flex,
-    slider::{Slider, SliderEvent, SliderState},
-    v_flex,
-};
-use gpui_kit::{
-    App, AppContext as _, Context, Div, Entity, FontWeight, InteractiveElement as _, IntoElement,
-    ParentElement as _, Styled as _, Window, div, px, rems,
-};
+use gpui_kit::component::{ActiveTheme as _, alert::Alert, h_flex, v_flex};
+use gpui_kit::{Context, ParentElement as _, Styled as _, Window, div, rems};
 
 const SERVICES: [&str; 11] = [
     "Google",
@@ -30,52 +21,6 @@ const LANGUAGES: [&str; 13] = [
 ];
 
 impl MainView {
-    fn ensure_interval_slider(
-        &mut self,
-        ui: &MainWindow,
-        value: i32,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Entity<SliderState> {
-        if let Some((state, applied, _)) = &mut self.interval_slider {
-            if *applied != value {
-                *applied = value;
-                state.update(cx, |slider, cx| {
-                    if slider.value().end().round() as i32 != value {
-                        slider.set_value(value as f32, window, cx);
-                    }
-                });
-            }
-            return state.clone();
-        }
-
-        let state = cx.new(|_| {
-            SliderState::new()
-                .min(0.)
-                .max(10.)
-                .step(1.)
-                .default_value(value as f32)
-        });
-        let view_ui = ui.clone();
-        let sub = cx.subscribe(&state, move |this, _, event: &SliderEvent, _| {
-            let SliderEvent::Change(val) = event else {
-                return;
-            };
-            let next = val.end().round().clamp(0., 10.) as i32;
-            if let Some((_, applied, _)) = &mut this.interval_slider {
-                *applied = next;
-            }
-            let view_ui = view_ui.clone();
-            runtime::dispatch(move || {
-                if view_ui.get_max_sync_interval() != next {
-                    set(&view_ui, "MaxSyncInterval", next);
-                }
-            });
-        });
-        self.interval_slider = Some((state.clone(), value, sub));
-        state
-    }
-
     pub(super) fn settings(
         &mut self,
         s: &MainState,
@@ -122,17 +67,22 @@ impl MainView {
             move |_, value| set(&lang, "TargetLanguage", value),
         );
 
-        let slider_state = self.ensure_interval_slider(ui, s.max_sync_interval, window, cx);
-        let slider = div()
-            .id("interval-slider-wrap")
-            .debug_selector(|| "interval-slider".to_owned())
-            .w(rems(11.25))
-            .flex_shrink_0()
-            .child(
-                Slider::new(&slider_state)
-                    .horizontal()
-                    .accessibility_label("调用间隔"),
-            );
+        let slider_ui = ui.clone();
+        let slider = win11_slider(
+            "interval-slider-wrap",
+            "interval-slider",
+            "调用间隔",
+            s.max_sync_interval,
+            0,
+            10,
+            1,
+            cx,
+            move |next| {
+                if slider_ui.get_max_sync_interval() != next {
+                    set(&slider_ui, "MaxSyncInterval", next);
+                }
+            },
+        );
 
         let config = ui.clone();
         let sentences_text = s.display_sentences.to_string();
@@ -393,48 +343,4 @@ fn set(ui: &MainWindow, field: &'static str, value: impl ToString) {
         _ => unreachable!(),
     }
     ui.invoke_setting_edited(field.into(), value);
-}
-
-fn section_heading(title: &'static str, cx: &App) -> Div {
-    div()
-        .px_1()
-        .text_xs()
-        .font_weight(FontWeight::SEMIBOLD)
-        .text_color(cx.theme().muted_foreground)
-        .child(title)
-}
-
-fn setting_row(
-    title: &'static str,
-    description: &'static str,
-    control: impl IntoElement,
-    cx: &App,
-) -> Div {
-    h_flex()
-        .justify_between()
-        .items_center()
-        .min_h(px(56.))
-        .gap_4()
-        .px_4()
-        .py_2p5()
-        .child(
-            v_flex()
-                .flex_1()
-                .min_w_0()
-                .gap_0p5()
-                .child(
-                    div()
-                        .text_sm()
-                        .font_weight(FontWeight::MEDIUM)
-                        .text_color(cx.theme().foreground)
-                        .child(title),
-                )
-                .child(
-                    div()
-                        .text_xs()
-                        .text_color(cx.theme().muted_foreground)
-                        .child(description),
-                ),
-        )
-        .child(control)
 }

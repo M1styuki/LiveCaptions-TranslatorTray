@@ -1,7 +1,9 @@
+use super::motion::smooth_value;
 use gpui_kit::{
-    AnyElement, Bounds, Hsla, IntoElement, ParentElement, PathBuilder, Pixels, Styled, Window,
-    canvas, fill, point, px,
+    AnyElement, Bounds, ElementId, Hsla, IntoElement, ParentElement, PathBuilder, Pixels, Styled,
+    Window, canvas, fill, point, px,
 };
+use std::time::Duration;
 
 fn path(bounds: Bounds<Pixels>, radius: f32, mut path: PathBuilder) -> PathBuilder {
     let xy = |[x, y]: [f32; 2]| point(px(x), px(y));
@@ -116,20 +118,54 @@ pub fn layer(fill: Option<Hsla>, stroke: Option<Hsla>, radius: f32) -> AnyElemen
     .into_any_element()
 }
 
-pub fn highlight_layer(
-    fill: Option<Hsla>,
-    highlight: Option<HighlightRing>,
-    radius: f32,
-) -> AnyElement {
+pub fn fill_layer(fill: Hsla, radius: f32) -> AnyElement {
     canvas(
         |_, _, _| (),
         move |bounds, _, window, _| {
-            if let Some(fill) = fill {
-                paint_fill(bounds, fill, radius, window);
-            }
-            if let Some(highlight) = highlight {
-                paint_ring_highlight(bounds, highlight, radius, window);
-            }
+            paint_fill(bounds, fill, radius, window);
+        },
+    )
+    .absolute()
+    .top_0()
+    .left_0()
+    .size_full()
+    .into_any_element()
+}
+
+pub fn ring_layer(highlight: HighlightRing, radius: f32) -> AnyElement {
+    canvas(
+        |_, _, _| (),
+        move |bounds, _, window, _| {
+            paint_ring_highlight(bounds, highlight, radius, window);
+        },
+    )
+    .absolute()
+    .top_0()
+    .left_0()
+    .size_full()
+    .into_any_element()
+}
+
+pub fn focus_ring_layer(
+    id: impl Into<ElementId>,
+    active: bool,
+    color: Hsla,
+    radius: f32,
+    duration: Duration,
+) -> AnyElement {
+    let id: ElementId = id.into();
+    canvas(
+        move |_, window, cx| {
+            smooth_value(
+                id.clone(),
+                if active { 1. } else { 0. },
+                duration,
+                window,
+                cx,
+            )
+        },
+        move |bounds, amount, window, _| {
+            paint_outline(bounds, color.opacity(amount), radius, window);
         },
     )
     .absolute()
@@ -144,13 +180,12 @@ pub trait ContinuousCorners: Styled + ParentElement + Sized {
         self.child(layer(fill, stroke, radius))
     }
 
-    fn contour_highlight(
-        self,
-        fill: Option<Hsla>,
-        highlight: Option<HighlightRing>,
-        radius: f32,
-    ) -> Self {
-        self.child(highlight_layer(fill, highlight, radius))
+    fn contour_fill(self, fill: Hsla, radius: f32) -> Self {
+        self.child(fill_layer(fill, radius))
+    }
+
+    fn ring_highlight(self, highlight: HighlightRing, radius: f32) -> Self {
+        self.child(ring_layer(highlight, radius))
     }
 }
 

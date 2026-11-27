@@ -233,6 +233,22 @@ pub struct SmoothScroll {
     state: Rc<RefCell<SmoothScrollState>>,
 }
 
+fn animations_enabled() -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SPI_GETCLIENTAREAANIMATION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW,
+    };
+    let mut animate = 1i32;
+    let _ = unsafe {
+        SystemParametersInfoW(
+            SPI_GETCLIENTAREAANIMATION,
+            0,
+            Some(std::ptr::from_mut(&mut animate).cast()),
+            SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+        )
+    };
+    animate != 0
+}
+
 impl SmoothScroll {
     pub fn reset(&self) {
         let mut state = self.state.borrow_mut();
@@ -247,7 +263,7 @@ impl SmoothScroll {
             .w_full()
             .flex_shrink_0()
             .on_scroll(move |event: &ScrollEvent, window, cx| {
-                if event.delta.precise() {
+                if event.delta.precise() || !animations_enabled() {
                     return;
                 }
                 let max_y = f32::from(scroll.max_offset().y).max(0.);
