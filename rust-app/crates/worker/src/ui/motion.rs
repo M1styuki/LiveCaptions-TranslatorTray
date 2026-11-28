@@ -117,14 +117,14 @@ fn pointer_feedback_with(
                     let hover = smooth_value(
                         (hover_id.clone(), "hover"),
                         if s.hovered { 1. } else { 0. },
-                        Duration::from_millis(120),
+                        Duration::from_millis(100),
                         window,
                         cx,
                     );
                     let press = smooth_value(
                         (press_id.clone(), "press"),
                         if s.pressed { 1. } else { 0. },
-                        Duration::from_millis(90),
+                        Duration::from_millis(75),
                         window,
                         cx,
                     );
@@ -166,8 +166,8 @@ pub fn entrance(id: impl Into<ElementId>, content: impl IntoElement) -> impl Int
             .child(content)
             .with_animation(
                 id,
-                Animation::new(Duration::from_millis(190)).with_easing(ease_out_quint()),
-                |div, t| div.opacity(t).top(px(6. * (1. - t))),
+                Animation::new(Duration::from_millis(135)).with_easing(ease_out_quint()),
+                |div, t| div.opacity(t).top(px(3. * (1. - t))),
             ),
     )
 }
@@ -185,7 +185,7 @@ pub fn slide_entrance(
             .child(content)
             .with_animation(
                 id,
-                Animation::new(Duration::from_millis(220)).with_easing(ease_out_quint()),
+                Animation::new(Duration::from_millis(175)).with_easing(ease_out_quint()),
                 move |div, t| div.opacity(t).left(px(offset_x * (1. - t))),
             ),
     )
@@ -197,10 +197,11 @@ pub fn expand_progress(
     window: &mut Window,
     cx: &mut App,
 ) -> f32 {
+    let duration_ms = if expanded { 175 } else { 130 };
     smooth_value(
         id,
         if expanded { 1. } else { 0. },
-        Duration::from_millis(210),
+        Duration::from_millis(duration_ms),
         window,
         cx,
     )

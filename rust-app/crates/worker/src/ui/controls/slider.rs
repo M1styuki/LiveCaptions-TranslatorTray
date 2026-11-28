@@ -1,15 +1,24 @@
-use super::super::{motion::pointer_feedback, runtime};
+use super::super::{
+    motion::{pointer_feedback, smooth_value},
+    runtime,
+};
 use gpui_kit::component::{ActiveTheme as _, h_flex};
 use gpui_kit::{
-    App, Bounds, ElementId, InteractiveElement as _, KeyDownEvent, MouseButton, MouseDownEvent,
-    MouseMoveEvent, MouseUpEvent, ParentElement as _, Pixels, Role, Stateful,
+    App, Bounds, ElementId, Entity, InteractiveElement as _, KeyDownEvent, MouseButton,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, ParentElement as _, Pixels, Role, Stateful,
     StatefulInteractiveElement as _, Styled as _, canvas, div, fill, point, px, rems, size,
 };
-use std::{cell::Cell, rc::Rc};
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 const THUMB_RADIUS: f32 = 8.;
 const TRACK_INSET: f32 = 10.;
 const SLIDER_HEIGHT: f32 = 28.;
+
+#[derive(Default, Clone, Copy)]
+struct SliderState {
+    hovered: bool,
+    dragging: bool,
+}
 
 fn slider_fraction(bounds: Bounds<Pixels>, x: Pixels) -> f32 {
     let inset = px(TRACK_INSET);
@@ -48,24 +57,47 @@ pub fn win11_slider(
             .clamp(i64::from(min), i64::from(max)) as i32
     };
 
-    let state_id = ElementId::NamedChild(ElementId::from(id).into(), "__slider-drag".into());
-    let drag_slot = Rc::new(std::cell::RefCell::new(None::<gpui_kit::Entity<bool>>));
+    let state_id = ElementId::NamedChild(ElementId::from(id).into(), "__slider-state".into());
+    let drag_slot = Rc::new(std::cell::RefCell::new(None::<Entity<SliderState>>));
+    let hover_slot = drag_slot.clone();
     let down_drag = drag_slot.clone();
 
     let track = canvas(
-        move |_, window, cx| window.use_keyed_state(state_id.clone(), cx, |_, _| false),
-        move |bounds, dragging, window, _cx| {
-            geometry.set(Some(bounds));
-            *drag_slot.borrow_mut() = Some(dragging.clone());
-
-            let ratio = if max > min {
+        move |_, window, cx| {
+            let state = window.use_keyed_state(state_id.clone(), cx, |_, _| SliderState::default());
+            let s = *state.read(cx);
+            let target_ratio = if max > min {
                 ((value as f64 - min as f64) / (max as f64 - min as f64)).clamp(0., 1.) as f32
             } else {
                 0.
             };
+            let ratio = smooth_value(
+                (ElementId::from(id), "sl-pos"),
+                target_ratio,
+                if s.dragging {
+                    Duration::ZERO
+                } else {
+                    Duration::from_millis(110)
+                },
+                window,
+                cx,
+            );
+            let core_t = smooth_value(
+                (ElementId::from(id), "sl-core"),
+                if s.hovered || s.dragging { 1. } else { 0. },
+                Duration::from_millis(110),
+                window,
+                cx,
+            );
+            (state, ratio, core_t)
+        },
+        move |bounds, (state, ratio, core_t), window, _cx| {
+            geometry.set(Some(bounds));
+            *drag_slot.borrow_mut() = Some(state.clone());
+
             let inset = px(TRACK_INSET);
-            let outer_r = px(THUMB_RADIUS);
-            let inner_r = px(THUMB_RADIUS - 2.5);
+            let outer_r = px(THUMB_RADIUS + 0.5 * core_t);
+            let inner_r = px((THUMB_RADIUS - 2.5) + 1.0 * core_t);
             let left = bounds.origin.x + inset;
             let width = (bounds.size.width - inset * 2.).max(px(1.));
             let x = left + width * ratio;
@@ -102,10 +134,10 @@ pub fn win11_slider(
                 .corner_radii(inner_r),
             );
 
-            let drag_state = dragging.clone();
+            let drag_state = state.clone();
             let drag_change = drag_change.clone();
             window.on_mouse_event(move |ev: &MouseMoveEvent, phase, _, cx| {
-                if !phase.bubble() || !ev.dragging() || !*drag_state.read(cx) {
+                if !phase.bubble() || !ev.dragging() || !drag_state.read(cx).dragging {
                     return;
                 }
                 let next = snap(slider_fraction(bounds, ev.position.x));
@@ -113,10 +145,10 @@ pub fn win11_slider(
                 runtime::dispatch(move || drag_change(next));
             });
 
-            let up_state = dragging;
+            let up_state = state;
             window.on_mouse_event(move |ev: &MouseUpEvent, _, _, cx| {
-                if ev.button == MouseButton::Left && *up_state.read(cx) {
-                    up_state.update(cx, |active, _| *active = false);
+                if ev.button == MouseButton::Left && up_state.read(cx).dragging {
+                    up_state.update(cx, |active, _| active.dragging = false);
                 }
             });
         },
@@ -126,8 +158,7 @@ pub fn win11_slider(
     let bar = pointer_feedback(
         (ElementId::from(id), "slider-fb"),
         h_flex()
-            .id(debug_name)
-            .debug_selector(|| debug_name.to_owned())
+            .id(id)
             .relative()
             .size_full()
             .h(px(SLIDER_HEIGHT))
@@ -141,7 +172,7 @@ pub fn win11_slider(
     )
     .on_mouse_down(MouseButton::Left, move |ev: &MouseDownEvent, window, cx| {
         if let Some(state) = down_drag.borrow().as_ref() {
-            state.update(cx, |active, _| *active = true);
+            state.update(cx, |active, _| active.dragging = true);
         }
         if let Some(bounds) = slot.get() {
             let next = snap(slider_fraction(bounds, ev.position.x));
@@ -163,5 +194,16 @@ pub fn win11_slider(
     })
     .child(track);
 
-    div().id(id).w(rems(11.25)).flex_shrink_0().child(bar)
+    div()
+        .id(debug_name)
+        .debug_selector(|| debug_name.to_owned())
+        .w(rems(11.25))
+        .flex_shrink_0()
+        .on_hover(move |hovered, window, cx| {
+            if let Some(state) = hover_slot.borrow().as_ref() {
+                state.update(cx, |active, _| active.hovered = *hovered);
+                window.refresh();
+            }
+        })
+        .child(bar)
 }

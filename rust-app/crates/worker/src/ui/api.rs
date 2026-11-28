@@ -117,11 +117,18 @@ impl Render for ApiView {
             "Baidu",
             "LibreTranslate",
         ];
-        let sidebar_width = if window.viewport_size().width < px(640.) {
-            rems(7.75)
+        let target_sidebar = if window.viewport_size().width < px(640.) {
+            f32::from(rems(7.75).to_pixels(window.rem_size()))
         } else {
-            rems(9.5)
+            f32::from(rems(9.5).to_pixels(window.rem_size()))
         };
+        let sidebar_width = px(super::motion::smooth_value(
+            "lc-api-nav-w",
+            target_sidebar,
+            std::time::Duration::from_millis(170),
+            window,
+            cx,
+        ));
 
         let nav_item = |index: i32, name: &'static str| {
             let ui = ui.clone();
@@ -253,7 +260,7 @@ impl Render for ApiView {
                             "api-section-{}-{}",
                             s.section, s.active_editor.config_index
                         )),
-                        -20.,
+                        -14.,
                         scroller("api-scroll", &self.scroll, &self.smooth_scroll, content),
                     ))),
             )

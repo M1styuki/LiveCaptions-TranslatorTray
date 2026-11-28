@@ -17,15 +17,68 @@ use std::{
     cell::{Cell, RefCell},
     collections::HashMap,
     rc::Rc,
-    time::Duration,
+    time::{Duration, Instant},
 };
+
+#[derive(Clone)]
+struct ClosingMenu {
+    id: &'static str,
+    origin: gpui_kit::Point<Pixels>,
+    max_height: Pixels,
+    width: Pixels,
+    items: Vec<(String, bool, bool)>,
+    seq: u64,
+    started: Instant,
+}
 
 #[derive(Default, Clone)]
 pub struct Dropdowns {
     /// `(id, active_index, keyboard_focus)`
     opened: Rc<Cell<Option<(&'static str, usize, bool)>>>,
+    closing: Rc<RefCell<Option<ClosingMenu>>>,
+    close_seq: Rc<Cell<u64>>,
     bounds: Rc<RefCell<HashMap<&'static str, Bounds<Pixels>>>>,
     menu_scroll: ScrollHandle,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn snapshot_close(
+    id: &'static str,
+    bounds: Bounds<Pixels>,
+    viewport_height: Pixels,
+    values: &[String],
+    selected: Option<usize>,
+    active_idx: usize,
+    closing_cell: &RefCell<Option<ClosingMenu>>,
+    seq_cell: &Cell<u64>,
+) {
+    if values.is_empty() {
+        return;
+    }
+    let available = viewport_height;
+    let max_height = px(336.).min(available - px(16.));
+    let desired = (px(10.) + px(28.) * values.len() as f32).min(max_height);
+    let y = if bounds.bottom() + px(4.) + desired > available && bounds.origin.y > desired {
+        bounds.origin.y - px(4.) - desired
+    } else {
+        bounds.bottom() + px(4.)
+    };
+    let seq = seq_cell.get().wrapping_add(1);
+    seq_cell.set(seq);
+    let items = values
+        .iter()
+        .enumerate()
+        .map(|(i, value)| (value.clone(), Some(i) == selected, i == active_idx))
+        .collect();
+    *closing_cell.borrow_mut() = Some(ClosingMenu {
+        id,
+        origin: point(bounds.origin.x, y),
+        max_height,
+        width: bounds.size.width,
+        items,
+        seq,
+        started: Instant::now(),
+    });
 }
 
 impl Dropdowns {
@@ -51,6 +104,10 @@ impl Dropdowns {
         let bounds = self.bounds.clone();
         let select = Rc::new(select);
         let toggle = self.opened.clone();
+        let toggle_closing = self.closing.clone();
+        let toggle_seq = self.close_seq.clone();
+        let toggle_bounds = self.bounds.clone();
+        let toggle_values = values.clone();
         let toggle_scroll = self.menu_scroll.clone();
         let current = selected.unwrap_or(0);
         let can_open = !values.is_empty();
@@ -104,11 +161,25 @@ impl Dropdowns {
             .when(!editable && can_open, |d| {
                 d.on_click(move |_, window, _| {
                     toggle_scroll.set_offset(point(px(0.), px(0.)));
-                    toggle.set(if toggle.get().is_some_and(|(key, _, _)| key == id) {
-                        None
+                    if let Some((_, active_idx, _)) = toggle.get().filter(|(key, _, _)| *key == id)
+                    {
+                        if let Some(tb) = toggle_bounds.borrow().get(id).copied() {
+                            snapshot_close(
+                                id,
+                                tb,
+                                window.viewport_size().height,
+                                &toggle_values,
+                                selected,
+                                active_idx,
+                                &toggle_closing,
+                                &toggle_seq,
+                            );
+                        }
+                        toggle.set(None);
                     } else {
-                        Some((id, current, false))
-                    });
+                        *toggle_closing.borrow_mut() = None;
+                        toggle.set(Some((id, current, false)));
+                    }
                     window.refresh();
                 })
             })
@@ -131,6 +202,10 @@ impl Dropdowns {
             );
 
         let arrow_state = self.opened.clone();
+        let arrow_closing = self.closing.clone();
+        let arrow_seq = self.close_seq.clone();
+        let arrow_bounds = self.bounds.clone();
+        let arrow_values = values.clone();
         let arrow_scroll = self.menu_scroll.clone();
         control = control.child(
             h_flex()
@@ -143,13 +218,26 @@ impl Dropdowns {
                 .when(uses_arrow, |d| {
                     d.focusable().tab_stop(true).on_click(move |_, window, _| {
                         arrow_scroll.set_offset(point(px(0.), px(0.)));
-                        arrow_state.set(
-                            if arrow_state.get().is_some_and(|(key, _, _)| key == id) {
-                                None
-                            } else {
-                                Some((id, current, false))
-                            },
-                        );
+                        if let Some((_, active_idx, _)) =
+                            arrow_state.get().filter(|(key, _, _)| *key == id)
+                        {
+                            if let Some(tb) = arrow_bounds.borrow().get(id).copied() {
+                                snapshot_close(
+                                    id,
+                                    tb,
+                                    window.viewport_size().height,
+                                    &arrow_values,
+                                    selected,
+                                    active_idx,
+                                    &arrow_closing,
+                                    &arrow_seq,
+                                );
+                            }
+                            arrow_state.set(None);
+                        } else {
+                            *arrow_closing.borrow_mut() = None;
+                            arrow_state.set(Some((id, current, false)));
+                        }
                         window.refresh();
                     })
                 })
@@ -157,23 +245,56 @@ impl Dropdowns {
         );
 
         let state = self.opened.clone();
+        let key_closing = self.closing.clone();
+        let key_seq = self.close_seq.clone();
+        let key_bounds = self.bounds.clone();
         let keyboard_values = values.clone();
         let keyboard_select = select.clone();
         let keyboard_scroll = self.menu_scroll.clone();
         control = control.on_key_down(move |event: &KeyDownEvent, window, cx| {
             let current_open = state.get().filter(|(key, _, _)| *key == id);
             match event.keystroke.key.as_str() {
-                "escape" if current_open.is_some() => state.set(None),
+                "escape" if current_open.is_some() => {
+                    if let Some(tb) = key_bounds.borrow().get(id).copied() {
+                        snapshot_close(
+                            id,
+                            tb,
+                            window.viewport_size().height,
+                            &keyboard_values,
+                            selected,
+                            current_open.unwrap().1,
+                            &key_closing,
+                            &key_seq,
+                        );
+                    }
+                    state.set(None);
+                }
                 "enter" | "space" if current_open.is_some() => {
                     let index = current_open.unwrap().1;
+                    if let Some(tb) = key_bounds.borrow().get(id).copied() {
+                        snapshot_close(
+                            id,
+                            tb,
+                            window.viewport_size().height,
+                            &keyboard_values,
+                            selected,
+                            index,
+                            &key_closing,
+                            &key_seq,
+                        );
+                    }
                     if let Some(value) = keyboard_values.get(index).cloned() {
                         let select = keyboard_select.clone();
                         runtime::dispatch(move || select(index, value));
                     }
                     state.set(None);
                 }
-                "enter" | "space" if !editable && can_open => state.set(Some((id, current, true))),
+                "enter" | "space" if !editable && can_open => {
+                    *key_closing.borrow_mut() = None;
+                    state.set(Some((id, current, true)));
+                }
                 "down" | "up" if can_open => {
+                    *key_closing.borrow_mut() = None;
                     let index = current_open.map_or(current, |(_, index, _)| index);
                     let index = if event.keystroke.key == "down" {
                         (index + 1).min(keyboard_values.len() - 1)
@@ -193,6 +314,10 @@ impl Dropdowns {
             && let Some(bounds) = self.bounds.borrow().get(id).copied()
         {
             let state = self.opened.clone();
+            let row_closing = self.closing.clone();
+            let row_seq = self.close_seq.clone();
+            let row_values = values.clone();
+            let out_values = values.clone();
             let accent = cx.theme().accent;
             let primary = cx.theme().primary;
             const MENU_PADDING: f32 = 5.;
@@ -201,6 +326,9 @@ impl Dropdowns {
                 let select = select.clone();
                 let state = state.clone();
                 let hover_state = state.clone();
+                let click_closing = row_closing.clone();
+                let click_seq = row_seq.clone();
+                let click_values = row_values.clone();
                 let clicked_value = value.clone();
                 let is_selected = Some(index) == selected;
                 let is_pointed = index == active_idx;
@@ -260,6 +388,16 @@ impl Dropdowns {
                     )
                     .on_click(move |_, window, cx| {
                         cx.stop_propagation();
+                        snapshot_close(
+                            id,
+                            bounds,
+                            window.viewport_size().height,
+                            &click_values,
+                            selected,
+                            index,
+                            &click_closing,
+                            &click_seq,
+                        );
                         state.set(None);
                         let select = select.clone();
                         let value = clicked_value.clone();
@@ -283,16 +421,21 @@ impl Dropdowns {
                     .child(row)
             });
             let state = self.opened.clone();
+            let out_closing = self.closing.clone();
+            let out_seq = self.close_seq.clone();
             let available = window.viewport_size().height;
             let max_height = rems(21.)
                 .to_pixels(window.rem_size())
                 .min(available - px(16.));
             let desired = (px(10.) + px(28.) * items.len() as f32).min(max_height);
-            let y = if bounds.bottom() + px(4.) + desired > available && bounds.origin.y > desired {
+            let open_above =
+                bounds.bottom() + px(4.) + desired > available && bounds.origin.y > desired;
+            let y = if open_above {
                 bounds.origin.y - px(4.) - desired
             } else {
                 bounds.bottom() + px(4.)
             };
+            let dy = if open_above { 3. } else { -3. };
             control = control.child(
                 deferred(
                     anchored()
@@ -317,6 +460,16 @@ impl Dropdowns {
                                 .occlude()
                                 .on_mouse_down_out(move |event, window, _| {
                                     if !bounds.contains(&event.position) {
+                                        snapshot_close(
+                                            id,
+                                            bounds,
+                                            window.viewport_size().height,
+                                            &out_values,
+                                            selected,
+                                            active_idx,
+                                            &out_closing,
+                                            &out_seq,
+                                        );
                                         state.set(None);
                                         window.refresh();
                                     }
@@ -332,14 +485,89 @@ impl Dropdowns {
                                 .child(Scrollbar::vertical(&self.menu_scroll))
                                 .with_animation(
                                     SharedString::from(format!("{id}-open")),
-                                    Animation::new(Duration::from_millis(140))
+                                    Animation::new(Duration::from_millis(115))
                                         .with_easing(ease_out_quint()),
-                                    |d, t| d.opacity(t).top(px(-4. * (1. - t))),
+                                    move |d, t| d.opacity(t).top(px(dy * (1. - t))),
                                 ),
                         ),
                 )
                 .with_priority(2),
             );
+        } else {
+            let expired =
+                self.closing.borrow().as_ref().is_some_and(|c| {
+                    c.id == id && c.started.elapsed() >= Duration::from_millis(90)
+                });
+            if expired {
+                *self.closing.borrow_mut() = None;
+            }
+            if let Some(closing) = self.closing.borrow().as_ref().filter(|c| c.id == id) {
+                let accent = cx.theme().accent;
+                let primary = cx.theme().primary;
+                const MENU_PADDING: f32 = 5.;
+                let option_radius = offset_radius(popup_radius, MENU_PADDING);
+                let fade_items = closing.items.iter().map(|(value, is_sel, is_ptr)| {
+                    h_flex()
+                        .relative()
+                        .h_7()
+                        .px_2()
+                        .w_full()
+                        .gap_2()
+                        .items_center()
+                        .flex_shrink_0()
+                        .when(*is_ptr, |d| d.contour_fill(accent, option_radius))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .text_sm()
+                                .text_color(cx.theme().popover_foreground)
+                                .truncate()
+                                .child(value.clone()),
+                        )
+                        .child(
+                            h_flex()
+                                .size(px(14.))
+                                .flex_shrink_0()
+                                .justify_center()
+                                .items_center()
+                                .when(*is_sel, |d| {
+                                    d.child(Icon::new(IconName::Check).xsmall().text_color(primary))
+                                }),
+                        )
+                });
+                control = control.child(
+                    deferred(
+                        anchored()
+                            .position(closing.origin)
+                            .snap_to_window_with_margin(px(4.))
+                            .child(
+                                v_flex()
+                                    .relative()
+                                    .w(closing.width)
+                                    .max_h(closing.max_height)
+                                    .p(px(MENU_PADDING))
+                                    .overflow_hidden()
+                                    .text_color(cx.theme().popover_foreground)
+                                    .rounded(cx.theme().radius_lg)
+                                    .contour(
+                                        Some(cx.theme().popover),
+                                        Some(cx.theme().border),
+                                        popup_radius,
+                                    )
+                                    .shadow_md()
+                                    .child(v_flex().children(fade_items))
+                                    .with_animation(
+                                        SharedString::from(format!("{id}-close-{}", closing.seq)),
+                                        Animation::new(Duration::from_millis(85))
+                                            .with_easing(ease_out_quint()),
+                                        |d, t| d.opacity(1. - t),
+                                    ),
+                            ),
+                    )
+                    .with_priority(2),
+                );
+            }
         }
 
         if open.is_some() {

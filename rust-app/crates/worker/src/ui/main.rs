@@ -7,6 +7,7 @@ use super::{
     model::{HistoryItem, MainState, MainWindow},
     motion::{
         SmoothScroll, entrance, expand_progress, pointer_feedback, reveal_row, smooth_spring,
+        smooth_value,
     },
     runtime,
     shape::{ContinuousCorners as _, offset_radius, paint_fill},
@@ -174,6 +175,7 @@ impl Render for MainView {
                 }
                 pane.child(
                     h_flex()
+                        .relative()
                         .px_4()
                         .pt_3()
                         .gap_2()
@@ -193,7 +195,13 @@ impl Render for MainView {
                                 true,
                                 cx,
                             ))
-                        }),
+                        })
+                        .with_animation(
+                            SharedString::from(format!("data-banner-{}", s.data_message)),
+                            Animation::new(Duration::from_millis(130))
+                                .with_easing(ease_out_quint()),
+                            |d, t| d.opacity(t).top(px(3. * (1. - t))),
+                        ),
                 )
             })
             .child(v_flex().flex_1().min_h_0().w_full().child(entrance(
@@ -219,26 +227,42 @@ impl Render for MainView {
                     .flex_1()
                     .min_h_0()
                     .w_full()
-                    .child(sidebar(&s, &ui, compact, cx))
+                    .child(sidebar(&s, &ui, compact, window, cx))
                     .child(right_pane),
             )
             .child(grip());
 
+        let modal_alpha = smooth_value(
+            "delete-dialog-vis",
+            if s.delete_confirm { 1. } else { 0. },
+            Duration::from_millis(if s.delete_confirm { 150 } else { 100 }),
+            window,
+            cx,
+        );
         if s.delete_confirm {
             let handles = self.delete_focus.get_or_insert_with(|| {
                 let cancel = cx.focus_handle();
                 cancel.focus(window, cx);
                 (cancel, cx.focus_handle())
             });
-            layout = layout.child(delete_dialog(&ui, handles.clone(), cx));
+            layout = layout.child(delete_dialog(&ui, handles.clone(), modal_alpha, cx));
         } else {
             self.delete_focus = None;
+            if modal_alpha > 0.005 {
+                layout = layout.child(delete_dialog_fade(modal_alpha, cx));
+            }
         }
         layout
     }
 }
 
-fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
+fn sidebar(
+    s: &MainState,
+    ui: &MainWindow,
+    compact: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> Div {
     let navs = [
         ("字幕", "original-icons/home.svg"),
         ("设置", "original-icons/settings.svg"),
@@ -251,9 +275,21 @@ fn sidebar(s: &MainState, ui: &MainWindow, compact: bool, cx: &App) -> Div {
     let active_index = s.page.clamp(0, 2) as f32;
     let pill_color = cx.theme().sidebar_accent;
     let pill_radius = f32::from(cx.theme().radius);
+    let target_w = if compact {
+        f32::from(rems(3.0).to_pixels(window.rem_size()))
+    } else {
+        f32::from(rems(7.75).to_pixels(window.rem_size()))
+    };
+    let nav_w = px(smooth_value(
+        "lc-main-nav-w",
+        target_w,
+        Duration::from_millis(170),
+        window,
+        cx,
+    ));
 
     v_flex()
-        .w(if compact { rems(3.0) } else { rems(7.75) })
+        .w(nav_w)
         .h_full()
         .flex_shrink_0()
         .bg(cx.theme().sidebar)
@@ -1075,6 +1111,7 @@ fn recovery(s: &MainState, ui: &MainWindow, cx: &App) -> Div {
 fn delete_dialog(
     ui: &MainWindow,
     (cancel_focus, confirm_focus): (FocusHandle, FocusHandle),
+    alpha: f32,
     cx: &App,
 ) -> impl IntoElement {
     let cancel = ui.clone();
@@ -1082,6 +1119,7 @@ fn delete_dialog(
     let escape = ui.clone();
     let first = cancel_focus.clone();
     let second = confirm_focus.clone();
+    let overlay = cx.theme().overlay;
 
     div()
         .id("delete-dialog")
@@ -1089,7 +1127,7 @@ fn delete_dialog(
         .top_0()
         .left_0()
         .size_full()
-        .bg(cx.theme().overlay)
+        .bg(overlay.opacity(overlay.a * alpha))
         .flex()
         .items_center()
         .justify_center()
@@ -1121,6 +1159,8 @@ fn delete_dialog(
                 .w(rems(24.))
                 .p_5()
                 .gap_3()
+                .opacity(alpha)
+                .top(px(4. * (1. - alpha)))
                 .text_color(cx.theme().popover_foreground)
                 .rounded(cx.theme().radius_lg)
                 .contour(
@@ -1172,9 +1212,45 @@ fn delete_dialog(
                         )),
                 ),
         )
-        .with_animation(
-            "delete-confirmation",
-            Animation::new(Duration::from_millis(140)).with_easing(ease_out_quint()),
-            |dialog, phase| dialog.opacity(phase),
+}
+
+fn delete_dialog_fade(alpha: f32, cx: &App) -> impl IntoElement {
+    let overlay = cx.theme().overlay;
+    div()
+        .absolute()
+        .top_0()
+        .left_0()
+        .size_full()
+        .bg(overlay.opacity(overlay.a * alpha))
+        .flex()
+        .items_center()
+        .justify_center()
+        .child(
+            v_flex()
+                .relative()
+                .w(rems(24.))
+                .p_5()
+                .gap_3()
+                .opacity(alpha)
+                .text_color(cx.theme().popover_foreground)
+                .rounded(cx.theme().radius_lg)
+                .contour(
+                    Some(cx.theme().popover),
+                    None,
+                    f32::from(cx.theme().radius_lg),
+                )
+                .shadow_xl()
+                .child(
+                    div()
+                        .text_base()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .child("删除全部历史记录？"),
+                )
+                .child(
+                    div()
+                        .text_sm()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("历史记录将永久删除，当前翻译上下文也会清空。"),
+                ),
         )
 }

@@ -1,4 +1,5 @@
 use super::super::{
+    motion::pointer_feedback,
     runtime,
     shape::{ContinuousCorners as _, focus_ring_layer},
 };
@@ -274,27 +275,38 @@ pub fn ring_input(
 ) -> Stateful<gpui_kit::Div> {
     let focused = focus.is_focused(window);
     let radius = f32::from(cx.theme().radius);
-    h_flex()
+    let base = h_flex()
         .id((ElementId::from(id), "ring-input"))
         .relative()
         .w_full()
         .h_8()
         .px_2p5()
-        .contour_fill(cx.theme().button, radius)
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .child(input.appearance(false).p_0()),
-        )
-        .ring_highlight(control_highlight(cx), radius)
-        .child(focus_ring_layer(
-            (ElementId::from(id), "input-focus"),
-            focused,
-            cx.theme().ring,
+        .contour_fill(cx.theme().button, radius);
+    let base = if focused {
+        base
+    } else {
+        pointer_feedback(
+            (ElementId::from(id), "input-hover"),
+            base,
+            cx.theme().button_hover,
+            cx.theme().transparent,
             radius,
-            Duration::from_millis(130),
-        ))
+        )
+    };
+    base.child(
+        div()
+            .flex_1()
+            .min_w_0()
+            .child(input.appearance(false).p_0()),
+    )
+    .ring_highlight(control_highlight(cx), radius)
+    .child(focus_ring_layer(
+        (ElementId::from(id), "input-focus"),
+        focused,
+        cx.theme().ring,
+        radius,
+        Duration::from_millis(130),
+    ))
 }
 
 pub fn ring_textarea(
@@ -306,13 +318,24 @@ pub fn ring_textarea(
 ) -> Stateful<gpui_kit::Div> {
     let focused = focus.is_focused(window);
     let radius = f32::from(cx.theme().radius);
-    div()
+    let base = div()
         .id((ElementId::from(id), "ring-textarea"))
         .relative()
         .w_full()
         .p_2()
-        .contour_fill(cx.theme().button, radius)
-        .child(textarea.appearance(false).p_0())
+        .contour_fill(cx.theme().button, radius);
+    let base = if focused {
+        base
+    } else {
+        pointer_feedback(
+            (ElementId::from(id), "textarea-hover"),
+            base,
+            cx.theme().button_hover,
+            cx.theme().transparent,
+            radius,
+        )
+    };
+    base.child(textarea.appearance(false).p_0())
         .ring_highlight(control_highlight(cx), radius)
         .child(focus_ring_layer(
             (ElementId::from(id), "textarea-focus"),

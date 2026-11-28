@@ -72,7 +72,7 @@ pub fn number_stepper<T: 'static>(
     let radius = f32::from(cx.theme().radius);
     let focus_border = cx.theme().ring;
 
-    h_flex()
+    let base = h_flex()
         .id(ElementId::Name(title.into()))
         .debug_selector(|| title.to_owned())
         .relative()
@@ -80,8 +80,19 @@ pub fn number_stepper<T: 'static>(
         .h_8()
         .pr(px(3.))
         .flex_shrink_0()
-        .contour_fill(cx.theme().button, radius)
-        .ring_highlight(control_highlight(cx), radius)
+        .contour_fill(cx.theme().button, radius);
+    let base = if focused {
+        base
+    } else {
+        pointer_feedback(
+            (ElementId::from(id), "stepper-hover"),
+            base,
+            cx.theme().button_hover,
+            cx.theme().transparent,
+            radius,
+        )
+    };
+    base.ring_highlight(control_highlight(cx), radius)
         .child(focus_ring_layer(
             (ElementId::from(id), "stepper-focus"),
             focused,

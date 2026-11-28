@@ -27,6 +27,7 @@ pub fn win11_switch(
     let state_id = ElementId::NamedChild(id.clone().into(), "__win11-switch-state".into());
     let hover_id = id.clone();
     let press_id = id.clone();
+    let stretch_id = id.clone();
     let slide_id = id.clone();
     let on_id = id.clone();
     let slot = Rc::new(RefCell::new(None::<Entity<SwitchPointerState>>));
@@ -81,12 +82,19 @@ pub fn win11_switch(
                     let hover = smooth_value(
                         (hover_id.clone(), "sw-hover"),
                         if s.hovered { 1. } else { 0. },
-                        Duration::from_millis(120),
+                        Duration::from_millis(100),
                         window,
                         cx,
                     );
                     let press = smooth_value(
                         (press_id.clone(), "sw-press"),
+                        if s.pressed { 1. } else { 0. },
+                        Duration::from_millis(75),
+                        window,
+                        cx,
+                    );
+                    let stretch = smooth_value(
+                        (stretch_id.clone(), "sw-stretch"),
                         if s.pressed { 1. } else { 0. },
                         Duration::from_millis(90),
                         window,
@@ -105,9 +113,9 @@ pub fn win11_switch(
                         window,
                         cx,
                     );
-                    (hover, press, slide.clamp(0., 1.), on_mix)
+                    (hover, press, stretch, slide.clamp(0., 1.), on_mix)
                 },
-                move |bounds, (hover, press, slide, on_mix), window, _| {
+                move |bounds, (hover, press, stretch, slide, on_mix), window, _| {
                     let radius = f32::from(bounds.size.height) / 2.;
                     let off_bg = transparent
                         .blend(off_fill_hover.opacity(hover))
@@ -128,9 +136,15 @@ pub fn win11_switch(
                     ));
 
                     let thumb_d = 12.;
+                    let thumb_w = thumb_d + 3. * stretch;
                     let pad = (f32::from(bounds.size.height) - thumb_d) / 2.;
                     let travel = (f32::from(bounds.size.width) - 2. * pad - thumb_d).max(0.);
-                    let thumb_x = f32::from(bounds.origin.x) + pad + travel * slide;
+                    let base_x = f32::from(bounds.origin.x) + pad + travel * slide;
+                    let thumb_x = if checked {
+                        base_x - (thumb_w - thumb_d) * slide
+                    } else {
+                        base_x
+                    };
                     let thumb_y = f32::from(bounds.origin.y) + pad;
                     let thumb_color = off_thumb
                         .blend(off_thumb_hover.opacity(hover))
@@ -139,7 +153,7 @@ pub fn win11_switch(
                         fill(
                             Bounds::new(
                                 point(px(thumb_x), px(thumb_y)),
-                                size(px(thumb_d), px(thumb_d)),
+                                size(px(thumb_w), px(thumb_d)),
                             ),
                             thumb_color,
                         )
