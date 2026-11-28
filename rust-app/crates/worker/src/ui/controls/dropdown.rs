@@ -22,7 +22,8 @@ use std::{
 
 #[derive(Default, Clone)]
 pub struct Dropdowns {
-    opened: Rc<Cell<Option<(&'static str, usize)>>>,
+    /// `(id, active_index, keyboard_focus)`
+    opened: Rc<Cell<Option<(&'static str, usize, bool)>>>,
     bounds: Rc<RefCell<HashMap<&'static str, Bounds<Pixels>>>>,
     menu_scroll: ScrollHandle,
 }
@@ -46,7 +47,7 @@ impl Dropdowns {
         select: impl Fn(usize, String) + 'static,
     ) -> AnyElement {
         let selected = values.iter().position(|item| item == value);
-        let open = self.opened.get().filter(|(key, _)| *key == id);
+        let open = self.opened.get().filter(|(key, _, _)| *key == id);
         let bounds = self.bounds.clone();
         let select = Rc::new(select);
         let toggle = self.opened.clone();
@@ -103,10 +104,10 @@ impl Dropdowns {
             .when(!editable && can_open, |d| {
                 d.on_click(move |_, window, _| {
                     toggle_scroll.set_offset(point(px(0.), px(0.)));
-                    toggle.set(if toggle.get().is_some_and(|(key, _)| key == id) {
+                    toggle.set(if toggle.get().is_some_and(|(key, _, _)| key == id) {
                         None
                     } else {
-                        Some((id, current))
+                        Some((id, current, false))
                     });
                     window.refresh();
                 })
@@ -142,11 +143,13 @@ impl Dropdowns {
                 .when(uses_arrow, |d| {
                     d.focusable().tab_stop(true).on_click(move |_, window, _| {
                         arrow_scroll.set_offset(point(px(0.), px(0.)));
-                        arrow_state.set(if arrow_state.get().is_some_and(|(key, _)| key == id) {
-                            None
-                        } else {
-                            Some((id, current))
-                        });
+                        arrow_state.set(
+                            if arrow_state.get().is_some_and(|(key, _, _)| key == id) {
+                                None
+                            } else {
+                                Some((id, current, false))
+                            },
+                        );
                         window.refresh();
                     })
                 })
@@ -158,7 +161,7 @@ impl Dropdowns {
         let keyboard_select = select.clone();
         let keyboard_scroll = self.menu_scroll.clone();
         control = control.on_key_down(move |event: &KeyDownEvent, window, cx| {
-            let current_open = state.get().filter(|(key, _)| *key == id);
+            let current_open = state.get().filter(|(key, _, _)| *key == id);
             match event.keystroke.key.as_str() {
                 "escape" if current_open.is_some() => state.set(None),
                 "enter" | "space" if current_open.is_some() => {
@@ -169,15 +172,15 @@ impl Dropdowns {
                     }
                     state.set(None);
                 }
-                "enter" | "space" if !editable && can_open => state.set(Some((id, current))),
+                "enter" | "space" if !editable && can_open => state.set(Some((id, current, true))),
                 "down" | "up" if can_open => {
-                    let index = current_open.map_or(current, |(_, index)| index);
+                    let index = current_open.map_or(current, |(_, index, _)| index);
                     let index = if event.keystroke.key == "down" {
                         (index + 1).min(keyboard_values.len() - 1)
                     } else {
                         index.saturating_sub(1)
                     };
-                    state.set(Some((id, index)));
+                    state.set(Some((id, index, true)));
                     keyboard_scroll.scroll_to_item(index);
                 }
                 _ => return,
@@ -186,62 +189,98 @@ impl Dropdowns {
             window.refresh();
         });
 
-        if let Some((_, highlight)) = open
+        if let Some((_, active_idx, keyboard_focus)) = open
             && let Some(bounds) = self.bounds.borrow().get(id).copied()
         {
             let state = self.opened.clone();
             let accent = cx.theme().accent;
+            let primary = cx.theme().primary;
             const MENU_PADDING: f32 = 5.;
             let option_radius = offset_radius(popup_radius, MENU_PADDING);
             let items = values.into_iter().enumerate().map(|(index, value)| {
                 let select = select.clone();
                 let state = state.clone();
+                let hover_state = state.clone();
                 let clicked_value = value.clone();
-                let active = index == highlight || Some(index) == selected;
-                let row = h_flex()
+                let is_selected = Some(index) == selected;
+                let is_pointed = index == active_idx;
+                let is_kbd_focused = is_pointed && keyboard_focus;
+                let base = h_flex()
                     .id(("option", index))
                     .debug_selector(|| format!("{id}-option-{index}"))
                     .relative()
                     .h_7()
                     .px_2()
                     .w_full()
-                    .gap_1p5()
+                    .gap_2()
+                    .items_center()
+                    .flex_shrink_0();
+                let row = if is_pointed {
+                    base.contour_fill(accent, option_radius)
+                } else {
+                    pointer_feedback(
+                        (SharedString::from(format!("{id}-opt-fb")), index),
+                        base,
+                        accent.opacity(0.65),
+                        accent,
+                        option_radius,
+                    )
+                };
+                let row = row
+                    .when(is_kbd_focused, |d| {
+                        d.child(focus_ring_layer(
+                            (
+                                ElementId::from(id),
+                                SharedString::from(format!("opt-kbd-{index}")),
+                            ),
+                            true,
+                            open_border,
+                            option_radius,
+                            Duration::from_millis(90),
+                        ))
+                    })
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .text_sm()
+                            .text_color(cx.theme().popover_foreground)
+                            .truncate()
+                            .child(value),
+                    )
+                    .child(
+                        h_flex()
+                            .size(px(14.))
+                            .flex_shrink_0()
+                            .justify_center()
+                            .items_center()
+                            .when(is_selected, |d| {
+                                d.child(Icon::new(IconName::Check).xsmall().text_color(primary))
+                            }),
+                    )
+                    .on_click(move |_, window, cx| {
+                        cx.stop_propagation();
+                        state.set(None);
+                        let select = select.clone();
+                        let value = clicked_value.clone();
+                        runtime::dispatch(move || select(index, value));
+                        window.refresh();
+                    });
+
+                div()
+                    .id((
+                        ElementId::from(id),
+                        SharedString::from(format!("opt-hover-{index}")),
+                    ))
+                    .w_full()
                     .flex_shrink_0()
-                    .when(active, |d| d.contour(Some(accent), None, option_radius));
-                pointer_feedback(
-                    (SharedString::from(format!("{id}-opt-fb")), index),
-                    row,
-                    accent.opacity(0.65),
-                    accent,
-                    option_radius,
-                )
-                .child(
-                    h_flex()
-                        .w_3p5()
-                        .justify_center()
-                        .when(Some(index) == selected, |d| {
-                            d.child(
-                                Icon::new(IconName::Check)
-                                    .xsmall()
-                                    .text_color(cx.theme().primary),
-                            )
-                        }),
-                )
-                .child(
-                    div()
-                        .text_sm()
-                        .text_color(cx.theme().popover_foreground)
-                        .truncate()
-                        .child(value),
-                )
-                .on_click(move |_, window, cx| {
-                    cx.stop_propagation();
-                    state.set(None);
-                    let select = select.clone();
-                    let value = clicked_value.clone();
-                    runtime::dispatch(move || select(index, value));
-                    window.refresh();
-                })
+                    .on_hover(move |hovered, window, _| {
+                        if *hovered && hover_state.get() != Some((id, index, false)) {
+                            hover_state.set(Some((id, index, false)));
+                            window.refresh();
+                        }
+                    })
+                    .child(row)
             });
             let state = self.opened.clone();
             let available = window.viewport_size().height;
